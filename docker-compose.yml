@@ -1,0 +1,24 @@
+# Mount the kubeconfig for monitoring context switching
+# Mount azure volume to preserve authentication used by Azure CLI
+# Mount the Windows hosts file to the container (required to routing traffic on Windows hosts)
+
+services:
+
+  krp:
+    build:
+      context: .
+    image: krp/krp:latest
+    container_name: krp
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      KRP_ENDPOINT_EXPLORER: false
+      KRP_WINDOWS_HOSTS: /windows_etc/hosts
+    volumes:
+      - ~/.kube:/root/.kube
+      - azure:/root/.azure 
+      - /c/Windows/System32/drivers/etc/:/windows_etc/ 
+
+volumes:
+    krp_azure:
