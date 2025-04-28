@@ -1,4 +1,4 @@
-﻿namespace Krp.KubernetesForwarder.Dns;
+﻿namespace Krp.KubernetesForwarder.Routing;
 
 public class DnsWindowsHostsOptions
 {

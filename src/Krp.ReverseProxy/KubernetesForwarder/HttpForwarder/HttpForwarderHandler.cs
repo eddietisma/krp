@@ -9,15 +9,15 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Yarp.ReverseProxy.Forwarder;
 
-namespace Krp.KubernetesForwarder;
+namespace Krp.KubernetesForwarder.HttpForwarder;
 
-public class HttpForwarder
+public class HttpForwarderHandler
 {
     private readonly PortForwardManager _portForwardManager;
     private readonly IHttpForwarder _forwarder;
-    private readonly ILogger<HttpForwarder> _logger;
+    private readonly ILogger<HttpForwarderHandler> _logger;
 
-    public HttpForwarder(PortForwardManager portForwardManager, IHttpForwarder forwarder, ILogger<HttpForwarder> logger)
+    public HttpForwarderHandler(PortForwardManager portForwardManager, IHttpForwarder forwarder, ILogger<HttpForwarderHandler> logger)
     {
         _portForwardManager = portForwardManager;
         _forwarder = forwarder;
