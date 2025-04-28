@@ -12,9 +12,9 @@ public class EndpointExplorerBackgroundService : BackgroundService
 {
     private readonly EndpointExplorerHandler _explorer;
     private readonly EndpointExplorerOptions _options;
-    private readonly ILogger<DnsUpdateService> _logger;
+    private readonly ILogger<DnsUpdateBackgroundService> _logger;
 
-    public EndpointExplorerBackgroundService(EndpointExplorerHandler explorer, IOptions<EndpointExplorerOptions> options, ILogger<DnsUpdateService> logger)
+    public EndpointExplorerBackgroundService(EndpointExplorerHandler explorer, IOptions<EndpointExplorerOptions> options, ILogger<DnsUpdateBackgroundService> logger)
     {
         _explorer = explorer;
         _options = options.Value;

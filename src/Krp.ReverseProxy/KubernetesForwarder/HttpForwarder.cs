@@ -13,13 +13,13 @@ namespace Krp.KubernetesForwarder;
 
 public class HttpForwarder
 {
-    private readonly PortForwardManager _portForwardHandlerManager;
+    private readonly PortForwardManager _portForwardManager;
     private readonly IHttpForwarder _forwarder;
     private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarder(PortForwardManager portForwardHandlerManager, IHttpForwarder forwarder, ILogger<HttpForwarder> logger)
+    public HttpForwarder(PortForwardManager portForwardManager, IHttpForwarder forwarder, ILogger<HttpForwarder> logger)
     {
-        _portForwardHandlerManager = portForwardHandlerManager;
+        _portForwardManager = portForwardManager;
         _forwarder = forwarder;
         _logger = logger;
     }
@@ -30,11 +30,11 @@ public class HttpForwarder
 
         var requestUrl = httpContext.Request.Host.Host;
 
-        var portForwardHandler = _portForwardHandlerManager.GetByUrl(requestUrl);
+        var portForwardHandler = _portForwardManager.GetHandlerByUrl(requestUrl);
         if (portForwardHandler == null)
         {
             _logger.LogWarning("Invalid url for proxy request: {requestUrl}", requestUrl);
-            await httpContext.Response.WriteAsJsonAsync(new InvalidProxyRequest($"Invalid proxy request. No matching routing for URL: '{requestUrl}'"));
+            await httpContext.Response.WriteAsync($"Invalid HTTP proxy request. No matching routing for: '{requestUrl}'");
             return;
         }
 
@@ -82,7 +82,5 @@ public class HttpForwarder
             _ => HttpVersion.Version11,
         };
     }
-
-    private record InvalidProxyRequest(string Message);
 }
 

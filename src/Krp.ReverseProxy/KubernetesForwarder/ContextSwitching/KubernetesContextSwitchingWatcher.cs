@@ -13,14 +13,14 @@ namespace Krp.KubernetesForwarder.ContextSwitching;
 public class KubernetesContextSwitchingWatcher : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly PortForwardManager _portForwardHandlerManager;
+    private readonly PortForwardManager _portForwardManager;
     private readonly ILogger<KubernetesContextSwitchingWatcher> _logger;
     private string _currentContext;
 
-    public KubernetesContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardManager portForwardHandlerManager, ILogger<KubernetesContextSwitchingWatcher> logger)
+    public KubernetesContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardManager portForwardManager, ILogger<KubernetesContextSwitchingWatcher> logger)
     {
         _serviceProvider = serviceProvider;
-        _portForwardHandlerManager = portForwardHandlerManager;
+        _portForwardManager = portForwardManager;
         _logger = logger;
     }
 
@@ -41,7 +41,7 @@ public class KubernetesContextSwitchingWatcher : BackgroundService
                 if (_currentContext != config.CurrentContext)
                 {
                     _logger.LogInformation("Detected context switch from {oldContext} to {newContext}", _currentContext, config.CurrentContext);
-                    _portForwardHandlerManager.RemoveAll();
+                    _portForwardManager.RemoveAllHandlers();
 
                     var endpointExplorer = _serviceProvider.GetService<EndpointExplorerHandler>();
                     if (endpointExplorer != null)

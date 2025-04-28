@@ -31,8 +31,6 @@ public class DnsWindowsHostsHandler : IDnsHandler
     {
         try
         {
-            var entries = hostnames.Select(x => "127.0.0.1 " + x).ToList(); // Append 127.0.0.1 to each endpoint.
-
             if (!File.Exists(_options.Path))
             {
                 _logger.LogError("Error when updating DNS. File not found: {path}", _options.Path);
@@ -60,7 +58,7 @@ public class DnsWindowsHostsHandler : IDnsHandler
 
             lines.Add("");
             lines.Add(MARKER_START);
-            lines.AddRange(entries);
+            lines.AddRange(hostnames);
             lines.Add(MARKER_END);
 
             var hasChanges = !(await File.ReadAllLinesAsync(_options.Path)).ToList().SequenceEqual(lines);
@@ -76,7 +74,7 @@ public class DnsWindowsHostsHandler : IDnsHandler
             _logger.LogInformation("Backup created at: {path}", backupPath);
 
             await File.WriteAllLinesAsync(_options.Path, lines, Encoding.UTF8);
-            _logger.LogInformation("HOSTS file updated with {count} entries", entries.Count);
+            _logger.LogInformation("HOSTS file updated with {count} entries", hostnames.Count);
         }
         catch (Exception e)
         {

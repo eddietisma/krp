@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.PortForward;
@@ -14,6 +15,10 @@ public class PortForwardHandler : IDisposable
     private int _localPort;
     private int? _localPortActual;
 
+    /// <summary>
+    /// The local port to use for the port-forwarding. If set to 0, a random port will be used.
+    /// Returns the actual port used for the port-forwarding if LocalPortActual is not null.
+    /// </summary>
     public int LocalPort
     {
         get => _localPort == 0 && _localPortActual != null && _process is { HasExited: false } ? _localPortActual.Value : _localPort;
@@ -33,6 +38,7 @@ public class PortForwardHandler : IDisposable
     public string Type { get; set; }
     public string Url => RemotePort == 80 ? $"{Resource}.{Namespace}" : $"{Resource}.{Namespace}:{RemotePort}";
     public string Hostname => $"{Resource}.{Namespace}";
+    public IPAddress LocalIp { get; set; }
 
     public PortForwardHandler(ProcessRunner processRunner, ILogger<PortForwardHandler> logger)
     {

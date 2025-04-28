@@ -1,4 +1,5 @@
-﻿using Krp.KubernetesForwarder.Dns;
+﻿using Krp.KubernetesForwarder;
+using Krp.KubernetesForwarder.Dns;
 using Krp.KubernetesForwarder.EndpointExplorer;
 using Krp.KubernetesForwarder.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,14 +21,17 @@ public static class KubernetesBuilderExtension
     /// <returns></returns>
     public static KubernetesForwarderBuilder UseEndpoint(this KubernetesForwarderBuilder builder, int localPort, int remotePort, string ns, string resource)
     {
-        builder.Endpoints.Add(new KrpEndpoint
+        builder.Services.Configure<KubernetesForwarderOptions>(options =>
         {
-            LocalPort = localPort,
-            Namespace = ns,
-            RemotePort = remotePort,
-            Resource = resource,
-            Type = "service",
-            IsStatic = true,
+            options.Endpoints.Add(new KrpEndpoint
+            {
+                LocalPort = localPort,
+                Namespace = ns,
+                RemotePort = remotePort,
+                Resource = resource,
+                Type = "service",
+                IsStatic = true,
+            });
         });
 
         return builder;
@@ -54,7 +58,7 @@ public static class KubernetesBuilderExtension
     /// <returns></returns>
     public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, KrpRouting routing)
     {
-        builder.Services.AddHostedService<DnsUpdateService>();
+        builder.Services.AddHostedService<DnsUpdateBackgroundService>();
 
         switch (routing)
         {
@@ -74,6 +78,31 @@ public static class KubernetesBuilderExtension
                 break;
         }
 
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts an optional Kestrel server to handle HTTP requests.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseHttpForwarder(this KubernetesForwarderBuilder builder)
+    {
+        builder.Services.AddHostedService<HttpForwarderBackgroundService>();
+        builder.Services.AddSingleton(builder.Services);
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts an optional TCP server to handle TCP requests.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="optionsAction"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseTcpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> optionsAction)
+    {
+        builder.Services.Configure(optionsAction);
+        builder.Services.AddHostedService<TcpForwarderBackgroundService>();
         return builder;
     }
 }

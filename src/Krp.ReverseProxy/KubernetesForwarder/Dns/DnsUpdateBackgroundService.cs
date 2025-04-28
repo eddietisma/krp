@@ -7,23 +7,23 @@ using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.Dns;
 
-public class DnsUpdateService : BackgroundService
+public class DnsUpdateBackgroundService : BackgroundService
 {
-    private readonly PortForwardManager _portForwardHandlerManager;
-    private readonly ILogger<DnsUpdateService> _logger;
+    private readonly PortForwardManager _portForwardManager;
+    private readonly ILogger<DnsUpdateBackgroundService> _logger;
     private readonly IDnsHandler _dnsHandler;
 
-    public DnsUpdateService(PortForwardManager portForwardHandlerManager, IDnsHandler dnsHandler, ILogger<DnsUpdateService> logger)
+    public DnsUpdateBackgroundService(PortForwardManager portForwardManager, IDnsHandler dnsHandler, ILogger<DnsUpdateBackgroundService> logger)
     {
-        _portForwardHandlerManager = portForwardHandlerManager;
-        _portForwardHandlerManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
+        _portForwardManager = portForwardManager;
+        _portForwardManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
         _dnsHandler = dnsHandler;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_portForwardHandlerManager.GetAll().Count == 0)
+        if (_portForwardManager.GetAllHandlers().Count == 0)
         {
             return;
         }
@@ -36,7 +36,7 @@ public class DnsUpdateService : BackgroundService
 
     private async Task OnEndPointsChangedEvent()
     {
-        if (_portForwardHandlerManager.GetAll().Count == 0)
+        if (_portForwardManager.GetAllHandlers().Count == 0)
         {
             return;
         }
@@ -48,10 +48,10 @@ public class DnsUpdateService : BackgroundService
 
     private async Task UpdateDns()
     {
-        var hostnames = _portForwardHandlerManager
-            .GetAll()
+        var hostnames = _portForwardManager
+            .GetAllHandlers()
             .Where(x => !string.IsNullOrEmpty(x.Url))
-            .Select(x => x.Hostname)
+            .Select(x => $"{x.LocalIp} {x.Hostname}")
             .ToList();
 
         await _dnsHandler.UpdateAsync(hostnames);
