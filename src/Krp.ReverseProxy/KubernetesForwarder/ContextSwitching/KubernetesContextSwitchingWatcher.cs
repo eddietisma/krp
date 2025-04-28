@@ -1,5 +1,5 @@
 ﻿using k8s;
-using Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.EndpointExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,7 +7,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.ContextSwitching;
+namespace Krp.KubernetesForwarder.ContextSwitching;
 
 public class KubernetesContextSwitchingWatcher : BackgroundService
 {

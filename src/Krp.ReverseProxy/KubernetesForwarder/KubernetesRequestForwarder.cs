@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Yarp.ReverseProxy.Forwarder;
 
-namespace Krp.ReverseProxy.KubernetesForwarder;
+namespace Krp.KubernetesForwarder;
 
 public class KubernetesRequestForwarder
 {

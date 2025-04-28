@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder;
+namespace Krp.KubernetesForwarder;
 
 public record ProcessWrapper(Process Process, ConcurrentStack<string> Logs);
 

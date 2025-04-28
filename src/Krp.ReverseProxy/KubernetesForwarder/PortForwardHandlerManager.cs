@@ -1,4 +1,4 @@
-﻿using Krp.ReverseProxy.KubernetesForwarder.Models;
+﻿using Krp.KubernetesForwarder.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder;
+namespace Krp.KubernetesForwarder;
 
 public class PortForwardHandlerManager
 {

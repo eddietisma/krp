@@ -1,9 +1,9 @@
-﻿using Krp.ReverseProxy.KubernetesForwarder;
+﻿using Krp.KubernetesForwarder;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace Krp.ReverseProxy.DependencyInjection;
+namespace Krp.DependencyInjection;
 
 public static class EndpointRouteBuilderExtensions
 {

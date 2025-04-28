@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
+namespace Krp.KubernetesForwarder.EndpointExplorer;
 
 public class KubernetesEndpointExplorerOptions
 {
