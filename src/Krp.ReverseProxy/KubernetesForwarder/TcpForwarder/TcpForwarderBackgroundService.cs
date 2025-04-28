@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder;
+namespace Krp.KubernetesForwarder.TcpForwarder;
 
 public class TcpForwarderBackgroundService : BackgroundService
 {
@@ -48,6 +48,7 @@ public class TcpForwarderBackgroundService : BackgroundService
                     var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
                     var localIp = localEndPoint?.Address;
                     var localPort = localEndPoint?.Port;
+
                     var portForwardHandler = _portForwardManager.GetByIpPort(localIp);
                     if (portForwardHandler == null)
                     {
@@ -56,6 +57,8 @@ public class TcpForwarderBackgroundService : BackgroundService
                         await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
                         return;
                     }
+
+                    await portForwardHandler.EnsureRunningAsync();
 
                     await target.ConnectAsync(IPAddress.Loopback, portForwardHandler.LocalPort, stoppingToken);
                     var clientStream = client.GetStream();

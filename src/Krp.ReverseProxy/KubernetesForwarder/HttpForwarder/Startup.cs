@@ -1,16 +1,15 @@
-using Krp.DependencyInjection;
-using Krp.KubernetesForwarder;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Krp;
+namespace Krp.KubernetesForwarder.HttpForwarder;
 
 public class Startup 
 {
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpForwarder();
-        services.AddSingleton<HttpForwarder>();
+        services.AddSingleton<HttpForwarderHandler>();
     }
 
     public void Configure(IApplicationBuilder app)
@@ -18,7 +17,10 @@ public class Startup
         app.UseRouting();
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapKubernetesForwarder();
+            endpoints.Map("/{**catch-all}", async (HttpForwarderHandler handler, HttpContext httpContext) =>
+            {
+                await handler.HandleRequest(httpContext);
+            });
         });
     }
 }

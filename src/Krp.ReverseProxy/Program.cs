@@ -36,7 +36,7 @@ public class Program
                     .UseEndpoint(0, 80, "sharedsvcs", "pdfgenerator-api")
                     .UseEndpointExplorer(options =>
                     {
-                        options.Filter = ["namespace/meetings/*", "namespace/*/service/person*"];
+                        //options.Filter = ["namespace/meetings/*", "namespace/*/service/person*"];
                         options.RefreshInterval = TimeSpan.FromHours(1);
                     })
                     .UseRouting(KrpRouting.WindowsHostsFile)
@@ -46,7 +46,7 @@ public class Program
                         options.DefaultTimeout = TimeSpan.FromSeconds(30);
                         options.DefaultBufferSize = 8192;
                         options.ListenAddress = IPAddress.Any;
-                        options.ListenPort = 81;
+                        options.ListenPort = 80;
                         options.MaxConnections = 100;
                     });
             });
