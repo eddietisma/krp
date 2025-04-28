@@ -1,5 +1,6 @@
 ﻿using k8s;
 using Krp.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.PortForward;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,11 +13,11 @@ namespace Krp.KubernetesForwarder.ContextSwitching;
 public class KubernetesContextSwitchingWatcher : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly PortForwardHandlerManager _portForwardHandlerManager;
+    private readonly PortForwardManager _portForwardHandlerManager;
     private readonly ILogger<KubernetesContextSwitchingWatcher> _logger;
     private string _currentContext;
 
-    public KubernetesContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardHandlerManager portForwardHandlerManager, ILogger<KubernetesContextSwitchingWatcher> logger)
+    public KubernetesContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardManager portForwardHandlerManager, ILogger<KubernetesContextSwitchingWatcher> logger)
     {
         _serviceProvider = serviceProvider;
         _portForwardHandlerManager = portForwardHandlerManager;
@@ -42,7 +43,7 @@ public class KubernetesContextSwitchingWatcher : BackgroundService
                     _logger.LogInformation("Detected context switch from {oldContext} to {newContext}", _currentContext, config.CurrentContext);
                     _portForwardHandlerManager.RemoveAll();
 
-                    var endpointExplorer = _serviceProvider.GetService<KubernetesEndpointExplorer>();
+                    var endpointExplorer = _serviceProvider.GetService<EndpointExplorerHandler>();
                     if (endpointExplorer != null)
                     {
                         await endpointExplorer.DiscoverEndpointsAsync(ct);

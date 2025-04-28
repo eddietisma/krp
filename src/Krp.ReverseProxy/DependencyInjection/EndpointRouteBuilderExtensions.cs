@@ -9,7 +9,7 @@ public static class EndpointRouteBuilderExtensions
 {
     public static IEndpointRouteBuilder MapKubernetesForwarder(this IEndpointRouteBuilder builder)
     {
-        builder.Map("/{**catch-all}", async (KubernetesRequestForwarder handler, HttpContext httpContext) =>
+        builder.Map("/{**catch-all}", async (HttpForwarder handler, HttpContext httpContext) =>
         {
             await handler.HandleRequest(httpContext);
         });
