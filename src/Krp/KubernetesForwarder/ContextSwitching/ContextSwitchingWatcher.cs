@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.ContextSwitching;
 
-public class KubernetesContextSwitchingWatcher : BackgroundService
+public class ContextSwitchingWatcher : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly PortForwardManager _portForwardManager;
-    private readonly ILogger<KubernetesContextSwitchingWatcher> _logger;
+    private readonly ILogger<ContextSwitchingWatcher> _logger;
     private string _currentContext;
 
-    public KubernetesContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardManager portForwardManager, ILogger<KubernetesContextSwitchingWatcher> logger)
+    public ContextSwitchingWatcher(IServiceProvider serviceProvider, PortForwardManager portForwardManager, ILogger<ContextSwitchingWatcher> logger)
     {
         _serviceProvider = serviceProvider;
         _portForwardManager = portForwardManager;

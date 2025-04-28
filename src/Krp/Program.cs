@@ -40,7 +40,7 @@ public class Program
                         options.RefreshInterval = TimeSpan.FromHours(1);
                     })
                     .UseRouting(KrpRouting.WindowsHostsFile)
-                    .UseHttpForwarder()
+                    //.UseHttpForwarder()
                     .UseTcpForwarder(options =>
                     {
                         options.DefaultTimeout = TimeSpan.FromSeconds(30);
