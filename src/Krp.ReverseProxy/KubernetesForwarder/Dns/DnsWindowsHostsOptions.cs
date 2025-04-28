@@ -1,4 +1,4 @@
-﻿namespace Krp.ReverseProxy.KubernetesForwarder.Dns;
+﻿namespace Krp.KubernetesForwarder.Dns;
 
 public class DnsWindowsHostsOptions
 {

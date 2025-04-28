@@ -1,11 +1,11 @@
-﻿using Krp.ReverseProxy.KubernetesForwarder;
-using Krp.ReverseProxy.KubernetesForwarder.ContextSwitching;
-using Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
+﻿using Krp.KubernetesForwarder;
+using Krp.KubernetesForwarder.ContextSwitching;
+using Krp.KubernetesForwarder.EndpointExplorer;
 using Meziantou.Framework.Win32;
 using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.InteropServices;
 
-namespace Krp.ReverseProxy.DependencyInjection;
+namespace Krp.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {

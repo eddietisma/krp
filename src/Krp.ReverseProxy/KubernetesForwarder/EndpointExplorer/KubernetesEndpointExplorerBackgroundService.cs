@@ -1,4 +1,4 @@
-using Krp.ReverseProxy.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.Dns;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,7 +6,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
+namespace Krp.KubernetesForwarder.EndpointExplorer;
 
 public class KubernetesEndpointExplorerBackgroundService : BackgroundService
 {

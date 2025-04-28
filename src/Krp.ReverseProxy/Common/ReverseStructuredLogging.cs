@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Krp.ReverseProxy.Common;
+namespace Krp.Common;
 
 public static class ReverseStructuredLogging
 {
