@@ -1,11 +1,11 @@
-﻿using Krp.ReverseProxy.KubernetesForwarder.Dns;
-using Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
-using Krp.ReverseProxy.KubernetesForwarder.Models;
+﻿using Krp.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 
-namespace Krp.ReverseProxy.DependencyInjection;
+namespace Krp.DependencyInjection;
 
 public static class KubernetesBuilderExtension
 {

@@ -1,8 +1,8 @@
-﻿using Krp.ReverseProxy.KubernetesForwarder.Models;
+﻿using Krp.KubernetesForwarder.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 
-namespace Krp.ReverseProxy.DependencyInjection;
+namespace Krp.DependencyInjection;
 
 public class KubernetesForwarderBuilder
 {

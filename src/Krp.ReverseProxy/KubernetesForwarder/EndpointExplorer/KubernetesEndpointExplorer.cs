@@ -1,6 +1,6 @@
 ﻿using k8s;
 using k8s.Models;
-using Krp.ReverseProxy.KubernetesForwarder.Models;
+using Krp.KubernetesForwarder.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.EndpointExplorer;
+namespace Krp.KubernetesForwarder.EndpointExplorer;
 
 public class KubernetesEndpointExplorer
 {

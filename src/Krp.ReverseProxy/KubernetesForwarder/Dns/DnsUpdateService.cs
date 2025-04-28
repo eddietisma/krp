@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.Dns;
+namespace Krp.KubernetesForwarder.Dns;
 
 public class DnsUpdateService : BackgroundService
 {

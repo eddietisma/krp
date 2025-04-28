@@ -1,10 +1,10 @@
-using Krp.ReverseProxy.DependencyInjection;
-using Krp.ReverseProxy.KubernetesForwarder.Models;
+using Krp.DependencyInjection;
+using Krp.KubernetesForwarder.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Krp.ReverseProxy;
+namespace Krp;
 
 public class Startup
 {

@@ -1,10 +1,10 @@
-﻿using Krp.ReverseProxy.Common;
+﻿using Krp.Common;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder;
+namespace Krp.KubernetesForwarder;
 
 public class PortForwardHandler : IDisposable
 {
