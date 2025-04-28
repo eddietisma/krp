@@ -1,6 +1,7 @@
 ﻿using Krp.KubernetesForwarder;
 using Krp.KubernetesForwarder.ContextSwitching;
 using Krp.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.PortForward;
 using Meziantou.Framework.Win32;
 using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.InteropServices;
@@ -30,11 +31,11 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<KubernetesContextSwitchingWatcher>();
         services.AddTransient<PortForwardHandler>();
         services.AddSingleton<ProcessRunner>();
-        services.AddSingleton<KubernetesEndpointExplorer>();
-        services.AddSingleton<KubernetesRequestForwarder>();
+        services.AddSingleton<EndpointExplorerHandler>();
+        services.AddSingleton<HttpForwarder>();
         services.AddSingleton(serviceProvider =>
         {
-            var manager = new PortForwardHandlerManager(serviceProvider);
+            var manager = new PortForwardManager(serviceProvider);
 
             foreach (var endpoint in builder.Endpoints)
             {

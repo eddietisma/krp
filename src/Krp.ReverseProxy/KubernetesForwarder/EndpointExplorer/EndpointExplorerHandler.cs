@@ -1,6 +1,7 @@
 ﻿using k8s;
 using k8s.Models;
 using Krp.KubernetesForwarder.Models;
+using Krp.KubernetesForwarder.PortForward;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
@@ -11,16 +12,14 @@ using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.EndpointExplorer;
 
-public class KubernetesEndpointExplorer
+public class EndpointExplorerHandler
 {
-    private readonly KubernetesEndpointExplorerOptions _options;
-    private readonly PortForwardHandlerManager _portForwardHandlerManager;
-    private readonly ILogger<KubernetesEndpointExplorer> _logger;
+    private readonly PortForwardManager _portForwardHandlerManager;
+    private readonly ILogger<EndpointExplorerHandler> _logger;
     private readonly List<Regex> _compiledFilters = new();
 
-    public KubernetesEndpointExplorer(IOptions<KubernetesEndpointExplorerOptions> options, PortForwardHandlerManager portForwardHandlerManager, ILogger<KubernetesEndpointExplorer> logger)
+    public EndpointExplorerHandler(IOptions<EndpointExplorerOptions> options, PortForwardManager portForwardHandlerManager, ILogger<EndpointExplorerHandler> logger)
     {
-        _options = options.Value;
         _portForwardHandlerManager = portForwardHandlerManager;
         _logger = logger;
 

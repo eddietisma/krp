@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Krp.KubernetesForwarder.PortForward;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
@@ -10,13 +11,13 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace Krp.KubernetesForwarder;
 
-public class KubernetesRequestForwarder
+public class HttpForwarder
 {
-    private readonly PortForwardHandlerManager _portForwardHandlerManager;
+    private readonly PortForwardManager _portForwardHandlerManager;
     private readonly IHttpForwarder _forwarder;
-    private readonly ILogger<IHttpForwarder> _logger;
+    private readonly ILogger<HttpForwarder> _logger;
 
-    public KubernetesRequestForwarder(PortForwardHandlerManager portForwardHandlerManager, IHttpForwarder forwarder, ILogger<IHttpForwarder> logger)
+    public HttpForwarder(PortForwardManager portForwardHandlerManager, IHttpForwarder forwarder, ILogger<HttpForwarder> logger)
     {
         _portForwardHandlerManager = portForwardHandlerManager;
         _forwarder = forwarder;
@@ -54,7 +55,13 @@ public class KubernetesRequestForwarder
 
         _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", httpContext.Request.GetEncodedUrl(), destinationUrl);
 
-        var response = await _forwarder.SendAsync(httpContext, destinationUrl, httpClient);
+        var requestConfig = new ForwarderRequestConfig
+        {
+            Version = GetVersionFromRequest(httpContext.Request),
+            VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
+        };
+
+        var response = await _forwarder.SendAsync(httpContext, destinationUrl, httpClient, requestConfig);
         if (response != ForwarderError.None)
         {
             var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
@@ -64,5 +71,18 @@ public class KubernetesRequestForwarder
         }
     }
 
+    private static Version GetVersionFromRequest(HttpRequest request)
+    {
+        return request.Protocol switch
+        {
+            "HTTP/1.0" => HttpVersion.Version10,
+            "HTTP/1.1" => HttpVersion.Version11,
+            "HTTP/2" or "HTTP/2.0" => HttpVersion.Version20,
+            "HTTP/3" or "HTTP/3.0" => HttpVersion.Version30, 
+            _ => HttpVersion.Version11,
+        };
+    }
+
     private record InvalidProxyRequest(string Message);
 }
+

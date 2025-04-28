@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder;
+namespace Krp.KubernetesForwarder.PortForward;
 
 public class PortForwardHandler : IDisposable
 {
@@ -80,5 +80,6 @@ public class PortForwardHandler : IDisposable
 
         _process?.Kill();
         _process?.Dispose();
+        _process = null;
     }
 }

@@ -39,10 +39,10 @@ public static class KubernetesBuilderExtension
     /// <param name="builder"></param>
     /// <param name="optionsAction"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseEndpointExplorer(this KubernetesForwarderBuilder builder, Action<KubernetesEndpointExplorerOptions> optionsAction)
+    public static KubernetesForwarderBuilder UseEndpointExplorer(this KubernetesForwarderBuilder builder, Action<EndpointExplorerOptions> optionsAction)
     {
         builder.Services.Configure(optionsAction);
-        builder.Services.AddHostedService<KubernetesEndpointExplorerBackgroundService>();
+        builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
         return builder;
     }
 

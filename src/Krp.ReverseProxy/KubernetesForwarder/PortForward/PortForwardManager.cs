@@ -6,18 +6,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder;
+namespace Krp.KubernetesForwarder.PortForward;
 
-public class PortForwardHandlerManager
+public class PortForwardManager
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly List<PortForwardHandler> _handlers = new();
-    private readonly ILogger<PortForwardHandlerManager> _logger;
+    private readonly ILogger<PortForwardManager> _logger;
 
-    public PortForwardHandlerManager(IServiceProvider serviceProvider)
+    public PortForwardManager(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-        _logger = serviceProvider.GetRequiredService<ILogger<PortForwardHandlerManager>>();
+        _logger = serviceProvider.GetRequiredService<ILogger<PortForwardManager>>();
     }
 
     public event Func<Task> EndPointsChangedEvent;

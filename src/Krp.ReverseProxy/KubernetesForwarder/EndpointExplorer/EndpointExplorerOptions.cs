@@ -2,7 +2,7 @@
 
 namespace Krp.KubernetesForwarder.EndpointExplorer;
 
-public class KubernetesEndpointExplorerOptions
+public class EndpointExplorerOptions
 {
     /// <summary>
     /// Interval to refresh and discover new endpoints.
