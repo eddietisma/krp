@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Krp.ReverseProxy.KubernetesForwarder.Dns;
+namespace Krp.KubernetesForwarder.Dns;
 
 public interface IDnsHandler
 {
