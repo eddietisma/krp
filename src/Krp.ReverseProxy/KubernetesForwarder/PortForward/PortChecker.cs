@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace Krp.KubernetesForwarder;
+namespace Krp.KubernetesForwarder.PortForward;
 
 public static class PortChecker
 {

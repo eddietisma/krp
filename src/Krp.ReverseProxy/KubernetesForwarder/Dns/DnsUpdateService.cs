@@ -1,3 +1,4 @@
+using Krp.KubernetesForwarder.PortForward;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Linq;
@@ -8,11 +9,11 @@ namespace Krp.KubernetesForwarder.Dns;
 
 public class DnsUpdateService : BackgroundService
 {
-    private readonly PortForwardHandlerManager _portForwardHandlerManager;
+    private readonly PortForwardManager _portForwardHandlerManager;
     private readonly ILogger<DnsUpdateService> _logger;
     private readonly IDnsHandler _dnsHandler;
 
-    public DnsUpdateService(PortForwardHandlerManager portForwardHandlerManager, IDnsHandler dnsHandler, ILogger<DnsUpdateService> logger)
+    public DnsUpdateService(PortForwardManager portForwardHandlerManager, IDnsHandler dnsHandler, ILogger<DnsUpdateService> logger)
     {
         _portForwardHandlerManager = portForwardHandlerManager;
         _portForwardHandlerManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
