@@ -61,7 +61,7 @@ curl http://my-api-service.default.svc.cluster.local/
 ## 📦 Roadmap / Ideas
 - [ ] Auto-discovery of services from the cluster.
 - [ ] Cross-platform support (Linux/macOS).
-- [ ] UDP support.
+- [ ] Low-level TCP/UDP support.
 
 ## Running inside Docker
 
