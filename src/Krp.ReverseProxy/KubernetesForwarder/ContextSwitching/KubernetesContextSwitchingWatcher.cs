@@ -29,7 +29,7 @@ public class KubernetesContextSwitchingWatcher : BackgroundService
         {
             try
             {
-                var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
+                var config = await KubernetesClientConfiguration.LoadKubeConfigAsync();
 
                 if (string.IsNullOrEmpty(_currentContext))
                 {
