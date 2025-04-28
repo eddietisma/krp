@@ -26,12 +26,12 @@ public static class ServiceCollectionExtensions
 
         var builder = new KubernetesForwarderBuilder(services);
 
-        services.AddHostedService<KubernetesContextSwitchingWatcher>();
-        services.AddTransient<PortForwardHandler>();
-        services.AddSingleton<ProcessRunner>();
+        services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointExplorerHandler>();
         services.AddSingleton<PortForwardManager>();
-        
+        services.AddTransient<PortForwardHandler>();
+        services.AddSingleton<ProcessRunner>();
+
         return builder;
     }
 }

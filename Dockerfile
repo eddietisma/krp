@@ -3,7 +3,7 @@ COPY . .
 RUN dotnet restore
 RUN dotnet build -c Release --no-restore 
 RUN dotnet test  -c Release --no-build --logger:trx
-RUN dotnet publish --no-build "src/Krp.ReverseProxy/Krp.ReverseProxy.csproj" -o /app/publish
+RUN dotnet publish --no-build "src/Krp/Krp.csproj" -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 
@@ -26,4 +26,4 @@ RUN LATEST_KUBELOGIN_VERSION=$(curl -s https://api.github.com/repos/Azure/kubelo
 
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "Krp.ReverseProxy.dll"]
+ENTRYPOINT ["dotnet", "Krp.dll"]
