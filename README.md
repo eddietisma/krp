@@ -1,12 +1,12 @@
-# KRP (Kubernetes Reverse Proxy)
+# KRP
 
-A lightweight dynamic reverse proxy for Kubernetes clusters on Windows.
+A lightweight Kubernetes Reverse Proxy.
 
 This project uses:
 - [YARP](https://github.com/dotnet/yarp/) (Yet Another Reverse Proxy) to dynamically route HTTP(S) traffic.
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/) to forward internal Kubernetes services and pods to your local machine.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp) to discover endpoints detect Kubernetes context switching.
-- Windows hosts file modification for DNS resolution of internal cluster URLs.
+- Windows hosts file modification for DNS resolution of internal Kubernetes resources.
 
 ## ✨ Features
 - On-demand port forwarding to internal Kubernetes resources.
@@ -56,16 +56,13 @@ You can now just **curl**:
 curl http://my-api-service.default.svc.cluster.local/
 ```
 
-🎯 without needing a VPN or complicated network setups!
-
 ## 📦 Roadmap / Ideas
-- [ ] Auto-discovery of services from the cluster.
+- [x] Auto-discovery of k8s services.
 - [ ] Cross-platform support (Linux/macOS).
 - [ ] Low-level TCP/UDP support.
 
 ## Running inside Docker
-
-1. Start docker-desktop as administrator (for access to Windows hosts file).
+1. Start docker-desktop as administrator (for hosts file access).
 1. Run `docker buildx bake`
 1. Run `docker compose up -d`
 1. Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login` (for Azure AKS)
@@ -99,22 +96,21 @@ volumes:
 
 ## Forwarders
 
-`UseHttpForwarder` works for HTTP requests.
+`UseHttpForwarder`
 - Supports HTTP (only).
 - Supports domain based routing.
 - Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS **is not supported**.
 
-`UseTcpForwarder` works for low-level TCP requests.
-- Supports all TCP connections (eg. databases, HTTP/x / gRCP).
-- **(Windows only)** Supports domain based routing (using domain-based IP per hostname in HOSTS file).
-- Limitations when hosting inside a Docker under Windows hosts due to Docker networking NAT issues (Windows do not yet have full support for host network driver).
+`UseTcpForwarder`
+- Supports low-level TCP requests (eg. databases, HTTP/x / gRCP).
+- Supports domain based routing (using domain-based IP per hostname in HOSTS file).
+- **Docker only:** No support for domain based routing under Windows hosts due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all IP originates from Docker gateway).
 
-`UseTcpWithHttpForwarder` (**default**) works with low-level TCP requests and forwards HTTP/x request to HttpForwarder using packet inspection.
-- Supports all TCP connections (eg. databases, HTTP/x / gRCP).
-- **(Windows only)** Supports domain based routing (using domain-based IP per hostname in HOSTS file)
-  - Due to limitation with Docker networking NAT all traffic will always originate from Docker gateway - limiting routing to HTTP requests only.
-- Opens a TCP connection and ínspects HTTP traffic and routes to different HTTP server ports (81 for HTTP/1.1 and 82 for HTTP/2).
-- (Docker only) When running inside docker
+`UseTcpWithHttpForwarder` (**default**)
+- Supports low-level TCP requests and forwards HTTP/x request to `HttpForwarder` using packet inspection.
+- Opens a TCP connection and inspects traffic and routes HTTP to different server ports (81 for HTTP/1.1 and 82 for HTTP/2).
+- Supports domain based routing (using domain-based IP per hostname in HOSTS file)
+- **Docker only:** Due to limitation with Docker networking NAT all traffic will always originate from Docker gateway - limiting routing to HTTP requests only.
 
 ## Hosting in docker
 
