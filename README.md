@@ -96,3 +96,29 @@ services:
 volumes:
     azure:
 ```
+
+## Forwarders
+
+`UseHttpForwarder` works for HTTP requests.
+- Supports HTTP (only).
+- Supports domain based routing.
+- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS **is not supported**.
+
+`UseTcpForwarder` works for low-level TCP requests.
+- Supports all TCP connections (eg. databases, HTTP/x / gRCP).
+- **(Windows only)** Supports domain based routing (using domain-based IP per hostname in HOSTS file).
+- Limitations when hosting inside a Docker under Windows hosts due to Docker networking NAT issues (Windows do not yet have full support for host network driver).
+
+`UseTcpWithHttpForwarder` (**default**) works with low-level TCP requests and forwards HTTP/x request to HttpForwarder using packet inspection.
+- Supports all TCP connections (eg. databases, HTTP/x / gRCP).
+- **(Windows only)** Supports domain based routing (using domain-based IP per hostname in HOSTS file)
+  - Due to limitation with Docker networking NAT all traffic will always originate from Docker gateway - limiting routing to HTTP requests only.
+- Opens a TCP connection and ínspects HTTP traffic and routes to different HTTP server ports (81 for HTTP/1.1 and 82 for HTTP/2).
+- (Docker only) When running inside docker
+
+## Hosting in docker
+
+For windows hosts:
+1) Enable host networking
+
+
