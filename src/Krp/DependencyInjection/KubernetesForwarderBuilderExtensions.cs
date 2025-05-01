@@ -3,6 +3,7 @@ using Krp.KubernetesForwarder.HttpForwarder;
 using Krp.KubernetesForwarder.Models;
 using Krp.KubernetesForwarder.Routing;
 using Krp.KubernetesForwarder.TcpForwarder;
+using Krp.KubernetesForwarder.TcpWithHttpForwarder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
@@ -104,6 +105,20 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.Configure(optionsAction);
         builder.Services.AddHostedService<TcpForwarderBackgroundService>();
+        return builder;
+    }
+
+    /// <summary>
+    /// Starts an optional TCP server to handle TCP requests with HTTP packet inspection.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="optionsAction"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseTcpWithHttpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> optionsAction)
+    {
+        builder.Services.Configure(optionsAction);
+        builder.Services.AddHostedService<TcpWithHttpForwarderBackgroundService>();
+        builder.UseHttpForwarder();
         return builder;
     }
 }

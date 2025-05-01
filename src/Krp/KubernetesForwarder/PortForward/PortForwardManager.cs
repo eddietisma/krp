@@ -34,7 +34,7 @@ public class PortForwardManager
     {
         var handler = _serviceProvider.GetService<PortForwardHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
-        handler.LocalIp = IPAddress.Parse($"127.0.0.{_handlers.Count + 1}");
+        handler.LocalIp = IPAddress.Parse($"127.0.0.{_handlers.Count}");
         handler.LocalPort = endpoint.LocalPort;
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;

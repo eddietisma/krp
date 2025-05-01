@@ -4,7 +4,6 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 #USER $APP_UID
 WORKDIR /app
-EXPOSE 8080
 
 # Install dependencies
 RUN apt-get update && apt-get install -y curl jq unzip lsb-release sudo gnupg apt-transport-https ca-certificates
@@ -45,6 +44,3 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Krp.dll"]
-
-
-

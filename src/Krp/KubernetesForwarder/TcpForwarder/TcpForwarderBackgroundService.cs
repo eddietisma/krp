@@ -49,6 +49,8 @@ public class TcpForwarderBackgroundService : BackgroundService
                     var localIp = localEndPoint?.Address;
                     var localPort = localEndPoint?.Port;
 
+                    _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
+
                     var portForwardHandler = _portForwardManager.GetByIpPort(localIp);
                     if (portForwardHandler == null)
                     {
