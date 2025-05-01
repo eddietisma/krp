@@ -1,6 +1,5 @@
 using Krp.DependencyInjection;
 using Krp.KubernetesForwarder.Models;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -39,16 +38,24 @@ public class Program
                         //options.Filter = ["namespace/meetings/*", "namespace/*/service/person*"];
                         options.RefreshInterval = TimeSpan.FromHours(1);
                     })
-                    .UseRouting(KrpRouting.WindowsHostsFile)
                     //.UseHttpForwarder()
-                    .UseTcpForwarder(options =>
+                    //.UseTcpForwarder(options =>
+                    //{
+                    //    options.DefaultTimeout = TimeSpan.FromSeconds(30);
+                    //    options.DefaultBufferSize = 8192;
+                    //    options.ListenAddress = IPAddress.Any;
+                    //    options.ListenPort = 80;
+                    //    options.MaxConnections = 100;
+                    //})
+                    .UseTcpWithHttpForwarder(options =>
                     {
                         options.DefaultTimeout = TimeSpan.FromSeconds(30);
                         options.DefaultBufferSize = 8192;
                         options.ListenAddress = IPAddress.Any;
                         options.ListenPort = 80;
                         options.MaxConnections = 100;
-                    });
+                    })
+                    .UseRouting(KrpRouting.WindowsHostsFile);
             });
 
 }
