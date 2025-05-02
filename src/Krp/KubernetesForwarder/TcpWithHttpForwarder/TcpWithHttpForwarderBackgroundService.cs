@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.TcpWithHttpForwarder;
 
+/// <summary>
+/// Opens a TCP connection and inspects traffic and routes HTTP requests to different HTTP forwarding ports (81 for HTTP/1.1 and 82 for HTTP/2).
+/// </summary>
 public class TcpWithHttpForwarderBackgroundService : BackgroundService
 {
     private static readonly byte[] _http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();

@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.TcpForwarder;
 
+/// <summary>
+/// Opens a TCP connection and forwards requests to Kubernetes based on originating ip (using domain-based IP per hostname in HOSTS file).
+/// </summary>
 public class TcpForwarderBackgroundService : BackgroundService
 {
     private readonly PortForwardManager _portForwardManager;
