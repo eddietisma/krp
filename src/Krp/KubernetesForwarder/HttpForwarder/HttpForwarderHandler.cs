@@ -11,6 +11,9 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace Krp.KubernetesForwarder.HttpForwarder;
 
+/// <summary>
+/// Uses Kestrel as HTTP server (configuration from appsettings.json) and forwards requests to Kubernetes based on domain.
+/// </summary>
 public class HttpForwarderHandler
 {
     private readonly PortForwardManager _portForwardManager;
