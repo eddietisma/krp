@@ -19,6 +19,20 @@ services:
       - ~/.kube:/root/.kube
       - azure:/root/.azure 
       - /c/Windows/System32/drivers/etc/:/windows_etc/ 
+    # privileged: true
+    network_mode: host
+#     networks:
+#       - krp
+
+# networks:
+#   krp:
+#     driver: bridge
+#     driver_opts:
+#       com.docker.network.bridge.gateway_mode_ipv4: "routed"
+#       com.docker.network.bridge.enable_ip_masquerade: "false"
+#     ipam:
+#       config:
+#         - subnet: 172.19.0.0/24
 
 volumes:
     krp_azure:
