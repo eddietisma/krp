@@ -14,6 +14,7 @@ This project uses:
 - Uses Windows HOST file to route URLs to KRP.
 - Removes all active port-fowardings on application exit.
 - Zero manual setup once running.
+- Scan active ports to dynamically route HTTP traffic to localhost (eg https://gateway.domain.com/api/).
 
 ## 🛠 How it works
 
