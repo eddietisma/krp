@@ -1,0 +1,35 @@
+
+# docker build -f Dockerfile.win -t krp/krp:latest_win .
+# docker compose -f docker-compose_win.yml up -d --force-recreate
+# az login --use-device-code
+# az login --use-device-code --tenant 8876461b-3d64-48b4-88a8-e7d81cbc3d1d
+# docker network create -d transparent krp_transparent
+# https://docs.docker.com/engine/network/packet-filtering-firewalls/#:~:text=The%20default%20is%20,will%20use%20a%20host%20address
+
+services:
+
+  krp:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.win
+    image: krp/krp:latest_win
+    container_name: krp
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      KRP_ENDPOINT_EXPLORER: false
+      # KRP_WINDOWS_HOSTS: /windows_etc/hosts
+    volumes:
+      - C:\Windows\System32\drivers\etc:C:\Windows\System32\drivers\etc
+      - ./.azure:c:\users\containeradministrator\.azure 
+      - c:\users\sonicue\.kube:c:\users\containeradministrator\.kube
+    networks:
+      - krp_transparent 
+
+networks:
+  krp_transparent:
+    driver: transparent
+    driver_opts:
+      com.docker.network.windowsshim.interface: "Ethernet 3"
+      com.docker.network.windowsshim.dnsservers: "8.8.8.8"

@@ -17,7 +17,7 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/
 
-# Install kubelogin (latest version)
+# Install kubelogin
 RUN LATEST_KUBELOGIN_VERSION=$(curl -s https://api.github.com/repos/Azure/kubelogin/releases/latest | jq -r .tag_name) && \
     curl -LO "https://github.com/Azure/kubelogin/releases/download/${LATEST_KUBELOGIN_VERSION}/kubelogin-linux-amd64.zip" && \
     unzip kubelogin-linux-amd64.zip && \
