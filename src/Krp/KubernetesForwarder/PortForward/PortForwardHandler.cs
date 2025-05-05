@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Krp.KubernetesForwarder.PortForward;
@@ -14,6 +15,7 @@ public class PortForwardHandler : IDisposable
     private Process _process;
     private int _localPort;
     private int? _localPortActual;
+    private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
     /// <summary>
     /// The local port to use for the port-forwarding. If set to 0, a random port will be used.
@@ -48,32 +50,42 @@ public class PortForwardHandler : IDisposable
 
     public async Task EnsureRunningAsync()
     {
-        if (_process is { HasExited: false })
+        // Ensure thread-safety to prevent running same kubectl command in simultaneously.
+        await _lock.WaitAsync();
+
+        try
         {
-            return;
-        }
-
-        if (LocalPort != 0 && !PortChecker.TryIsPortAvailable(LocalPort))
-        {
-            _logger.LogError("Port-forward failed, port {port} is not available", LocalPort);
-            return;
-        }
-
-        var (process, logs) = await _processRunner.RunCommandAsync("kubectl", $"port-forward {Type}/{Resource} {LocalPort}:{RemotePort} -n {Namespace}");
-
-        _process = process;
-
-        foreach (var log in logs)
-        {
-            if (!ReverseStructuredLogging.TryParse("Forwarding from 127.0.0.1:{port}-> {targetPort}", log, out var values))
+            if (_process is { HasExited: false })
             {
-                continue;
+                return;
             }
 
-            if (values.TryGetValue("port", out var value))
+            if (LocalPort != 0 && !PortChecker.TryIsPortAvailable(LocalPort))
             {
-                LocalPortActual = Convert.ToInt32(value);
+                _logger.LogError("Port-forward failed, port {port} is not available", LocalPort);
+                return;
             }
+
+            var (process, logs) = await _processRunner.RunCommandAsync("kubectl", $"port-forward {Type}/{Resource} {LocalPort}:{RemotePort} -n {Namespace}");
+
+            _process = process;
+
+            foreach (var log in logs)
+            {
+                if (!ReverseStructuredLogging.TryParse("Forwarding from 127.0.0.1:{port}-> {targetPort}", log, out var values))
+                {
+                    continue;
+                }
+
+                if (values.TryGetValue("port", out var value))
+                {
+                    LocalPortActual = Convert.ToInt32(value);
+                }
+            }
+        }
+        finally
+        {
+            _lock.Release();
         }
     }
 
