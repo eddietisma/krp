@@ -52,7 +52,7 @@ public class PortForwardHandler : IDisposable
         {
             return;
         }
-        
+
         if (LocalPort != 0 && !PortChecker.TryIsPortAvailable(LocalPort))
         {
             _logger.LogError("Port-forward failed, port {port} is not available", LocalPort);
