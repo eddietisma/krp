@@ -1,5 +1,5 @@
 using Krp.DependencyInjection;
-using Krp.KubernetesForwarder.Routing;
+using Krp.KubernetesForwarder.Dns;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -46,21 +46,16 @@ public class Program
                     //.UseHttpForwarder()
                     //.UseTcpForwarder(options =>
                     // {
-                    //    options.DefaultTimeout = TimeSpan.FromSeconds(30);
-                    //    options.DefaultBufferSize = 8192;
                     //    options.ListenAddress = IPAddress.Any;
                     //    options.ListenPort = 80;
-                    //    options.MaxConnections = 100;
+
                     // })
                     .UseTcpWithHttpForwarder(options =>
                     {
-                       options.DefaultTimeout = TimeSpan.FromSeconds(30);
-                       options.DefaultBufferSize = 8192;
-                       options.ListenAddress = IPAddress.Any;
-                       options.ListenPort = 80;
-                       options.MaxConnections = 100;
+                        options.ListenAddress = IPAddress.Any;
+                        options.ListenPort = 80;
                     })
-                    .UseRouting(KrpRouting.WindowsHostsFile);
+                    .UseRouting(DnsOptions.WindowsHostsFile);
             });
 
 }

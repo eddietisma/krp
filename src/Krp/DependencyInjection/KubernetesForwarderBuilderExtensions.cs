@@ -1,7 +1,7 @@
-﻿using Krp.KubernetesForwarder.EndpointExplorer;
+﻿using Krp.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.EndpointExplorer;
 using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.HttpForwarder;
-using Krp.KubernetesForwarder.Routing;
 using Krp.KubernetesForwarder.TcpForwarder;
 using Krp.KubernetesForwarder.TcpWithHttpForwarder;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,17 +102,17 @@ public static class KubernetesBuilderExtension
     }
 
     /// <summary>
-    /// Use Windows HOSTS file DNS routing.
+    /// Configures routing.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="routing"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, KrpRouting routing)
+    public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, DnsOptions routing)
     {
         builder.Services.AddHostedService<DnsUpdateBackgroundService>();
         switch (routing)
         {
-            case KrpRouting.WindowsHostsFile:
+            case DnsOptions.WindowsHostsFile:
                 builder.Services.Configure<DnsWindowsHostsOptions>(options =>
                 {
                     var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts");
@@ -125,6 +125,8 @@ public static class KubernetesBuilderExtension
                 });
                 builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
                 break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(routing), routing, null);
         }
 
         return builder;
