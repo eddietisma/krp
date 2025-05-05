@@ -5,25 +5,25 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.Routing;
+namespace Krp.KubernetesForwarder.Dns;
 
 public class DnsUpdateBackgroundService : BackgroundService
 {
-    private readonly EndpointManager _portForwardManager;
+    private readonly EndpointManager _endpointManager;
     private readonly ILogger<DnsUpdateBackgroundService> _logger;
     private readonly IDnsHandler _dnsHandler;
 
-    public DnsUpdateBackgroundService(EndpointManager portForwardManager, IDnsHandler dnsHandler, ILogger<DnsUpdateBackgroundService> logger)
+    public DnsUpdateBackgroundService(EndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsUpdateBackgroundService> logger)
     {
-        _portForwardManager = portForwardManager;
-        _portForwardManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
+        _endpointManager = endpointManager;
+        _endpointManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
         _dnsHandler = dnsHandler;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_portForwardManager.GetAllHandlers().Count == 0)
+        if (_endpointManager.GetAllHandlers().Count == 0)
         {
             return;
         }
@@ -36,19 +36,19 @@ public class DnsUpdateBackgroundService : BackgroundService
 
     private async Task OnEndPointsChangedEvent()
     {
-        if (_portForwardManager.GetAllHandlers().Count == 0)
+        if (_endpointManager.GetAllHandlers().Count == 0)
         {
             return;
         }
 
-        // Configures all endpoints by set using UseEndpointExplorer.
+        // Configures all endpoints set using UseEndpointExplorer.
         _logger.LogInformation("Updating DNS entries due to new endpoint changes....");
         await UpdateDns();
     }
 
     private async Task UpdateDns()
     {
-        var hostnames = _portForwardManager
+        var hostnames = _endpointManager
             .GetAllHandlers()
             .Where(x => !string.IsNullOrEmpty(x.Url))
             .Select(x => $"{x.LocalIp} {x.Hostname}")
