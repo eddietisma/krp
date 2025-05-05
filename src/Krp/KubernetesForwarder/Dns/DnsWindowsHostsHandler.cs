@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.Routing;
+namespace Krp.KubernetesForwarder.Dns;
 
 public interface IDnsHandler
 {

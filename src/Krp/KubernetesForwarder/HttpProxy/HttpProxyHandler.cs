@@ -1,5 +1,6 @@
-﻿using Krp.KubernetesForwarder.PortForward;
-using Krp.KubernetesForwarder.Routing;
+﻿using Krp.Common;
+using Krp.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.PortForward;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Threading.Tasks;

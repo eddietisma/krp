@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -52,6 +53,24 @@ public class HttpForwarderBackgroundService : BackgroundService
             })
             .ConfigureWebHostDefaults(webBuilder =>
             {
+                webBuilder.ConfigureKestrel(serverOptions =>
+                {
+                    serverOptions.ListenAnyIP(81, listenOptions =>
+                    {
+                        listenOptions.Protocols = HttpProtocols.Http1;
+                    });
+
+                    serverOptions.ListenAnyIP(82, listenOptions =>
+                    {
+                        listenOptions.Protocols = HttpProtocols.Http2;
+                    });
+
+                    serverOptions.ListenAnyIP(443, listenOptions =>
+                    {
+                        listenOptions.UseHttps(); // Use default dev certs for HTTPS.
+                        listenOptions.Protocols = HttpProtocols.Http1;
+                    });
+                });
                 webBuilder.UseStartup<Startup>();
             });
 

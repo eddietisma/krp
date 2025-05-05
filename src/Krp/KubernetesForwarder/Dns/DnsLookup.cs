@@ -5,7 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.Routing;
+namespace Krp.KubernetesForwarder.Dns;
 
 public interface IDnsLookupHandler
 {

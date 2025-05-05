@@ -1,6 +1,7 @@
-﻿using Krp.KubernetesForwarder.Endpoints;
+﻿using Krp.Common;
+using Krp.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.PortForward;
-using Krp.KubernetesForwarder.Routing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
@@ -15,18 +16,18 @@ using Yarp.ReverseProxy.Forwarder;
 namespace Krp.KubernetesForwarder.HttpForwarder;
 
 /// <summary>
-/// Uses Kestrel as HTTP server (configuration from appsettings.json) and forwards requests to Kubernetes based on domain.
+/// Uses Kestrel as HTTP server and forwards requests to Kubernetes based on domain.
 /// </summary>
 public class HttpForwarderHandler
 {
-    private readonly EndpointManager _portForwardManager;
+    private readonly EndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
     private readonly IDnsLookupHandler _dnsLookupHandler;
     private readonly ILogger<HttpForwarderHandler> _logger;
 
-    public HttpForwarderHandler(EndpointManager portForwardManager, IHttpForwarder forwarder, IDnsLookupHandler dnsLookupHandler, ILogger<HttpForwarderHandler> logger)
+    public HttpForwarderHandler(EndpointManager endpointManager, IHttpForwarder forwarder, IDnsLookupHandler dnsLookupHandler, ILogger<HttpForwarderHandler> logger)
     {
-        _portForwardManager = portForwardManager;
+        _endpointManager = endpointManager;
         _forwarder = forwarder;
         _dnsLookupHandler = dnsLookupHandler;
         _logger = logger;
@@ -34,40 +35,28 @@ public class HttpForwarderHandler
 
     public async Task HandleRequest(HttpContext httpContext)
     {
-        _logger.LogInformation("Received {requestUrl}", httpContext.Request.GetEncodedUrl());
-
-        var endpoint = _portForwardManager.GetHttpEndpointByUrl(httpContext.Request.Host.Host, httpContext.Request.Path);
-        var portForwardHandler = _portForwardManager.GetHandlerByUrl(httpContext.Request.Host.Host);
-
-        if (portForwardHandler != null)
-        {
-            await portForwardHandler.EnsureRunningAsync();
-        }
+        _logger.LogDebug("Received {requestUrl}", httpContext.Request.GetEncodedUrl());
 
         var destinationUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
 
-        if (portForwardHandler != null)
-        {
-            destinationUrl = $"http://localhost:{portForwardHandler.LocalPort}";
-        }
-   
+        var endpoint = _endpointManager.GetHttpEndpointByUrl(httpContext.Request.Host.Host, httpContext.Request.Path);
         if (endpoint != null && !PortChecker.TryIsPortAvailable(endpoint.LocalPort))
         {
-            destinationUrl = $"http://localhost:{endpoint.LocalPort}";
-
             if (httpContext.Request.Path.StartsWithSegments(endpoint.Path, out var remaining))
             {
                 httpContext.Request.Path = remaining;
             }
+
+            destinationUrl = $"http://localhost:{endpoint.LocalPort}";
         }
 
-        //if (endpoint == null && portForwardHandler == null)
-        //{
-        //    _logger.LogWarning("Invalid url for proxy request: {requestUrl}", httpContext.Request.Host.Host);
-        //    await httpContext.Response.WriteAsync($"Invalid HTTP proxy request. No matching routing for: '{httpContext.Request.Host.Host}'");
-        //    return;
-        //}
-
+        var portForwardHandler = _endpointManager.GetHandlerByUrl(httpContext.Request.Host.Host);
+        if (portForwardHandler != null)
+        {
+            await portForwardHandler.EnsureRunningAsync();
+            destinationUrl = $"http://localhost:{portForwardHandler.LocalPort}";
+        }
+        
         _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", httpContext.Request.GetEncodedUrl(), destinationUrl);
 
         var socketsHandler = new SocketsHttpHandler
