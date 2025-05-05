@@ -14,6 +14,7 @@ This project uses:
 - Uses Windows HOST file to route URLs to KRP.
 - Removes all active port-fowardings on application exit.
 - Zero manual setup once running.
+- Scan active ports to dynamically route HTTP traffic to localhost (eg https://gateway.domain.com/api/).
 
 ## 🛠 How it works
 
@@ -63,9 +64,10 @@ curl http://my-api-service.default.svc.cluster.local/
 
 ## Running inside Docker
 1. Start docker-desktop as administrator (for hosts file access).
-1. Run `docker buildx bake`
-1. Run `docker compose up -d`
-1. Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login` (for Azure AKS)
+1. Run `docker buildx bake`.
+1. Run `docker compose up -d`.
+1. Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login` (for Azure AKS).
+1. (Windows only) Enable host networking.
 
 ```
 # Mount the kubeconfig for monitoring context switching
@@ -111,10 +113,3 @@ volumes:
 - Opens a TCP connection and inspects traffic and routes HTTP to different server ports (81 for HTTP/1.1 and 82 for HTTP/2).
 - Supports domain based routing (using domain-based IP per hostname in HOSTS file)
 - **Docker only:** Due to limitation with Docker networking NAT all traffic will always originate from Docker gateway - limiting routing to HTTP requests only.
-
-## Hosting in docker
-
-For windows hosts:
-1) Enable host networking
-
-
