@@ -1,7 +1,6 @@
 ﻿using k8s;
 using k8s.Models;
-using Krp.KubernetesForwarder.Models;
-using Krp.KubernetesForwarder.PortForward;
+using Krp.KubernetesForwarder.Endpoints;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
@@ -14,13 +13,13 @@ namespace Krp.KubernetesForwarder.EndpointExplorer;
 
 public class EndpointExplorerHandler
 {
-    private readonly PortForwardManager _portForwardManager;
+    private readonly EndpointManager _endpointManager;
     private readonly ILogger<EndpointExplorerHandler> _logger;
     private readonly List<Regex> _compiledFilters = new();
 
-    public EndpointExplorerHandler(IOptions<EndpointExplorerOptions> options, PortForwardManager portForwardManager, ILogger<EndpointExplorerHandler> logger)
+    public EndpointExplorerHandler(IOptions<EndpointExplorerOptions> options, EndpointManager endpointManager, ILogger<EndpointExplorerHandler> logger)
     {
-        _portForwardManager = portForwardManager;
+        _endpointManager = endpointManager;
         _logger = logger;
 
         foreach (var pattern in options.Value.Filter)
@@ -74,10 +73,10 @@ public class EndpointExplorerHandler
                     Type = "service",
                 };
 
-                _portForwardManager.AddEndpoint(endpoint);
+                _endpointManager.AddEndpoint(endpoint);
             }
         }
 
-        _portForwardManager.TriggerEndPointsChangedEvent();
+        _endpointManager.TriggerEndPointsChangedEvent();
     }
 }

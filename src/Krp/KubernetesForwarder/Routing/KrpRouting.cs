@@ -1,4 +1,4 @@
-﻿namespace Krp.KubernetesForwarder.Models;
+﻿namespace Krp.KubernetesForwarder.Routing;
 
 public enum KrpRouting
 {

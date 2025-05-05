@@ -1,6 +1,6 @@
 ﻿using Krp.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.HttpForwarder;
-using Krp.KubernetesForwarder.Models;
 using Krp.KubernetesForwarder.Routing;
 using Krp.KubernetesForwarder.TcpForwarder;
 using Krp.KubernetesForwarder.TcpWithHttpForwarder;
@@ -12,6 +12,19 @@ namespace Krp.DependencyInjection;
 
 public static class KubernetesBuilderExtension
 {
+    /// <summary>
+    /// Use DNS lookups to resolve hostnames to IP addresses.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="optionsAction"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseDnsLookup(this KubernetesForwarderBuilder builder, Action<DnsLookupOptions> optionsAction)
+    {
+        builder.Services.AddSingleton<IDnsLookupHandler, DnsLookupHandler>();
+        builder.Services.Configure(optionsAction);
+        return builder;
+    }
+
     /// <summary>
     /// Define a new endpoint that will get proxied and port-forwarded when URL matches '{resource}.{ns}:{port}'.
     /// </summary>
@@ -35,6 +48,28 @@ public static class KubernetesBuilderExtension
                 IsStatic = true,
             });
         });
+        return builder;
+    }
+
+    /// <summary>
+    /// Define a new HTTP endpoint that will get proxied when URL matches '{host}/{path}' and local port is active.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="localPort"></param>
+    /// <param name="host"></param>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseHttpEndpoint(this KubernetesForwarderBuilder builder, int localPort, string host, string path = null)
+    {
+        builder.Services.Configure<KubernetesForwarderOptions>(options =>
+        {
+            options.HttpEndpoints.Add(new KrpHttpEndpoint
+            {
+                Host = host,
+                LocalPort = localPort,
+                Path = path,
+            });
+        });
 
         return builder;
     }
@@ -49,36 +84,7 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.Configure(optionsAction);
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
-        return builder;
-    }
-
-    /// <summary>
-    /// Use Windows HOSTS file DNS routing.
-    /// </summary>
-    /// <param name="builder"></param>
-    /// <param name="routing"></param>
-    /// <returns></returns>
-    public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, KrpRouting routing)
-    {
-        builder.Services.AddHostedService<DnsUpdateBackgroundService>();
-
-        switch (routing)
-        {
-            case KrpRouting.WindowsHostsFile:
-                builder.Services.Configure<DnsWindowsHostsOptions>(options =>
-                {
-                    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts");
-
-                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS")))
-                    {
-                        path = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS");
-                    }
-
-                    options.Path = path;
-                });
-                builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
-                break;
-        }
+        builder.Services.AddSingleton<EndpointExplorerHandler>();
 
         return builder;
     }
@@ -92,6 +98,35 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.AddHostedService<HttpForwarderBackgroundService>();
         builder.Services.AddSingleton(builder.Services);
+        return builder;
+    }
+
+    /// <summary>
+    /// Use Windows HOSTS file DNS routing.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="routing"></param>
+    /// <returns></returns>
+    public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, KrpRouting routing)
+    {
+        builder.Services.AddHostedService<DnsUpdateBackgroundService>();
+        switch (routing)
+        {
+            case KrpRouting.WindowsHostsFile:
+                builder.Services.Configure<DnsWindowsHostsOptions>(options =>
+                {
+                    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts");
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS")))
+                    {
+                        path = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS");
+                    }
+
+                    options.Path = path;
+                });
+                builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
+                break;
+        }
+
         return builder;
     }
 

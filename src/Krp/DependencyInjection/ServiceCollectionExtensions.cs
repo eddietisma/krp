@@ -1,5 +1,5 @@
 ﻿using Krp.KubernetesForwarder.ContextSwitching;
-using Krp.KubernetesForwarder.EndpointExplorer;
+using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.PortForward;
 using Meziantou.Framework.Win32;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +14,6 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static KubernetesForwarderBuilder AddKubernetesForwarder(this IServiceCollection services)
     {
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
 #pragma warning disable CA1416
@@ -27,8 +26,7 @@ public static class ServiceCollectionExtensions
         var builder = new KubernetesForwarderBuilder(services);
 
         services.AddHostedService<ContextSwitchingWatcher>();
-        services.AddSingleton<EndpointExplorerHandler>();
-        services.AddSingleton<PortForwardManager>();
+        services.AddSingleton<EndpointManager>();
         services.AddTransient<PortForwardHandler>();
         services.AddSingleton<ProcessRunner>();
 
