@@ -1,4 +1,4 @@
-﻿using Krp.KubernetesForwarder.PortForward;
+﻿using Krp.KubernetesForwarder.Endpoints;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,14 +15,14 @@ namespace Krp.KubernetesForwarder.TcpForwarder;
 /// </summary>
 public class TcpForwarderBackgroundService : BackgroundService
 {
-    private readonly PortForwardManager _portForwardManager;
+    private readonly EndpointManager _endpointManager;
     private readonly ILogger<TcpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _options;
     private TcpListener _listener;
 
-    public TcpForwarderBackgroundService(PortForwardManager portForwardManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
+    public TcpForwarderBackgroundService(EndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
     {
-        _portForwardManager = portForwardManager;
+        _endpointManager = endpointManager;
         _logger = logger;
         _options = options.Value;
     }
@@ -54,7 +54,7 @@ public class TcpForwarderBackgroundService : BackgroundService
 
                     _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 
-                    var portForwardHandler = _portForwardManager.GetByIpPort(localIp);
+                    var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
                     if (portForwardHandler == null)
                     {
                         _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);

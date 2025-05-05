@@ -1,5 +1,5 @@
 using Krp.DependencyInjection;
-using Krp.KubernetesForwarder.Models;
+using Krp.KubernetesForwarder.Routing;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -18,6 +18,7 @@ public class Program
             .ConfigureServices(services =>
             {
                 services.AddKubernetesForwarder()
+                    .UseHttpEndpoint(5000, "gateway-api.qa.hsb.se", "/meetings")
                     .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-attestorder-grpcserver-api")
                     .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-notification-grpcserver-api")
                     .UseEndpoint(0, 80, "associdocs", "documents-api")
@@ -38,22 +39,26 @@ public class Program
                         //options.Filter = ["namespace/meetings/*", "namespace/*/service/person*"];
                         options.RefreshInterval = TimeSpan.FromHours(1);
                     })
+                    .UseDnsLookup(options =>
+                    {
+                        options.Nameserver = "8.8.8.8";
+                    })
                     //.UseHttpForwarder()
                     //.UseTcpForwarder(options =>
-                    //{
+                    // {
                     //    options.DefaultTimeout = TimeSpan.FromSeconds(30);
                     //    options.DefaultBufferSize = 8192;
                     //    options.ListenAddress = IPAddress.Any;
                     //    options.ListenPort = 80;
                     //    options.MaxConnections = 100;
-                    //})
+                    // })
                     .UseTcpWithHttpForwarder(options =>
                     {
-                        options.DefaultTimeout = TimeSpan.FromSeconds(30);
-                        options.DefaultBufferSize = 8192;
-                        options.ListenAddress = IPAddress.Any;
-                        options.ListenPort = 80;
-                        options.MaxConnections = 100;
+                       options.DefaultTimeout = TimeSpan.FromSeconds(30);
+                       options.DefaultBufferSize = 8192;
+                       options.ListenAddress = IPAddress.Any;
+                       options.ListenPort = 80;
+                       options.MaxConnections = 100;
                     })
                     .UseRouting(KrpRouting.WindowsHostsFile);
             });
