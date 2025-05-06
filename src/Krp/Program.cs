@@ -19,6 +19,8 @@ public class Program
             {
                 services.AddKubernetesForwarder()
                     .UseHttpEndpoint(5000, "gateway-api.qa.hsb.se", "/meetings")
+                    .UseHttpEndpoint(5001, "gateway-api.qa.hsb.se", "/meetings-nominations")
+                    .UseHttpEndpoint(5002, "gateway-api.qa.hsb.se", "/assignmentattest/electedmembers")
                     .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-attestorder-grpcserver-api")
                     .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-notification-grpcserver-api")
                     .UseEndpoint(0, 80, "associdocs", "documents-api")
