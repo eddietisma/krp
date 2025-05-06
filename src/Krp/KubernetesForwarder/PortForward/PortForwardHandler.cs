@@ -50,7 +50,7 @@ public class PortForwardHandler : IDisposable
 
     public async Task EnsureRunningAsync()
     {
-        // Ensure thread-safety to prevent running same kubectl command in simultaneously.
+        // Prevent running same kubectl command in simultaneously to ensure thread-safety.
         await _lock.WaitAsync();
 
         try
