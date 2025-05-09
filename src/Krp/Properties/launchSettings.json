@@ -12,11 +12,13 @@
       "commandName": "Docker",
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "environmentVariables": {
-        "ASPNETCORE_HTTP_PORTS": "80"
+        "ASPNETCORE_HTTP_PORTS": "80",
+        "ASPNETCORE_HTTPS_PORTS": "443"
       },
       "publishAllPorts": true,
-      "useSSL": false,
-      "httpPort": 80
+      "useSSL": true,
+      "httpPort": 80,
+      "sslPort": 443
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"

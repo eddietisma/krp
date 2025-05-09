@@ -6,6 +6,7 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <DockerfileRunArguments>-v $(USERPROFILE)/.kube:/root/.kube -v azure:/root/.azure -v /c/Windows/System32/drivers/etc/:/windows_etc/</DockerfileRunArguments>
+    <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
