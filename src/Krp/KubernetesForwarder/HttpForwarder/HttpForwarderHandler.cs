@@ -35,7 +35,9 @@ public class HttpForwarderHandler
 
     public async Task HandleRequest(HttpContext httpContext)
     {
-        _logger.LogDebug("Received {requestUrl}", httpContext.Request.GetEncodedUrl());
+        var requestUrl = httpContext.Request.GetEncodedUrl();
+
+        _logger.LogDebug("Received {requestUrl}", requestUrl);
 
         var destinationUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
 
@@ -48,6 +50,11 @@ public class HttpForwarderHandler
             }
 
             destinationUrl = $"http://localhost:{endpoint.LocalPort}";
+
+            if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+            {
+                destinationUrl = $"http://host.docker.internal:{endpoint.LocalPort}";
+            }
         }
 
         var portForwardHandler = _endpointManager.GetHandlerByUrl(httpContext.Request.Host.Host);
@@ -57,7 +64,7 @@ public class HttpForwarderHandler
             destinationUrl = $"http://localhost:{portForwardHandler.LocalPort}";
         }
         
-        _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", httpContext.Request.GetEncodedUrl(), destinationUrl);
+        _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", requestUrl, destinationUrl);
 
         var socketsHandler = new SocketsHttpHandler
         {
@@ -70,7 +77,7 @@ public class HttpForwarderHandler
             ConnectTimeout = TimeSpan.FromSeconds(15),
         };
     
-        if (!destinationUrl.Contains("localhost"))
+        if (!destinationUrl.Contains("localhost") && !destinationUrl.Contains("host.docker.internal"))
         {
             socketsHandler.ConnectCallback = async (context, cancellationToken) =>
             {
