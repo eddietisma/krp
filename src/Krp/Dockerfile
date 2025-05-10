@@ -23,7 +23,6 @@ RUN LATEST_KUBELOGIN_VERSION=$(curl -s https://api.github.com/repos/Azure/kubelo
     mv bin/linux_amd64/kubelogin /usr/local/bin/ && \
     rm kubelogin-linux-amd64.zip
 
-
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
