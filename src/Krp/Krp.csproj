@@ -1,14 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>krp</ToolCommandName>
-    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
     <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
+    <IsPackable>true</IsPackable>
+    <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
+
+    <!--Tool-->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>krp</ToolCommandName>
+
+    <!--Package-->
+    <Authors>Eddie Tisma</Authors>
+    <PackageId>krp</PackageId>
+    <PackageProjectUrl>https://github.com/eddietisma/krp</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Link="README.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.8.2" />
