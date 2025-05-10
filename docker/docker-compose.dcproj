@@ -13,4 +13,7 @@
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
   </ItemGroup>
+	<!--https://github.com/dotnet/sdk/issues/35134-->
+	<Target Name="Pack">
+	</Target>
 </Project>
