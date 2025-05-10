@@ -40,9 +40,8 @@ jobs:
           echo "version=${latest_release}-beta${{ github.run_number }}-${short_sha}" >> $GITHUB_OUTPUT
         fi
 
-
     - name: Pack
       run: dotnet pack ./src/Krp/Krp.csproj --configuration Release --no-build --output ./nupkgs -p:PackageVersion=${{ steps.version.outputs.version }}
 
     - name: Push
-      run: dotnet nuget push ./nupkgs/*.nupkg --no-symbols --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
