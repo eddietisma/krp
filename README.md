@@ -1,33 +1,38 @@
-# KRP
+# krp - Kubernetes Reverse Proxy
 
-A lightweight Kubernetes Reverse Proxy.
+**krp** is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless HTTP routing to internal Kubernetes resources. The tool facilitates automatic cleanup of active port forwards and provides dynamic routing of HTTP traffic via localhost using the Windows hosts file, with zero manual setup.
 
-This project uses:
-- [YARP](https://github.com/dotnet/yarp/) (Yet Another Reverse Proxy) to dynamically route HTTP(S) traffic.
-- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/) to forward internal Kubernetes services and pods to your local machine.
-- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp) to discover endpoints detect Kubernetes context switching.
-- Modifies hosts file for DNS resolution of internal Kubernetes resources.
+## **Key Features**
+- **On-Demand Port Forwarding:** Forward internal Kubernetes resources to your local machine automatically.
+- **Context-Sensitive Port Management:** Automatically adapts to changes in Kubernetes context and cluster.
+- **Automatic Cleanup:** All active port forwards are cleaned up on application exit.
+- **Dynamic Traffic Routing:** Routes HTTP(S) traffic to localhost through the Windows hosts file.
+- **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
 
-### Features
-- On-demand port forwarding to internal Kubernetes resources.
-- Automatically handles active port-forwards when switching Kube context/cluster.
-- Automatically removes all active port-fowardings on application exit.
-- Uses Windows HOST file to route URLs to KRP.
-- Scans active ports to dynamically route HTTP traffic to localhost (eg https://gateway.domain.com/api/).
-- Zero manual setup once running.
+## **Core Dependencies**
+- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) traffic routing capabilities.
+- [DnsClient](https://github.com/MichaCo/DnsClient.NET): Facilitates DNS lookups when resolving Kubernetes service endpoints.
+- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes service or pod ports to local machine ports.
+- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
 
-## How it works 🛠
+## **How KRP Works**
 
-1. **Hosts modification**:  
-   Adds cluster internal names (like `my-service.namespace.svc.cluster.local`) to your local hosts file, resolving to `127.0.0.1`.
+1. **Host File Modifications:**  
+   KRP adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
 
-2. **Port-forwarding with kubectl**:  
-   Forwards Kubernetes service or pod ports to your local machine, using dynamically selected free ports.
+2. **Port Forwarding with `kubectl`:**  
+   KRP forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
 
-3. **Reverse proxying with YARP**:  
-   YARP listens on your machine and proxies HTTP(S) requests to the correct port-forwarded target automatically.
+3. **Reverse Proxying with YARP:**  
+   YARP listens on the local machine and proxies HTTP(S) requests to the appropriate port-forwarded targets.
 
-## Getting started 🚀
+## **Getting Started** 🚀
+
+### Prerequisites
+- **`kubectl`**: Must be installed and authenticated against your Kubernetes cluster.
+- **Administrator Permissions**: Because KRP modifies the Windows hosts file, the application must be run with administrator privileges.
+
+### Installation
 
 ```powershell
 git clone https://github.com/eddietisma/krp.git
@@ -35,21 +40,20 @@ cd krp
 dotnet run
 ```
 
-Make sure:
-- `kubectl` is installed and authenticated against your cluster.
-- Because this app modifies the Windows hosts, you **must** run it **as administrator**. ⚠️
+## **Usage**
 
-## Example 📋
+### Use Case
 
-Suppose your cluster has a service like:
+Assume your cluster has a service exposed at `myservice.myapi:8080`. With KRP running:
 
+- The Windows hosts file will be modified to resolve `myservice.myapi` to `127.0.0.1`.
+- HTTP traffic will be routed through the local port-forward and proxied via YARP.
+
+You can then make requests as if the service was hosted locally:
+
+```powershell
+curl http://myservice.myapi
 ```
-myservice.myapi:8080
-```
-
-Once running:
-- The hosts file will resolve `myservice.myapi -> 127.0.0.1`
-- Traffic will automatically be routed through a local port-forward and proxied.
 
 You can now just **curl**:
 
@@ -57,19 +61,19 @@ You can now just **curl**:
 curl http://myservice.myapi
 ```
 
-## Usage
-
 ### Configuration
+
+You can configure KRP's port-forwarding and routing behavior by adding service definitions as follows:
 
 ```csharp
 services.AddKubernetesForwarder()
     .UseHttpEndpoint(5000, "api.domain.com", "/api")
     .UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
-    .UseEndpoint(9032, 80, "namespace", "myapi") // Specify local ports.
-    .UseEndpoint(0, 80, "namespace", "myapi") // Use 0 for dynamic ports.
+    .UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
+    .UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
     .UseEndpointExplorer(options =>
     {
-        // Specify filters to only map specific namespaces/services/pods.
+        // Filters to map specific namespaces, services, or pods
         options.Filter = [
            "namespace/meetings/*",
            "namespace/*/service/person*",
@@ -78,7 +82,7 @@ services.AddKubernetesForwarder()
     })
     .UseDnsLookup(options =>
     {
-        // Used to fetch real IP for HTTP endpoints as fall-back when local port is not active.
+        // Use a fallback DNS resolver if the local port is not active
         options.Nameserver = "8.8.8.8";
     })
     //.UseHttpForwarder()
@@ -95,7 +99,7 @@ services.AddKubernetesForwarder()
     .UseRouting(DnsOptions.WindowsHostsFile);
 ```
 
-### Forwarders
+### Forwarders Available
 `UseHttpForwarder`
 - Supports HTTP (only).
 - Supports domain based routing.
@@ -103,27 +107,35 @@ services.AddKubernetesForwarder()
 
 `UseTcpForwarder`
 - Supports low-level TCP requests (eg. databases, HTTP/x / gRCP).
-- Supports domain based routing (using domain-based IP per hostname in HOSTS file).
+- Supports domain based routing (using domain-based IP per hostname in hosts file).
 - **Docker only:** No support for domain based routing under Windows hosts due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all IP originates from Docker gateway).
 
 `UseTcpWithHttpForwarder` (**default**)
 - Supports low-level TCP requests and forwards HTTP/x request to `HttpForwarder` using packet inspection.
 - Opens a TCP connection and inspects traffic and routes HTTP to different server ports (81 for HTTP/1.1 and 82 for HTTP/2).
-- Supports domain based routing (using domain-based IP per hostname in HOSTS file)
+- Supports domain based routing (using domain-based IP per hostname in hosts file)
 - **Docker only:** Due to limitation with Docker networking NAT all traffic will always originate from Docker gateway - limiting routing to HTTP requests only.
 
-## Running inside Docker
-1. Start docker-desktop as administrator (for hosts file access).
-1. Run `docker buildx bake`.
-1. Run `docker compose up -d`.
-1. **AKS only**: Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login`.
-1. **Windows only**: Enable host networking.
+## **Running in Docker**
 
-```
-# Mount the kubeconfig for monitoring context switching
-# Mount azure volume to preserve authentication used by Azure CLI
-# Mount the Windows hosts file to the container (required to routing traffic on Windows hosts)
+To run KRP in a Docker container, follow these steps:
 
+1. **Start Docker Desktop** as an administrator (required for hosts file modification).
+2. **Build and run the Docker container:**
+   ```bash
+   docker buildx bake
+   docker compose up -d
+   ```
+
+3. **For AKS (Azure Kubernetes Service):**  
+   Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login` to authenticate with Azure.
+
+4. **For Windows environments:**  
+   Ensure the **host network mode** is enabled in the Docker configuration.
+
+### Example `docker-compose.yml`
+
+```yaml
 services:
 
   krp:
@@ -146,9 +158,9 @@ volumes:
     azure:
 ```
 
-## 📦 Roadmap / Ideas
-- [x] Auto-discovery of k8s services.
+## Roadmap / Ideas
+- [x] Auto-discovery of Kubernetes services.
 - [ ] Cross-platform support (Linux/macOS).
-- [x] Low-level TCP support.
-- [ ] Low-level UDP support.
-- [ ] Remove hosts dependency using WinDivert/PF/iptables.
+- [x] Support for low-level TCP traffic forwarding.
+- [ ] Support for low-level UDP traffic forwarding.
+- [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** for more flexible routing.
