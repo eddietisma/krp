@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>krp</ToolCommandName>
-    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
@@ -11,7 +9,22 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <DockerfileRunArguments>-v $(USERPROFILE)/.kube:/root/.kube -v azure:/root/.azure -v /c/Windows/System32/drivers/etc/:/windows_etc/</DockerfileRunArguments>
+    <IsPackable>true</IsPackable>
+
+    <!--Tool-->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>krp</ToolCommandName>
+
+    <!--Package-->
+    <Authors>Eddie Tisma</Authors>
+    <PackageId>krp</PackageId>
+    <PackageProjectUrl>https://github.com/eddietisma/krp</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Link="README.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.8.2" />
