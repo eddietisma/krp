@@ -37,9 +37,8 @@ public class PortForwardHandler : IDisposable
     public string Namespace { get; set; }
     public int RemotePort { get; set; }
     public string Resource { get; set; }
-    public string Type { get; set; }
-    public string Url => RemotePort == 80 ? $"{Resource}.{Namespace}" : $"{Resource}.{Namespace}:{RemotePort}";
-    public string Hostname => $"{Resource}.{Namespace}";
+    public string Url => RemotePort == 80 ? Hostname : $"{Hostname}:{RemotePort}";
+    public string Hostname => $"{Resource.Substring("service/".Length)}.{Namespace}";
     public IPAddress LocalIp { get; set; }
 
     public PortForwardHandler(ProcessRunner processRunner, ILogger<PortForwardHandler> logger)
@@ -66,7 +65,7 @@ public class PortForwardHandler : IDisposable
                 return;
             }
 
-            var (process, logs) = await _processRunner.RunCommandAsync("kubectl", $"port-forward {Type}/{Resource} {LocalPort}:{RemotePort} -n {Namespace}");
+            var (process, logs) = await _processRunner.RunCommandAsync("kubectl", $"port-forward {Resource} {LocalPort}:{RemotePort} -n {Namespace}");
 
             _process = process;
 
