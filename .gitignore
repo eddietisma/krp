@@ -1,6 +1,6 @@
-## Arcade specific things
-
 .azure/
+
+## Arcade specific things
 
 # Ignore the local '.dotnet' runtime directory and local '.packages' directory (only during CI builds, but still shouldn't ever be checked in)
 .dotnet/
