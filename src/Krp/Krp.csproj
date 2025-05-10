@@ -14,6 +14,7 @@
 
     <!--Package-->
     <Authors>Eddie Tisma</Authors>
+    <Description>A reverse-proxy for dynamic port-forwarding to Kubernetes</Description>
     <PackageId>krp</PackageId>
     <PackageProjectUrl>https://github.com/eddietisma/krp</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -28,6 +29,10 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="KubernetesClient" />
     <PackageReference Include="Meziantou.Framework.Win32.Jobs" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Yarp.ReverseProxy" />
   </ItemGroup>
