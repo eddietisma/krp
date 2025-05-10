@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on: windows-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout code
@@ -33,18 +33,16 @@ jobs:
           echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
         else
           short_sha=$(git rev-parse --short HEAD)
-          echo "version=1.0.0-beta-${short_sha}" >> $GITHUB_OUTPUT
+          latest_release=$(git tag -l --sort=-creatordate | head -n 1)
+          if [ -z "$latest_release" ]; then
+            latest_release="1.0.0"
+          fi
+          echo "version=${latest_release}-beta${{ github.run_number }}-${short_sha}" >> $GITHUB_OUTPUT
         fi
 
+
     - name: Pack
-      run: dotnet pack ./src/Krp/Krp.csproj `
-        --configuration Release `
-        -p:PackageVersion=${{ steps.version.outputs.version }} `
-        --no-build `
-        --output ./nupkgs
+      run: dotnet pack ./src/Krp/Krp.csproj --configuration Release --no-build --output ./nupkgs -p:PackageVersion=${{ steps.version.outputs.version }}
 
     - name: Push
-      run: dotnet nuget push ./nupkgs/*.nupkg `
-        --source https://api.nuget.org/v3/index.json `
-        --api-key ${{ secrets.NUGET_API_KEY }} `
-        --skip-duplicate
+      run: dotnet nuget push ./nupkgs/*.nupkg --no-symbols --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
