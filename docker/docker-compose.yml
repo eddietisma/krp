@@ -4,7 +4,7 @@ services:
     privileged: true
     restart: no
     build:
-      context: src/Krp
+      context: ../src/Krp
       dockerfile: Dockerfile
     environment:
       KRP_ENDPOINT_EXPLORER: false
