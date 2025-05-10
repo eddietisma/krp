@@ -4,6 +4,7 @@ A lightweight Kubernetes Reverse Proxy.
 
 This project uses:
 - [YARP](https://github.com/dotnet/yarp/) (Yet Another Reverse Proxy) to dynamically route HTTP(S) traffic.
+- [DnsClient](https://github.com/MichaCo/DnsClient.NET) for DNS lookups when using HTTP endpoints.
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/) to forward internal Kubernetes services and pods to your local machine.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp) to discover endpoints detect Kubernetes context switching.
 - Modifies hosts file for DNS resolution of internal Kubernetes resources.
