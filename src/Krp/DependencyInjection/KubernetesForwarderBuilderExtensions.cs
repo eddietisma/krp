@@ -44,7 +44,6 @@ public static class KubernetesBuilderExtension
                 Namespace = ns,
                 RemotePort = remotePort,
                 Resource = resource,
-                Type = "service",
                 IsStatic = true,
             });
         });
