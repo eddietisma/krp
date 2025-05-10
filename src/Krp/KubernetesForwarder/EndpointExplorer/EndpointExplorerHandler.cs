@@ -69,8 +69,7 @@ public class EndpointExplorerHandler
                     LocalPort = 0,
                     Namespace = service.Namespace(),
                     RemotePort = port.Port,
-                    Resource = service.Name(),
-                    Type = "service",
+                    Resource = $"service/{service.Name()}",
                 };
 
                 _endpointManager.AddEndpoint(endpoint);

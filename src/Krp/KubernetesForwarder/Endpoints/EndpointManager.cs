@@ -39,7 +39,7 @@ public class EndpointManager
     public void AddEndpoint(KrpHttpEndpoint endpoint)
     {
         _httpEndpoints.Add(endpoint);
-        _logger.LogDebug("Registered HTTP endpoint for {host}", endpoint.Host);
+        _logger.LogDebug("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
     }
 
     public void AddEndpoint(KrpEndpoint endpoint)
@@ -51,7 +51,6 @@ public class EndpointManager
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;
         handler.Resource = endpoint.Resource;
-        handler.Type = endpoint.Type;
 
         if (_handlers.Any(x => x.Url == handler.Url))
         {

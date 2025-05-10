@@ -7,5 +7,4 @@ public class KrpEndpoint
     public string Namespace { get; set; }
     public int RemotePort { get; set; }
     public string Resource { get; set; }
-    public string Type { get; set; }
 }
