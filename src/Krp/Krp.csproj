@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>krp</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
     <TargetFramework>net9.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
