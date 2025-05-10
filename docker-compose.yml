@@ -1,38 +1,21 @@
-# Mount the kubeconfig for monitoring context switching
-# Mount azure volume to preserve authentication used by Azure CLI
-# Mount the Windows hosts file to the container (required to routing traffic on Windows hosts)
-
 services:
-
   krp:
+    image: ${DOCKER_REGISTRY-}krp
+    privileged: true
+    restart: no
     build:
-      context: .
-    image: krp/krp:latest
-    container_name: krp
-    restart: unless-stopped
-    ports:
-      - "80:80"
+      context: src/Krp
+      dockerfile: Dockerfile
     environment:
       KRP_ENDPOINT_EXPLORER: false
       KRP_WINDOWS_HOSTS: /windows_etc/hosts
     volumes:
-      - ~/.kube:/root/.kube
-      - azure:/root/.azure 
-      - /c/Windows/System32/drivers/etc/:/windows_etc/ 
-    # privileged: true
-    network_mode: host
-#     networks:
-#       - krp
-
-# networks:
-#   krp:
-#     driver: bridge
-#     driver_opts:
-#       com.docker.network.bridge.gateway_mode_ipv4: "routed"
-#       com.docker.network.bridge.enable_ip_masquerade: "false"
-#     ipam:
-#       config:
-#         - subnet: 172.19.0.0/24
+      - ~/.kube:/root/.kube # Mount the kubeconfig for monitoring context switching.
+      - ~/.kube:/home/app/.kube
+      - azure:/root/.azure # Mount azure volume to preserve authentication used by Azure CLI (if using Azure AKS).
+      - azure:/home/app/.azure
+      - /c/Windows/System32/drivers/etc/:/windows_etc/ # Mount the hosts file to the container (required to route traffic).
+    # network_mode: host
 
 volumes:
     krp_azure:
