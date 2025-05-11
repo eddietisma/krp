@@ -18,8 +18,10 @@ public class Program
             .ConfigureServices((context, services) =>
             {
                 services.AddKubernetesForwarder(context.Configuration)
-                    .UseHttpEndpoint(5000, "gateway-api.qa.hsb.se", "/meetings")
-                    .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-attestorder-grpcserver-api")
+                    //.UseHttpEndpoint(5000, "api.domain.com", "/api")
+                    //.UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
+                    //.UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
+                    //.UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
                     .UseEndpointExplorer(options =>
                     {
                         //options.Filter = [
