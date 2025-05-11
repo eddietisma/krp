@@ -21,10 +21,10 @@
 ## **How `krp` Works**
 
 1. **Host File Modifications:**  
-   **krp** adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
+   `krp` adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
 
 2. **Port Forwarding with `kubectl`:**  
-   **krp** forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
+   `krp` forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
 
 3. **Reverse Proxying with YARP:**  
    YARP listens on the local machine and proxies HTTP(S) requests to the appropriate port-forwarded targets.
@@ -65,7 +65,7 @@ curl http://myservice.myapi
 
 ### Configuration
 
-You can configure **krp**'s port-forwarding and routing behavior by adding service definitions as follows:
+You can configure port-forwarding and routing behavior by adding service definitions as follows:
 
 ```csharp
 services.AddKubernetesForwarder()
