@@ -34,7 +34,7 @@
 
 ### Prerequisites
 - **`kubectl`**: Must be installed and authenticated against your Kubernetes cluster.
-- **Administrator Permissions**: Because **krp** modifies the Windows hosts file, the application must be run with administrator privileges.
+- **Administrator Permissions**: Because `krp` modifies the Windows hosts file, the application must be run with administrator privileges.
 
 ### Installation
 
