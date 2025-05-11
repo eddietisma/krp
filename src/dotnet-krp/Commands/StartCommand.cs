@@ -32,8 +32,6 @@ public class StartCommand
             .ConfigureServices((context, services) =>
             {
                 var builder = services.AddKubernetesForwarder(context.Configuration)
-                    .UseHttpEndpoint(5000, "gateway-api.qa.hsb.se", "/meetings")
-                    .UseEndpoint(0, 80, "asgnmntattest", "assignment-attest-attestorder-grpcserver-api")
                     .UseDnsLookup(options =>
                     {
                         options.Nameserver = Nameservers;
