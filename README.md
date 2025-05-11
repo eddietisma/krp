@@ -19,7 +19,7 @@
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes service or pod ports to local machine ports.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
 
-## **How krp Works**
+## **How `krp` Works**
 
 1. **Host File Modifications:**  
    **krp** adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
