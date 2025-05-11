@@ -121,7 +121,7 @@ services.AddKubernetesForwarder()
 
 ## **Running in Docker**
 
-To run KRP in a Docker container, follow these steps:
+To run `krp` in a Docker container, follow these steps:
 
 1. **Start Docker Desktop** as an administrator (required for hosts file modification).
 2. **Build and run the Docker container:**
@@ -140,7 +140,6 @@ To run KRP in a Docker container, follow these steps:
 
 ```yaml
 services:
-
   krp:
     build:
       context: .
@@ -156,7 +155,6 @@ services:
       - ~/.kube:/root/.kube
       - azure:/root/.azure 
       - /c/Windows/System32/drivers/etc/:/windows_etc/ 
-
 volumes:
     azure:
 ```
@@ -167,3 +165,4 @@ volumes:
 - [x] Support for low-level TCP traffic forwarding.
 - [ ] Support for low-level UDP traffic forwarding.
 - [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** for more flexible routing.
+- [ ] User interface.
