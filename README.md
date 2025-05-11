@@ -1,7 +1,7 @@
 # `krp` - Kubernetes Reverse Proxy
 
-[![Spectre.Console NuGet Version](https://img.shields.io/nuget/v/krp.svg?style=flat&label=NuGet%3A%20krp)](https://www.nuget.org/packages/krp)
-[![dotnet-krp](https://img.shields.io/nuget/v/dotnet-krp.svg?style=flat&label=NuGet%3A%20dotnet-krp)](https://www.nuget.org/packages/dotnet-krp)
+[![krp NuGet Version](https://img.shields.io/nuget/v/krp.svg?style=flat&label=NuGet%3A%20krp&include_prereleases=false)](https://www.nuget.org/packages/krp)
+[![dotnet-krp NuGet Version](https://img.shields.io/nuget/v/dotnet-krp.svg?style=flat&label=NuGet%3A%20dotnet-krp&include_prereleases=false)](https://www.nuget.org/packages/dotnet-krp)
 
 `krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless HTTP routing to internal Kubernetes resources. The tool facilitates automatic cleanup of active port forwards and provides dynamic routing of HTTP traffic via localhost using the Windows hosts file, with zero manual setup.
 
