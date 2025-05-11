@@ -49,7 +49,6 @@ public class HttpForwarderBackgroundService : BackgroundService
 
                     services.Add(serviceDescriptor);
                 }
-
             })
             .ConfigureWebHostDefaults(webBuilder =>
             {
@@ -68,7 +67,7 @@ public class HttpForwarderBackgroundService : BackgroundService
                     serverOptions.ListenAnyIP(443, listenOptions =>
                     {
                         listenOptions.UseHttps(); // Use default dev certs for HTTPS.
-                        listenOptions.Protocols = HttpProtocols.Http1;
+                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
                     });
                 });
                 webBuilder.UseStartup<Startup>();
