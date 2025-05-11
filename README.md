@@ -1,8 +1,12 @@
-# krp - Kubernetes Reverse Proxy
+# `krp` - Kubernetes Reverse Proxy
+
+[![Spectre.Console NuGet Version](https://img.shields.io/nuget/v/krp.svg?style=flat&label=NuGet%3A%20krp)](https://www.nuget.org/packages/krp)
+[![dotnet-krp](https://img.shields.io/nuget/v/dotnet-krp.svg?style=flat&label=NuGet%3A%20dotnet-krp)](https://www.nuget.org/packages/dotnet-krp)
+
 
 **krp** is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless HTTP routing to internal Kubernetes resources. The tool facilitates automatic cleanup of active port forwards and provides dynamic routing of HTTP traffic via localhost using the Windows hosts file, with zero manual setup.
 
-## **Key Features**
+## **Features**
 - **On-Demand Port Forwarding:** Forward internal Kubernetes resources to your local machine automatically.
 - **Context-Sensitive Port Management:** Automatically adapts to changes in Kubernetes context and cluster.
 - **Automatic Cleanup:** All active port forwards are cleaned up on application exit.
@@ -15,13 +19,13 @@
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes service or pod ports to local machine ports.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
 
-## **How KRP Works**
+## **How krp Works**
 
 1. **Host File Modifications:**  
-   KRP adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
+   **krp** adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
 
 2. **Port Forwarding with `kubectl`:**  
-   KRP forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
+   **krp** forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
 
 3. **Reverse Proxying with YARP:**  
    YARP listens on the local machine and proxies HTTP(S) requests to the appropriate port-forwarded targets.
@@ -30,7 +34,7 @@
 
 ### Prerequisites
 - **`kubectl`**: Must be installed and authenticated against your Kubernetes cluster.
-- **Administrator Permissions**: Because KRP modifies the Windows hosts file, the application must be run with administrator privileges.
+- **Administrator Permissions**: Because **krp** modifies the Windows hosts file, the application must be run with administrator privileges.
 
 ### Installation
 
@@ -40,11 +44,16 @@ cd krp
 dotnet run
 ```
 
+```powershell
+dotnet tool install --global dotnet-krp
+krp
+```
+
 ## **Usage**
 
 ### Use Case
 
-Assume your cluster has a service exposed at `myservice.myapi:8080`. With KRP running:
+Assume your cluster has a service exposed at `myservice.myapi:8080`. With **krp** running:
 
 - The Windows hosts file will be modified to resolve `myservice.myapi` to `127.0.0.1`.
 - HTTP traffic will be routed through the local port-forward and proxied via YARP.
@@ -55,15 +64,9 @@ You can then make requests as if the service was hosted locally:
 curl http://myservice.myapi
 ```
 
-You can now just **curl**:
-
-```powershell
-curl http://myservice.myapi
-```
-
 ### Configuration
 
-You can configure KRP's port-forwarding and routing behavior by adding service definitions as follows:
+You can configure **krp**'s port-forwarding and routing behavior by adding service definitions as follows:
 
 ```csharp
 services.AddKubernetesForwarder()
