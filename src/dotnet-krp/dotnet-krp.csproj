@@ -1,23 +1,25 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
+    <RootNamespace>Krp.Tool</RootNamespace>
     <IsPackable>true</IsPackable>
-    <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
+    <Nullable>enable</Nullable>
+
+    <!--Tool-->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>krp</ToolCommandName>
 
     <!--Package-->
     <Authors>Eddie Tisma</Authors>
     <Description>A reverse-proxy for dynamic port-forwarding to Kubernetes</Description>
-    <PackageId>krp</PackageId>
+    <PackageId>dotnet-krp</PackageId>
     <PackageProjectUrl>https://github.com/eddietisma/krp</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
@@ -30,16 +32,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CliWrap" />
-    <PackageReference Include="DnsClient" />
-    <PackageReference Include="KubernetesClient" />
-    <PackageReference Include="Meziantou.Framework.Win32.Jobs" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+    <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.SourceLink.GitHub">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
-    <PackageReference Include="Yarp.ReverseProxy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Krp\Krp.csproj" />
   </ItemGroup>
 
 </Project>
