@@ -6,20 +6,20 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.HttpForwarder;
+namespace Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 
-public class HttpForwarderBackgroundService : BackgroundService
+public class WebHost
 {
     private readonly IServiceCollection _services;
     private readonly IServiceProvider _serviceProvider;
 
-    public HttpForwarderBackgroundService(IServiceCollection services, IServiceProvider serviceProvider)
+    public WebHost(IServiceCollection services, IServiceProvider serviceProvider)
     {
         _services = services;
         _serviceProvider = serviceProvider;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task Start(CancellationToken stoppingToken)
     {
         var hostBuilder = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -67,7 +67,7 @@ public class HttpForwarderBackgroundService : BackgroundService
                     serverOptions.ListenAnyIP(443, listenOptions =>
                     {
                         listenOptions.UseHttps(); // Use default dev certs for HTTPS.
-                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     });
                 });
                 webBuilder.UseStartup<Startup>();
