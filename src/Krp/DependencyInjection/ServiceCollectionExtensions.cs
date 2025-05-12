@@ -1,6 +1,7 @@
 ﻿using Krp.KubernetesForwarder.ContextSwitching;
 using Krp.KubernetesForwarder.Endpoints;
-using Krp.KubernetesForwarder.PortForward;
+using Krp.KubernetesForwarder.Endpoints.Models;
+using Krp.KubernetesForwarder.Endpoints.PortForward;
 using Meziantou.Framework.Win32;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +31,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointManager>();
-        services.AddTransient<PortForwardHandler>();
+        services.AddTransient<PortForwardEndpointHandler>();
         services.AddSingleton<ProcessRunner>();
 
         return builder;
@@ -38,8 +39,8 @@ public static class ServiceCollectionExtensions
 
     private static void RegisterEndpoints(IConfiguration configuration, KubernetesForwarderBuilder builder)
     {
-        var httpEndpoints = configuration.GetSection("Krp:HttpEndpoints").Get<List<KrpHttpEndpoint>>() ?? new List<KrpHttpEndpoint>();
-        var endpoints = configuration.GetSection("Krp:Endpoints").Get<List<KrpEndpoint>>() ?? new List<KrpEndpoint>();
+        var httpEndpoints = configuration.GetSection("Krp:HttpEndpoints").Get<List<HttpEndpoint>>() ?? new List<HttpEndpoint>();
+        var endpoints = configuration.GetSection("Krp:Endpoints").Get<List<KubernetesEndpoint>>() ?? new List<KubernetesEndpoint>();
 
         foreach (var endpoint in httpEndpoints)
         {
