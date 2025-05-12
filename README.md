@@ -1,7 +1,7 @@
 # `krp` - Kubernetes Reverse Proxy
 
-[![krp NuGet Version](https://img.shields.io/nuget/v/krp.svg?style=flat&label=NuGet%3A%20krp&include_prereleases=false)](https://www.nuget.org/packages/krp)
-[![dotnet-krp NuGet Version](https://img.shields.io/nuget/v/dotnet-krp.svg?style=flat&label=NuGet%3A%20dotnet-krp&include_prereleases=false)](https://www.nuget.org/packages/dotnet-krp)
+[![NuGet](https://img.shields.io/nuget/v/krp?color=brightgreen&label=krp )](https://www.nuget.org/packages/krp)
+[![NuGet](https://img.shields.io/nuget/v/dotnet-krp?color=brightgreen&label=dotnet-krp)](https://www.nuget.org/packages/dotnet-krp)
 
 `krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless HTTP routing to internal Kubernetes resources. The tool facilitates automatic cleanup of active port forwards and provides dynamic routing of HTTP traffic via localhost using the Windows hosts file, with zero manual setup.
 
@@ -52,7 +52,7 @@ krp
 
 ### Use Case
 
-Assume your cluster has a service exposed at `myservice.myapi:8080`. With **krp** running:
+Assume your cluster has a service exposed at `myservice.myapi:8080`. With `krp` running:
 
 - The Windows hosts file will be modified to resolve `myservice.myapi` to `127.0.0.1`.
 - HTTP traffic will be routed through the local port-forward and proxied via YARP.
