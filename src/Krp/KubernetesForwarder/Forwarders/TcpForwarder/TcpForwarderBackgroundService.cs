@@ -29,14 +29,17 @@ public class TcpForwarderBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _listener = new TcpListener(_options.ListenAddress, _options.ListenPort);
-        _listener.Start();
-        _logger.LogInformation("Listening on {address}:{port}", _options.ListenAddress, _options.ListenPort);
-
-        while (!stoppingToken.IsCancellationRequested)
+        foreach (var port in _options.ListenPorts)
         {
-            var client = await _listener.AcceptTcpClientAsync();
-            _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
+            _listener = new TcpListener(_options.ListenAddress, port);
+            _listener.Start();
+            _logger.LogInformation("Listening on {address}:{port}", _options.ListenAddress, port);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                var client = await _listener.AcceptTcpClientAsync(stoppingToken);
+                _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
+            }
         }
     }
 
