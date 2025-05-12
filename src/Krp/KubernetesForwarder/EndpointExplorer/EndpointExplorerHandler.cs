@@ -4,8 +4,10 @@ using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.Endpoints.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,22 +38,19 @@ public class EndpointExplorerHandler
 
         var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
         var client = new Kubernetes(config);
-        var services = new List<V1Service>();
+        var services = new ConcurrentBag<V1Service>();
 
         var namespaces = await client.ListNamespaceAsync(cancellationToken: ct);
-        foreach (var ns in namespaces.Items)
+        
+        await Parallel.ForEachAsync(namespaces.Items, new ParallelOptions { MaxDegreeOfParallelism = 100, CancellationToken = ct }, async (ns, cancellationToken) =>
         {
-            try
+            var result = await FetchServicesAsync(ns.Metadata.Name, client, cancellationToken);
+
+            foreach (var svc in result)
             {
-                var namespaceServices = await client.ListNamespacedServiceAsync(ns.Name(), cancellationToken: ct);
-                services.AddRange(namespaceServices.Items);
-                _logger.LogInformation("namespace/{namespace}", ns.Name());
+                services.Add(svc);
             }
-            catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-            {
-                _logger.LogInformation("namespace/{namespace} (skipping due to access)", ns.Name());
-            }
-        }
+        });
 
         var filteredServices = services
             .Where(x => x.Spec?.Ports != null)
@@ -78,5 +77,20 @@ public class EndpointExplorerHandler
         }
 
         _endpointManager.TriggerEndPointsChangedEvent();
+    }
+
+    private async Task<IEnumerable<V1Service>> FetchServicesAsync(string ns, Kubernetes client, CancellationToken ct)
+    {
+        try
+        {
+            var namespaceServices = await client.ListNamespacedServiceAsync(ns, cancellationToken: ct);
+            _logger.LogInformation("namespace/{namespace}", ns);
+            return namespaceServices.Items;
+        }
+        catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            _logger.LogInformation("namespace/{namespace} (skipping due to access)", ns);
+            return Enumerable.Empty<V1Service>();
+        }
     }
 }
