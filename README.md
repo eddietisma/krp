@@ -106,7 +106,7 @@ services.AddKubernetesForwarder()
 - Supports HTTP (only).
 - Supports domain based routing.
 - Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS **is not supported**.
-- Uses SSL termination.
+- Uses SSL termination (for HTTPS either disable certificate validation or setup certificate for each domain).
 
 `UseTcpForwarder`
 - Supports low-level TCP requests (eg. databases, HTTP/x / gRCP).
