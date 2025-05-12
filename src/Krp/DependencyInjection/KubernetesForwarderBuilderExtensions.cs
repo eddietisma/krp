@@ -1,9 +1,9 @@
 ﻿using Krp.KubernetesForwarder.Dns;
 using Krp.KubernetesForwarder.EndpointExplorer;
-using Krp.KubernetesForwarder.Endpoints;
-using Krp.KubernetesForwarder.HttpForwarder;
-using Krp.KubernetesForwarder.TcpForwarder;
-using Krp.KubernetesForwarder.TcpWithHttpForwarder;
+using Krp.KubernetesForwarder.Endpoints.Models;
+using Krp.KubernetesForwarder.Forwarders.HttpForwarder;
+using Krp.KubernetesForwarder.Forwarders.TcpForwarder;
+using Krp.KubernetesForwarder.Forwarders.TcpWithHttpForwarder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
@@ -38,7 +38,7 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.Configure<KubernetesForwarderOptions>(options =>
         {
-            options.Endpoints.Add(new KrpEndpoint
+            options.Endpoints.Add(new KubernetesEndpoint
             {
                 LocalPort = localPort,
                 Namespace = ns,
@@ -62,7 +62,7 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.Configure<KubernetesForwarderOptions>(options =>
         {
-            options.HttpEndpoints.Add(new KrpHttpEndpoint
+            options.HttpEndpoints.Add(new HttpEndpoint
             {
                 Host = host,
                 LocalPort = localPort,

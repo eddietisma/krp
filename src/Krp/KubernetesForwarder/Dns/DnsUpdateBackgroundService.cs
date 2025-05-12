@@ -51,7 +51,8 @@ public class DnsUpdateBackgroundService : BackgroundService
         var hostnames = _endpointManager
             .GetAllHandlers()
             .Where(x => !string.IsNullOrEmpty(x.Url))
-            .Select(x => $"{x.LocalIp} {x.Hostname}")
+            .Select(x => $"{x.LocalIp} {x.Host}")
+            .Distinct()
             .ToList();
 
         await _dnsHandler.UpdateAsync(hostnames);

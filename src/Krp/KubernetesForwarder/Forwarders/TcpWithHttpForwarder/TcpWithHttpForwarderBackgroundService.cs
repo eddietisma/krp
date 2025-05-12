@@ -1,5 +1,6 @@
-﻿using Krp.KubernetesForwarder.Endpoints;
-using Krp.KubernetesForwarder.TcpForwarder;
+﻿using Krp.KubernetesForwarder.Dns;
+using Krp.KubernetesForwarder.Endpoints;
+using Krp.KubernetesForwarder.Forwarders.TcpForwarder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,7 +11,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.TcpWithHttpForwarder;
+namespace Krp.KubernetesForwarder.Forwarders.TcpWithHttpForwarder;
 
 /// <summary>
 /// Opens a TCP connection and inspects traffic and routes HTTP requests to different HTTP forwarding ports (81 for HTTP/1.1 and 82 for HTTP/2).
@@ -18,13 +19,15 @@ namespace Krp.KubernetesForwarder.TcpWithHttpForwarder;
 public class TcpWithHttpForwarderBackgroundService : BackgroundService
 {
     private static readonly byte[] _http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
+    private readonly IDnsLookupHandler _dnsLookupHandler;
     private readonly EndpointManager _endpointManager;
     private readonly ILogger<TcpWithHttpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _options;
     private TcpListener _listener;
 
-    public TcpWithHttpForwarderBackgroundService(EndpointManager endpointManager, ILogger<TcpWithHttpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
+    public TcpWithHttpForwarderBackgroundService(IDnsLookupHandler dnsLookupHandler, EndpointManager endpointManager, ILogger<TcpWithHttpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
     {
+        _dnsLookupHandler = dnsLookupHandler;
         _endpointManager = endpointManager;
         _logger = logger;
         _options = options.Value;
@@ -52,8 +55,8 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
                 using (var target = new TcpClient())
                 {
                     var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
-                    var localIp = localEndPoint?.Address;
-                    var localPort = localEndPoint?.Port;
+                    var localIp = localEndPoint!.Address;
+                    var localPort = localEndPoint!.Port;
 
                     _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 
@@ -66,8 +69,7 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
 
                         var isHttp2 = IsHttp2Preface(buffer, bytesRead);
                         var targetPort = isHttp2 ? 82 : 81;
-
-
+                        
                         await target.ConnectAsync(IPAddress.Loopback, targetPort, stoppingToken);
 
                         var targetStream = target.GetStream();
@@ -88,9 +90,21 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
                             return;
                         }
 
+                        //if (portForwardHandler.GetType() == typeof(HttpProxyEndpointHandler))
+                        //{
+                        //    if (PortChecker.TryIsPortAvailable(portForwardHandler.LocalPort))
+                        //    {
+                        //        ipAddress = await _dnsLookupHandler.QueryAsync(portForwardHandler.Host);
+                        //        port = localPort;
+                        //    }
+                        //}
+                        
                         await portForwardHandler.EnsureRunningAsync();
 
-                        await target.ConnectAsync(IPAddress.Loopback, portForwardHandler.LocalPort, stoppingToken);
+                        var ipAddress = IPAddress.Loopback;
+                        var port = portForwardHandler.LocalPort;
+
+                        await target.ConnectAsync(ipAddress, port, stoppingToken);
                         var clientStream = client.GetStream();
                         var targetStream = target.GetStream();
                         var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
