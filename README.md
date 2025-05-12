@@ -160,9 +160,11 @@ volumes:
 ```
 
 ## Roadmap / Ideas
+- [ ] Add integration tests.
 - [x] Auto-discovery of Kubernetes services.
-- [ ] Cross-platform support (Linux/macOS).
 - [x] Support for low-level TCP traffic forwarding.
 - [ ] Support for low-level UDP traffic forwarding.
-- [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** for more flexible routing.
+- [ ] Support for translating internal Kubernetes IPs.
+- [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
+- [ ] Cross-platform support (Linux/macOS).
 - [ ] User interface.
