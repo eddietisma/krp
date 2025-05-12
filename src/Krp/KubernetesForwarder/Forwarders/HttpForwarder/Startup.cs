@@ -1,10 +1,9 @@
+using Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Krp.KubernetesForwarder.HttpForwarder;
-
-public class Startup 
+public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {

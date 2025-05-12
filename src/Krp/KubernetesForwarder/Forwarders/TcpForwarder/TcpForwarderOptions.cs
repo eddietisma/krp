@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Krp.KubernetesForwarder.TcpForwarder;
+namespace Krp.KubernetesForwarder.Forwarders.TcpForwarder;
 
 public class TcpForwarderOptions
 {
