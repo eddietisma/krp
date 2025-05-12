@@ -1,6 +1,7 @@
 ﻿using k8s;
 using k8s.Models;
 using Krp.KubernetesForwarder.Endpoints;
+using Krp.KubernetesForwarder.Endpoints.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
@@ -64,7 +65,7 @@ public class EndpointExplorerHandler
         {
             foreach (var port in service.Spec.Ports)
             {
-                var endpoint = new KrpEndpoint
+                var endpoint = new KubernetesEndpoint
                 {
                     LocalPort = 0,
                     Namespace = service.Namespace(),

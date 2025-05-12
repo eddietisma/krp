@@ -1,0 +1,20 @@
+services:
+
+  krp:
+    build:
+      context: .
+    image: krp/krp:latest
+    container_name: krp
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      KRP_ENDPOINT_EXPLORER: false
+      KRP_WINDOWS_HOSTS: /windows_etc/hosts
+    volumes:
+      - ~/.kube:/root/.kube
+      - azure:/root/.azure 
+      - /c/Windows/System32/drivers/etc/:/windows_etc/ 
+
+volumes:
+    azure:

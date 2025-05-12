@@ -1,5 +1,7 @@
 ﻿using Krp.DependencyInjection;
-using Krp.KubernetesForwarder.PortForward;
+using Krp.KubernetesForwarder.Endpoints.HttpProxy;
+using Krp.KubernetesForwarder.Endpoints.Models;
+using Krp.KubernetesForwarder.Endpoints.PortForward;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,10 +16,8 @@ namespace Krp.KubernetesForwarder.Endpoints;
 public class EndpointManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly List<PortForwardHandler> _handlers = new();
-    private readonly List<KrpHttpEndpoint> _httpEndpoints = new();
+    private readonly List<IEndpointHandler> _handlers = new();
     private readonly ILogger<EndpointManager> _logger;
-
     public EndpointManager(IServiceProvider serviceProvider, ILogger<EndpointManager> logger, IOptions<KubernetesForwarderOptions> options)
     {
         _serviceProvider = serviceProvider;
@@ -36,17 +36,41 @@ public class EndpointManager
 
     public event Func<Task> EndPointsChangedEvent;
 
-    public void AddEndpoint(KrpHttpEndpoint endpoint)
+    /// <summary>
+    /// Create and add a new HTTP proxy handler.
+    /// </summary>
+    /// <param name="endpoint"></param>
+    public void AddEndpoint(HttpEndpoint endpoint)
     {
-        _httpEndpoints.Add(endpoint);
+        var handler = new HttpProxyEndpointHandler
+        {
+            IsStatic = true,
+            LocalIp = _handlers.FirstOrDefault(x => x.Host == endpoint.Host)?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"), // Re-use IP if already exists.
+            LocalPort = endpoint.LocalPort,
+            Url = $"{endpoint.Host}{endpoint.Path}",
+            Host = endpoint.Host,
+            Path = endpoint.Path,
+        };
+
+        if (_handlers.Any(x => x.Url == handler.Url))
+        {
+            _logger.LogWarning("Skipped already existing HTTP endpoint for {url}", handler.Url);
+            return;
+        }
+
+        _handlers.Add(handler);
         _logger.LogDebug("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
     }
 
-    public void AddEndpoint(KrpEndpoint endpoint)
+    /// <summary>
+    /// Create and add a new Kubernetes port-forwarding handler.
+    /// </summary>
+    /// <param name="endpoint"></param>
+    public void AddEndpoint(KubernetesEndpoint endpoint)
     {
-        var handler = _serviceProvider.GetService<PortForwardHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
+        var handler = _serviceProvider.GetService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
-        handler.LocalIp = IPAddress.Parse($"127.0.0.{_handlers.Count}");
+        handler.LocalIp = IPAddress.Parse($"127.0.0.{_handlers.Count + 1}");
         handler.LocalPort = endpoint.LocalPort;
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;
@@ -62,27 +86,42 @@ public class EndpointManager
         _logger.LogDebug("Registered endpoint for {url}", handler.Url);
     }
 
-
-    public KrpHttpEndpoint GetHttpEndpointByUrl(string url, string path)
+    /// <summary>
+    /// Used for HTTP endpoints to find the correct handler by URL and path.
+    /// </summary>
+    /// <param name="host"></param>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
     {
-        return _httpEndpoints.FirstOrDefault(x => x.Host == url && path.StartsWith($"{x.Path}/"));
+        return _handlers.FirstOrDefault(x => x.GetType() == typeof(HttpProxyEndpointHandler) && x.Host == host && path.StartsWith($"{x.Path}/"));
     }
 
-    public PortForwardHandler GetHandlerByUrl(string url)
+    /// <summary>
+    /// Used for Kubernetes endpoints to find the correct handler by URL.
+    /// </summary>
+    /// <param name="url"></param>
+    /// <returns></returns>
+    public IEndpointHandler GetHandlerByUrl(string url)
     {
         return _handlers.FirstOrDefault(x => x.Url == url);
     }
 
-    public PortForwardHandler GetHandlerByIpPort(IPAddress ip)
+    /// <summary>
+    /// Used for low-level TCP forwarding by routing using loopback IPs to determine correct downstream port.
+    /// </summary>
+    /// <param name="ip"></param>
+    /// <returns></returns>
+    public IEndpointHandler GetHandlerByIpPort(IPAddress ip)
     {
-        return _handlers.FirstOrDefault(x => Equals(x.LocalIp, ip));
+        return _handlers.FirstOrDefault(x => x.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.LocalIp, ip));
     }
 
-    public List<PortForwardHandler> GetAllHandlers()
+    public List<IEndpointHandler> GetAllHandlers()
     {
         return _handlers;
     }
-
+    
     public void RemoveAllHandlers()
     {
         foreach (var handler in _handlers)

@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.PortForward;
+namespace Krp.KubernetesForwarder.Endpoints.PortForward;
 
 public record ProcessWrapper(Process Process, ConcurrentStack<string> Logs);
 

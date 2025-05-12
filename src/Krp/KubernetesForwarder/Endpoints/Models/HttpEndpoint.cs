@@ -1,6 +1,6 @@
-﻿namespace Krp.KubernetesForwarder.Endpoints;
+﻿namespace Krp.KubernetesForwarder.Endpoints.Models;
 
-public class KrpHttpEndpoint
+public class HttpEndpoint
 {
     public string Host { get; set; }
     public int LocalPort { get; set; }

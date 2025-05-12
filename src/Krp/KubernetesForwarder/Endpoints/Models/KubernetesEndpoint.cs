@@ -1,6 +1,6 @@
-﻿namespace Krp.KubernetesForwarder.Endpoints;
+﻿namespace Krp.KubernetesForwarder.Endpoints.Models;
 
-public class KrpEndpoint
+public class KubernetesEndpoint
 {
     public bool IsStatic { get; set; }
     public int LocalPort { get; set; }

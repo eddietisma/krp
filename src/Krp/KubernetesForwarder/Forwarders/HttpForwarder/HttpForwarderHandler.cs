@@ -1,7 +1,6 @@
 ﻿using Krp.Common;
 using Krp.KubernetesForwarder.Dns;
 using Krp.KubernetesForwarder.Endpoints;
-using Krp.KubernetesForwarder.PortForward;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Yarp.ReverseProxy.Forwarder;
 
-namespace Krp.KubernetesForwarder.HttpForwarder;
+namespace Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 
 /// <summary>
 /// Uses Kestrel as HTTP server and forwards requests to Kubernetes based on domain.
@@ -41,27 +40,22 @@ public class HttpForwarderHandler
 
         var destinationUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
 
-        var endpoint = _endpointManager.GetHttpEndpointByUrl(httpContext.Request.Host.Host, httpContext.Request.Path);
-        if (endpoint != null && !PortChecker.TryIsPortAvailable(endpoint.LocalPort))
+        var httpProxyHandler = _endpointManager.GetHttpEndpointByUrl(httpContext.Request.Host.Host, httpContext.Request.Path);
+        if (httpProxyHandler != null && !PortChecker.TryIsPortAvailable(httpProxyHandler.LocalPort))
         {
-            if (httpContext.Request.Path.StartsWithSegments(endpoint.Path, out var remaining))
+            if (httpContext.Request.Path.StartsWithSegments(httpProxyHandler.Path, out var remaining))
             {
                 httpContext.Request.Path = remaining;
             }
 
-            destinationUrl = $"http://localhost:{endpoint.LocalPort}";
-
-            if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-            {
-                destinationUrl = $"http://host.docker.internal:{endpoint.LocalPort}";
-            }
+            destinationUrl = httpProxyHandler.GetDestinationUrl();
         }
 
         var portForwardHandler = _endpointManager.GetHandlerByUrl(httpContext.Request.Host.Host);
         if (portForwardHandler != null)
         {
             await portForwardHandler.EnsureRunningAsync();
-            destinationUrl = $"http://localhost:{portForwardHandler.LocalPort}";
+            destinationUrl = portForwardHandler.GetDestinationUrl();
         }
         
         _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", requestUrl, destinationUrl);

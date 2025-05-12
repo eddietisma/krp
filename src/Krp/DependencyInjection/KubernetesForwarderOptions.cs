@@ -1,10 +1,10 @@
-﻿using Krp.KubernetesForwarder.Endpoints;
+﻿using Krp.KubernetesForwarder.Endpoints.Models;
 using System.Collections.Generic;
 
 namespace Krp.DependencyInjection;
 
 public class KubernetesForwarderOptions
 {
-    public List<KrpEndpoint> Endpoints { get; set; } = new();
-    public List<KrpHttpEndpoint> HttpEndpoints { get; set; } = new();
+    public List<KubernetesEndpoint> Endpoints { get; set; } = new();
+    public List<HttpEndpoint> HttpEndpoints { get; set; } = new();
 }

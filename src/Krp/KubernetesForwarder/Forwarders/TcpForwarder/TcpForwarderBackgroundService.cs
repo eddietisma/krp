@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.TcpForwarder;
+namespace Krp.KubernetesForwarder.Forwarders.TcpForwarder;
 
 /// <summary>
 /// Opens a TCP connection and forwards requests to Kubernetes based on originating ip (using domain-based IP per hostname in HOSTS file).

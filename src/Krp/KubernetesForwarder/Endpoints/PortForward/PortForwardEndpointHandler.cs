@@ -6,12 +6,12 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.KubernetesForwarder.PortForward;
+namespace Krp.KubernetesForwarder.Endpoints.PortForward;
 
-public class PortForwardHandler : IDisposable
+public class PortForwardEndpointHandler : IEndpointHandler
 {
     private readonly ProcessRunner _processRunner;
-    private readonly ILogger<PortForwardHandler> _logger;
+    private readonly ILogger<PortForwardEndpointHandler> _logger;
     private Process _process;
     private int _localPort;
     private int? _localPortActual;
@@ -37,11 +37,24 @@ public class PortForwardHandler : IDisposable
     public string Namespace { get; set; }
     public int RemotePort { get; set; }
     public string Resource { get; set; }
-    public string Url => RemotePort == 80 ? Hostname : $"{Hostname}:{RemotePort}";
-    public string Hostname => $"{Resource.Substring("service/".Length)}.{Namespace}";
+
+    public string Url
+    {
+        get => RemotePort == 80 ? Host : $"{Host}:{RemotePort}";
+        set => throw new NotImplementedException();
+    }
+
+    public string Path { get; set; }
+
+    public string Host
+    {
+        get => $"{Resource.Substring("service/".Length)}.{Namespace}";
+        set => throw new NotImplementedException();
+    }
+
     public IPAddress LocalIp { get; set; }
 
-    public PortForwardHandler(ProcessRunner processRunner, ILogger<PortForwardHandler> logger)
+    public PortForwardEndpointHandler(ProcessRunner processRunner, ILogger<PortForwardEndpointHandler> logger)
     {
         _processRunner = processRunner;
         _logger = logger;
@@ -49,7 +62,7 @@ public class PortForwardHandler : IDisposable
 
     public async Task EnsureRunningAsync()
     {
-        // Prevent running same kubectl command in simultaneously to ensure thread-safety.
+        // Prevent running same kubectl command simultaneously.
         await _lock.WaitAsync();
 
         try
@@ -86,6 +99,11 @@ public class PortForwardHandler : IDisposable
         {
             _lock.Release();
         }
+    }
+
+    public string GetDestinationUrl()
+    {
+        return $"http://localhost:{LocalPort}";
     }
 
     public void Dispose()
