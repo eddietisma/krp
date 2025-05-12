@@ -53,7 +53,7 @@ public class StartCommand
                         builder.UseTcpForwarder(options =>
                         {
                             options.ListenAddress = IPAddress.Any;
-                            options.ListenPort = 80;
+                            options.ListenPorts = [80, 443];
 
                         });
                         break;
@@ -61,7 +61,7 @@ public class StartCommand
                         builder.UseTcpWithHttpForwarder(options =>
                         {
                             options.ListenAddress = IPAddress.Any;
-                            options.ListenPort = 80;
+                            options.ListenPorts = [80, 443];
                         });
                         break;
                 }

@@ -92,9 +92,18 @@ public static class KubernetesBuilderExtension
     /// Starts an optional Kestrel server to handle HTTP requests.
     /// </summary>
     /// <param name="builder"></param>
+    /// <param name="optionsAction"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseHttpForwarder(this KubernetesForwarderBuilder builder)
+    public static KubernetesForwarderBuilder UseHttpForwarder(this KubernetesForwarderBuilder builder, Action<HttpForwarderOptions> optionsAction = null)
     {
+        optionsAction ??= options =>
+        {
+            options.Http2Port = 81;
+            options.HttpPort = 80;
+            options.HttpsPort = 443;
+        };
+
+        builder.Services.Configure(optionsAction);
         builder.Services.AddHostedService<HttpForwarderBackgroundService>();
         builder.Services.AddSingleton(builder.Services);
         return builder;
@@ -148,13 +157,18 @@ public static class KubernetesBuilderExtension
     /// Starts an optional TCP server to handle TCP requests with HTTP packet inspection.
     /// </summary>
     /// <param name="builder"></param>
-    /// <param name="optionsAction"></param>
+    /// <param name="tcpOptionsAction"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseTcpWithHttpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> optionsAction)
+    public static KubernetesForwarderBuilder UseTcpWithHttpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> tcpOptionsAction)
     {
-        builder.Services.Configure(optionsAction);
+        builder.Services.Configure(tcpOptionsAction);
         builder.Services.AddHostedService<TcpWithHttpForwarderBackgroundService>();
-        builder.UseHttpForwarder();
+        builder.UseHttpForwarder(options =>
+        {
+            options.Http2Port = 82;
+            options.HttpPort = 81;
+            options.HttpsPort = 444;
+        });
         return builder;
     }
 }

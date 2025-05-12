@@ -10,11 +10,13 @@ namespace Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 
 public class WebHost
 {
+    private readonly HttpForwarderOptions _options;
     private readonly IServiceCollection _services;
     private readonly IServiceProvider _serviceProvider;
 
-    public WebHost(IServiceCollection services, IServiceProvider serviceProvider)
+    public WebHost(HttpForwarderOptions options, IServiceCollection services, IServiceProvider serviceProvider)
     {
+        _options = options;
         _services = services;
         _serviceProvider = serviceProvider;
     }
@@ -54,17 +56,17 @@ public class WebHost
             {
                 webBuilder.ConfigureKestrel(serverOptions =>
                 {
-                    serverOptions.ListenAnyIP(81, listenOptions =>
+                    serverOptions.ListenAnyIP(_options.HttpPort, listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http1;
                     });
 
-                    serverOptions.ListenAnyIP(82, listenOptions =>
+                    serverOptions.ListenAnyIP(_options.Http2Port, listenOptions =>
                     {
                         listenOptions.Protocols = HttpProtocols.Http2;
                     });
 
-                    serverOptions.ListenAnyIP(443, listenOptions =>
+                    serverOptions.ListenAnyIP(_options.HttpsPort, listenOptions =>
                     {
                         listenOptions.UseHttps(); // Use default dev certs for HTTPS.
                         listenOptions.Protocols = HttpProtocols.Http1;

@@ -1,13 +1,18 @@
 ﻿using Krp.KubernetesForwarder.Dns;
 using Krp.KubernetesForwarder.Endpoints;
+using Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 using Krp.KubernetesForwarder.Forwarders.TcpForwarder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,27 +27,57 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
     private readonly IDnsLookupHandler _dnsLookupHandler;
     private readonly EndpointManager _endpointManager;
     private readonly ILogger<TcpWithHttpForwarderBackgroundService> _logger;
-    private readonly TcpForwarderOptions _options;
-    private TcpListener _listener;
+    private readonly TcpForwarderOptions _tcpOptions;
+    private readonly HttpForwarderOptions _httpOptions;
+    private readonly List<TcpListener> _listeners = new();
 
-    public TcpWithHttpForwarderBackgroundService(IDnsLookupHandler dnsLookupHandler, EndpointManager endpointManager, ILogger<TcpWithHttpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
+    public TcpWithHttpForwarderBackgroundService(
+        IDnsLookupHandler dnsLookupHandler,
+        EndpointManager endpointManager,
+        ILogger<TcpWithHttpForwarderBackgroundService> logger,
+        IOptions<TcpForwarderOptions> tcpOptions,
+        IOptions<HttpForwarderOptions> httpOptions)
     {
         _dnsLookupHandler = dnsLookupHandler;
         _endpointManager = endpointManager;
         _logger = logger;
-        _options = options.Value;
+        _httpOptions = httpOptions.Value;
+        _tcpOptions = tcpOptions.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _listener = new TcpListener(_options.ListenAddress, _options.ListenPort);
-        _listener.Start();
-        _logger.LogInformation("Listening on {address}:{port}", _options.ListenAddress, _options.ListenPort);
+        foreach (var port in _tcpOptions.ListenPorts)
+        {
+            var listener = new TcpListener(_tcpOptions.ListenAddress, port);
+            listener.Start();
+            _listeners.Add(listener);
+            _logger.LogInformation("Listening on {address}:{port}", _tcpOptions.ListenAddress, port);
 
+            // Start accept loop for each port
+            _ = Task.Run(() => AcceptLoopAsync(listener, stoppingToken), stoppingToken);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task AcceptLoopAsync(TcpListener listener, CancellationToken stoppingToken)
+    {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var client = await _listener.AcceptTcpClientAsync();
-            _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
+            try
+            {
+                var client = await listener.AcceptTcpClientAsync(stoppingToken);
+                _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting connection");
+            }
         }
     }
 
@@ -50,69 +85,82 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
     {
         try
         {
-            using (client)
+            using var tcpClient = client;
+            using var target = new TcpClient();
+
+            var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
+            var localIp = localEndPoint!.Address;
+            var localPort = localEndPoint!.Port;
+
+            _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
+
+            var clientStream = client.GetStream();
+
+            var buffer = new byte[2048];
+            var bytesRead = 0;
+
+            var targetIp = localIp;
+            int targetPort = 0;
+
+            if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
             {
-                using (var target = new TcpClient())
+                var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
+                if (portForwardHandler != null)
                 {
-                    var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
-                    var localIp = localEndPoint!.Address;
-                    var localPort = localEndPoint!.Port;
+                    await portForwardHandler.EnsureRunningAsync();
 
-                    _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
-
-                    if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-                    {
-                        var clientStream = client.GetStream();
-
-                        var buffer = new byte[24];
-                        var bytesRead = await clientStream.ReadAsync(buffer, 0, buffer.Length, stoppingToken);
-
-                        var isHttp2 = IsHttp2Preface(buffer, bytesRead);
-                        var targetPort = isHttp2 ? 82 : 81;
-                        
-                        await target.ConnectAsync(IPAddress.Loopback, targetPort, stoppingToken);
-
-                        var targetStream = target.GetStream();
-                        await targetStream.WriteAsync(buffer, 0, bytesRead, stoppingToken);
-                        var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
-                        var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
-
-                        await Task.WhenAny(clientToTarget, targetToClient);
-                    }
-                    else
-                    {
-                        var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
-                        if (portForwardHandler == null)
-                        {
-                            _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);
-                            var errorMessageBytes = GetErrorMessageBytes(localIp, localPort);
-                            await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
-                            return;
-                        }
-
-                        //if (portForwardHandler.GetType() == typeof(HttpProxyEndpointHandler))
-                        //{
-                        //    if (PortChecker.TryIsPortAvailable(portForwardHandler.LocalPort))
-                        //    {
-                        //        ipAddress = await _dnsLookupHandler.QueryAsync(portForwardHandler.Host);
-                        //        port = localPort;
-                        //    }
-                        //}
-                        
-                        await portForwardHandler.EnsureRunningAsync();
-
-                        var ipAddress = IPAddress.Loopback;
-                        var port = portForwardHandler.LocalPort;
-
-                        await target.ConnectAsync(ipAddress, port, stoppingToken);
-                        var clientStream = client.GetStream();
-                        var targetStream = target.GetStream();
-                        var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
-                        var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
-                        await Task.WhenAny(clientToTarget, targetToClient);
-                    }
+                    targetIp = IPAddress.Loopback;
+                    targetPort = portForwardHandler.LocalPort;
                 }
             }
+
+            if (targetPort == 0)
+            {
+                switch (localPort)
+                {
+                    case 80:
+                        // Handle HTTP/2 over cleartext (h2c) and HTTP/1.1.
+                        bytesRead = await clientStream.ReadAsync(buffer, 0, 24, stoppingToken);
+                        var isHttp2 = IsHttp2Preface(buffer, bytesRead);
+
+                        // Forward to HttpForwarder for routing using HTTP headers.
+                        targetPort = isHttp2 ? _httpOptions.Http2Port : _httpOptions.HttpPort;
+                        break;
+                    case 443:
+                        // Forward to HttpForwarder for routing using HTTP headers.
+                        targetPort = _httpOptions.HttpsPort;
+
+                        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+                        {
+                            // Fetch HOST from SNI since we can't use loopback IPs for routing.
+                            bytesRead = await clientStream.ReadAsync(buffer, 0, buffer.Length, stoppingToken);
+                            var host = ParseSniHostname(buffer, bytesRead);
+
+                            if (!string.IsNullOrEmpty(host))
+                            {
+                                // TODO: Need to verify local HTTP endpoints by checking port.
+                                //var httpProxyHandler = _endpointManager.GetHandlerByUrl(host);
+
+                                // Bypass HTTP forwarder to prevent unnecessary overhead (e.g. TLS termination).
+                                targetIp = await _dnsLookupHandler.QueryAsync(host);
+                                targetPort = localPort;
+                            }
+                        }
+                        break;
+                    default:
+                        _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);
+                        var errorMessageBytes = GetErrorMessageBytes(localIp, localPort);
+                        await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
+                        return;
+                }
+            }
+            
+            await target.ConnectAsync(targetIp, targetPort, stoppingToken);
+            var targetStream = target.GetStream();
+            await targetStream.WriteAsync(buffer, 0, bytesRead, stoppingToken);
+            var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
+            var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
+            await Task.WhenAny(clientToTarget, targetToClient);
         }
         catch (Exception ex)
         {
@@ -123,20 +171,26 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping TCP forwarder");
-        _listener.Stop();
+
+        foreach (var listener in _listeners)
+        {
+            listener.Stop();
+        }
+
         await base.StopAsync(cancellationToken);
     }
 
     public byte[] GetErrorMessageBytes(IPAddress ip, int? port = 0)
     {
-        var errorResponse = $"""
-                             HTTP/1.1 400 Bad Request
-                             Content-Type: application/json
-                             Connection: close
+        var errorResponse = 
+            $"""
+             HTTP/1.1 400 Bad Request
+             Content-Type: application/json
+             Connection: close
 
-                             "Invalid TCP proxy request. No matching routing for '{ip}:{port}'."
-                             """;
-        return System.Text.Encoding.UTF8.GetBytes(errorResponse);
+             "Invalid TCP proxy request. No matching routing for '{ip}:{port}'."
+             """;
+        return Encoding.UTF8.GetBytes(errorResponse);
     }
 
     /// <summary>
@@ -154,4 +208,123 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
 
         return bytesRead >= 24 && buffer.Take(24).SequenceEqual(_http2Preface);
     }
+
+    public static string ParseSniHostname(byte[] buffer, int length)
+    {
+        if (buffer == null || length < 5 || buffer[0] != 0x16)
+        {
+            return null; // Not a TLS handshake record
+        }
+
+        var pos = 5; // Skip: ContentType (1) + Version (2) + Record Length (2)
+        
+        if (pos + 1 > length || buffer[pos++] != 0x01)
+        {
+            return null; // Not a ClientHello message
+        }
+
+        if (pos + 3 + 2 + 32 > length)
+        {
+            return null; // Handshake Length + Version + Random
+        }
+
+        pos += 3; // Skip Handshake Length
+        pos += 2; // Skip Protocol Version
+        pos += 32; // Skip Random
+
+        if (pos + 1 > length)
+        {
+            return null;
+        }
+
+        var sessionIdLength = buffer[pos++];
+        pos += sessionIdLength;
+        if (pos > length)
+        {
+            return null;
+        }
+
+        if (pos + 2 > length)
+        {
+            return null;
+        }
+
+        var cipherSuitesLength = (buffer[pos++] << 8) | buffer[pos++];
+        pos += cipherSuitesLength;
+
+        if (pos > length)
+        {
+            return null;
+        }
+
+        if (pos + 1 > length)
+        {
+            return null;
+        }
+
+        var compressionMethodsLength = buffer[pos++];
+        pos += compressionMethodsLength;
+        if (pos > length)
+        {
+            return null;
+        }
+
+        if (pos + 2 > length)
+        {
+            return null;
+        }
+
+        var extensionsLength = (buffer[pos++] << 8) | buffer[pos++];
+        var extensionsEnd = pos + extensionsLength;
+        if (extensionsEnd > length)
+        {
+            return null;
+        }
+
+        while (pos + 4 <= extensionsEnd)
+        {
+            var extensionType = (buffer[pos++] << 8) | buffer[pos++];
+            var extensionLength = (buffer[pos++] << 8) | buffer[pos++];
+            if (pos + extensionLength > extensionsEnd)
+            {
+                return null;
+            }
+
+            if (extensionType == 0x00) // Server Name Indication
+            {
+                var sniListLength = (buffer[pos++] << 8) | buffer[pos++];
+                var sniListEnd = pos + sniListLength;
+                if (sniListEnd > extensionsEnd)
+                {
+                    return null;
+                }
+
+                while (pos + 3 <= sniListEnd)
+                {
+                    var nameType = buffer[pos++];
+                    var nameLength = (buffer[pos++] << 8) | buffer[pos++];
+
+                    if (pos + nameLength > sniListEnd)
+                    {
+                        return null;
+                    }
+
+                    if (nameType == 0x00) // HostName
+                    {
+                        return Encoding.ASCII.GetString(buffer, pos, nameLength);
+                    }
+
+                    pos += nameLength;
+                }
+            }
+            else
+            {
+                pos += extensionLength;
+            }
+        }
+
+        return null;
+    }
 }
+
+

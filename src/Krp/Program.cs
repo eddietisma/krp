@@ -38,13 +38,12 @@ public class Program
                     //.UseTcpForwarder(options =>
                     // {
                     //    options.ListenAddress = IPAddress.Any;
-                    //    options.ListenPort = 80;
-
+                    //    options.ListenPorts = [80, 443];
                     // })
                     .UseTcpWithHttpForwarder(options =>
                     {
                         options.ListenAddress = IPAddress.Any;
-                        options.ListenPort = 80;
+                        options.ListenPorts = [80, 443];
                     })
                     .UseRouting(DnsOptions.WindowsHostsFile);
             });
