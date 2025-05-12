@@ -57,4 +57,4 @@ public class DnsUpdateBackgroundService : BackgroundService
 
         await _dnsHandler.UpdateAsync(hostnames);
     }
-} 
+}
