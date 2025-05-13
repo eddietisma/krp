@@ -37,13 +37,13 @@
 
 ### Installation
 
-```powershell
+```cli
 git clone https://github.com/eddietisma/krp.git
 cd krp
 dotnet run
 ```
 
-```powershell
+```cli
 dotnet tool install --global dotnet-krp
 krp
 ```
@@ -59,7 +59,7 @@ Assume your cluster has a service exposed at `myservice.myapi:8080`. With `krp` 
 
 You can then make requests as if the service was hosted locally:
 
-```powershell
+```cli
 curl http://myservice.myapi
 ```
 
@@ -125,7 +125,7 @@ To run `krp` in a Docker container, follow these steps:
 
 1. **Start Docker Desktop** as an administrator (required for hosts file modification).
 2. **Build and run the Docker container:**
-   ```bash
+   ```cli
    docker buildx bake
    docker compose up -d
    ```
