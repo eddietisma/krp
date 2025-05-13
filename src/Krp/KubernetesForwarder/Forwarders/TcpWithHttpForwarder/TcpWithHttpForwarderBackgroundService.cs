@@ -2,7 +2,6 @@
 using Krp.KubernetesForwarder.Endpoints;
 using Krp.KubernetesForwarder.Forwarders.HttpForwarder;
 using Krp.KubernetesForwarder.Forwarders.TcpForwarder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -130,22 +128,30 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
                         // Forward to HttpForwarder for routing using HTTP headers.
                         targetPort = _httpOptions.HttpsPort;
 
-                        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-                        {
-                            // Fetch HOST from SNI since we can't use loopback IPs for routing.
-                            bytesRead = await clientStream.ReadAsync(buffer, 0, buffer.Length, stoppingToken);
-                            var host = ParseSniHostname(buffer, bytesRead);
-
-                            if (!string.IsNullOrEmpty(host))
-                            {
-                                // TODO: Need to verify local HTTP endpoints by checking port.
-                                //var httpProxyHandler = _endpointManager.GetHandlerByUrl(host);
-
-                                // Bypass HTTP forwarder to prevent unnecessary overhead (e.g. TLS termination).
-                                targetIp = await _dnsLookupHandler.QueryAsync(host);
-                                targetPort = localPort;
-                            }
-                        }
+                        // TODO: Since TCP connections are stream based, once the tunnel is setup we can no longer react to when HTTP endpoints check switches state.
+                        // TODO: Idea - once a hostname has been setup, react to when ANY HTTP endpoint changes state and disconnect all active HTTP tunnels.
+                        //if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+                        //{
+                        //    // Fetch HOST from SNI since we can't use loopback IPs for routing.
+                        //    bytesRead = await clientStream.ReadAsync(buffer, 0, buffer.Length, stoppingToken);
+                        //    var host = ParseSniHostname(buffer, bytesRead);
+                        //    if (!string.IsNullOrEmpty(host))
+                        //    {
+                        //        var endpointHandler = _endpointManager.GetHandlersByHost(host);
+                        //        if (endpointHandler.Any(x => !PortChecker.TryIsPortAvailable(x.LocalPort)))
+                        //        {
+                        //            // Send to HTTP forwarder if at least one endpoint has an active port for this host.
+                        //            targetIp = IPAddress.Loopback;
+                        //            targetPort = _httpOptions.HttpsPort;
+                        //        }
+                        //        else
+                        //        {
+                        //            // Bypass HTTP forwarder to prevent unnecessary overhead (e.g. TLS termination).
+                        //            targetIp = await _dnsLookupHandler.QueryAsync(host);
+                        //            targetPort = localPort;
+                        //        }
+                        //    }
+                        //}
                         break;
                     default:
                         _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);
@@ -154,7 +160,8 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
                         return;
                 }
             }
-            
+
+            // Setup live TCP connection between client and downstream port to let data flow.
             await target.ConnectAsync(targetIp, targetPort, stoppingToken);
             var targetStream = target.GetStream();
             await targetStream.WriteAsync(buffer, 0, bytesRead, stoppingToken);

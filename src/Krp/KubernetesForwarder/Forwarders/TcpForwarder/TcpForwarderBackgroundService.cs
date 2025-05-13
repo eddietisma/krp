@@ -68,6 +68,7 @@ public class TcpForwarderBackgroundService : BackgroundService
 
                     await portForwardHandler.EnsureRunningAsync();
 
+                    // Setup live TCP connection between client and downstream port to let data flow.
                     await target.ConnectAsync(IPAddress.Loopback, portForwardHandler.LocalPort, stoppingToken);
                     var clientStream = client.GetStream();
                     var targetStream = target.GetStream();

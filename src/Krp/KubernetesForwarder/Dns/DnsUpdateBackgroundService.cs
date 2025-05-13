@@ -48,6 +48,7 @@ public class DnsUpdateBackgroundService : BackgroundService
 
     private async Task UpdateDns()
     {
+        // https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods
         var hostnames = _endpointManager
             .GetAllHandlers()
             .Where(x => !string.IsNullOrEmpty(x.Url))
