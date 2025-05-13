@@ -82,8 +82,8 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseEndpointExplorer(this KubernetesForwarderBuilder builder, Action<EndpointExplorerOptions> optionsAction)
     {
         builder.Services.Configure(optionsAction);
+        builder.Services.AddSingleton<EndpointExplorer.EndpointExplorer>();
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
-        builder.Services.AddSingleton<EndpointExplorerHandler>();
 
         return builder;
     }
@@ -104,6 +104,7 @@ public static class KubernetesBuilderExtension
         };
 
         builder.Services.Configure(optionsAction);
+        builder.Services.AddSingleton<HttpForwarder>();
         builder.Services.AddHostedService<HttpForwarderBackgroundService>();
         builder.Services.AddSingleton(builder.Services);
         return builder;
@@ -149,12 +150,13 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseTcpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> optionsAction)
     {
         builder.Services.Configure(optionsAction);
+        builder.Services.AddSingleton<TcpForwarder>();
         builder.Services.AddHostedService<TcpForwarderBackgroundService>();
         return builder;
     }
 
     /// <summary>
-    /// Starts an optional TCP server to handle TCP requests with HTTP packet inspection.
+    /// Starts an optional TCP server to handle TCP requests with HTTP packet inspection. 
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="tcpOptionsAction"></param>
@@ -162,6 +164,7 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseTcpWithHttpForwarder(this KubernetesForwarderBuilder builder, Action<TcpForwarderOptions> tcpOptionsAction)
     {
         builder.Services.Configure(tcpOptionsAction);
+        builder.Services.AddSingleton<TcpWithHttpForwarder>();
         builder.Services.AddHostedService<TcpWithHttpForwarderBackgroundService>();
         builder.UseHttpForwarder(options =>
         {

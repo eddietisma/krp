@@ -1,4 +1,3 @@
-using Krp.Dns;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,11 +9,11 @@ namespace Krp.EndpointExplorer;
 
 public class EndpointExplorerBackgroundService : BackgroundService
 {
-    private readonly EndpointExplorerHandler _explorer;
+    private readonly EndpointExplorer _explorer;
     private readonly EndpointExplorerOptions _options;
-    private readonly ILogger<DnsUpdateBackgroundService> _logger;
+    private readonly ILogger<EndpointExplorerBackgroundService> _logger;
 
-    public EndpointExplorerBackgroundService(EndpointExplorerHandler explorer, IOptions<EndpointExplorerOptions> options, ILogger<DnsUpdateBackgroundService> logger)
+    public EndpointExplorerBackgroundService(EndpointExplorer explorer, IOptions<EndpointExplorerOptions> options, ILogger<EndpointExplorerBackgroundService> logger)
     {
         _explorer = explorer;
         _options = options.Value;
