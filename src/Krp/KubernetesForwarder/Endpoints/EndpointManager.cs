@@ -98,13 +98,23 @@ public class EndpointManager
     }
 
     /// <summary>
-    /// Used for Kubernetes endpoints to find the correct handler by URL.
+    /// Used for Kubernetes endpoints to find the correct handler by host.
     /// </summary>
-    /// <param name="url"></param>
+    /// <param name="host"></param>
     /// <returns></returns>
-    public IEndpointHandler GetHandlerByUrl(string url)
+    public List<IEndpointHandler> GetHandlersByHost(string host)
     {
-        return _handlers.FirstOrDefault(x => x.Url == url);
+        return _handlers.Where(x => x.Host == host).ToList();
+    }
+
+    /// <summary>
+    /// Used for Kubernetes endpoints to find the correct handler by host.
+    /// </summary>
+    /// <param name="host"></param>
+    /// <returns></returns>
+    public IEndpointHandler GetPortForwardHandlerByHost(string host)
+    {
+        return _handlers.FirstOrDefault(x => x.GetType() == typeof(PortForwardEndpointHandler) && x.Host == host);
     }
 
     /// <summary>
