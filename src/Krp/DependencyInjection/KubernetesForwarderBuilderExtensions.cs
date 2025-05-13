@@ -1,9 +1,9 @@
-﻿using Krp.KubernetesForwarder.Dns;
-using Krp.KubernetesForwarder.EndpointExplorer;
-using Krp.KubernetesForwarder.Endpoints.Models;
-using Krp.KubernetesForwarder.Forwarders.HttpForwarder;
-using Krp.KubernetesForwarder.Forwarders.TcpForwarder;
-using Krp.KubernetesForwarder.Forwarders.TcpWithHttpForwarder;
+﻿using Krp.Dns;
+using Krp.EndpointExplorer;
+using Krp.Endpoints.Models;
+using Krp.Forwarders.HttpForwarder;
+using Krp.Forwarders.TcpForwarder;
+using Krp.Forwarders.TcpWithHttpForwarder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;

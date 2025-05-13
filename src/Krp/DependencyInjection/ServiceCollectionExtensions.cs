@@ -1,7 +1,7 @@
-﻿using Krp.KubernetesForwarder.ContextSwitching;
-using Krp.KubernetesForwarder.Endpoints;
-using Krp.KubernetesForwarder.Endpoints.Models;
-using Krp.KubernetesForwarder.Endpoints.PortForward;
+﻿using Krp.ContextSwitching;
+using Krp.Endpoints;
+using Krp.Endpoints.Models;
+using Krp.Endpoints.PortForward;
 using Meziantou.Framework.Win32;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
