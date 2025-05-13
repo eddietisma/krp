@@ -1,5 +1,5 @@
 using Krp.DependencyInjection;
-using Krp.KubernetesForwarder.Dns;
+using Krp.Dns;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
