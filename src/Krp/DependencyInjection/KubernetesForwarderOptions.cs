@@ -1,4 +1,4 @@
-﻿using Krp.KubernetesForwarder.Endpoints.Models;
+﻿using Krp.Endpoints.Models;
 using System.Collections.Generic;
 
 namespace Krp.DependencyInjection;
