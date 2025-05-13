@@ -17,14 +17,14 @@ namespace Krp.Forwarders.HttpForwarder;
 /// <summary>
 /// Uses Kestrel as HTTP server and forwards requests to Kubernetes based on domain.
 /// </summary>
-public class HttpForwarderHandler
+public class HttpForwarder
 {
     private readonly EndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
     private readonly IDnsLookupHandler _dnsLookupHandler;
-    private readonly ILogger<HttpForwarderHandler> _logger;
+    private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarderHandler(EndpointManager endpointManager, IHttpForwarder forwarder, IDnsLookupHandler dnsLookupHandler, ILogger<HttpForwarderHandler> logger)
+    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, IDnsLookupHandler dnsLookupHandler, ILogger<HttpForwarder> logger)
     {
         _endpointManager = endpointManager;
         _forwarder = forwarder;
