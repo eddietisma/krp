@@ -1,5 +1,4 @@
 ﻿using k8s;
-using Krp.EndpointExplorer;
 using Krp.Endpoints;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -43,7 +42,7 @@ public class ContextSwitchingWatcher : BackgroundService
                     _logger.LogInformation("Detected context switch from {oldContext} to {newContext}", _currentContext, config.CurrentContext);
                     _endpointManager.RemoveAllHandlers();
 
-                    var endpointExplorer = _serviceProvider.GetService<EndpointExplorerHandler>();
+                    var endpointExplorer = _serviceProvider.GetService<EndpointExplorer.EndpointExplorer>();
                     if (endpointExplorer != null)
                     {
                         await endpointExplorer.DiscoverEndpointsAsync(ct);

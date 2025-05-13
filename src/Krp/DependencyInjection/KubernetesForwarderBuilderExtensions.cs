@@ -83,7 +83,7 @@ public static class KubernetesBuilderExtension
     {
         builder.Services.Configure(optionsAction);
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
-        builder.Services.AddSingleton<EndpointExplorerHandler>();
+        builder.Services.AddSingleton<EndpointExplorer.EndpointExplorer>();
 
         return builder;
     }

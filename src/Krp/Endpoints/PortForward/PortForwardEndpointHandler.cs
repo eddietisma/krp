@@ -1,5 +1,4 @@
 ﻿using Krp.Common;
-using Krp.Endpoints;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;

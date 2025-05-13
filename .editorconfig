@@ -191,6 +191,9 @@ dotnet_naming_rule.private_or_internal_field_should_be_camel_case.severity = err
 dotnet_naming_rule.private_or_internal_field_should_be_camel_case.symbols = private_or_internal_field
 dotnet_naming_rule.private_or_internal_field_should_be_camel_case.style = require_underscore_prefix_and_camel_case
 
+dotnet_naming_rule.constants_should_be_upper_case.severity = suggestion
+dotnet_naming_rule.constants_should_be_upper_case.symbols = constant_fields
+dotnet_naming_rule.constants_should_be_upper_case.style = upper_case
 
 # Symbol specifications
 
@@ -214,6 +217,10 @@ dotnet_naming_symbols.non_field_members.applicable_kinds = property, event, meth
 dotnet_naming_symbols.non_field_members.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
 dotnet_naming_symbols.non_field_members.required_modifiers = 
 
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.applicable_accessibilities = *
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+
 # Naming styles
 
 dotnet_naming_style.pascal_case.required_prefix = 
@@ -230,6 +237,11 @@ dotnet_naming_style.camel_case.required_prefix =
 dotnet_naming_style.camel_case.required_suffix = 
 dotnet_naming_style.camel_case.word_separator = 
 dotnet_naming_style.camel_case.capitalization = camel_case
+
+dotnet_naming_style.upper_case.required_prefix = 
+dotnet_naming_style.upper_case.required_suffix = 
+dotnet_naming_style.upper_case.word_separator = _
+dotnet_naming_style.upper_case.capitalization = all_upper
 
 [*.{cs,vb}]
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
