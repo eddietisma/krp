@@ -10,6 +10,7 @@
     <DockerfileContext>.</DockerfileContext>
     <DockerfileRunArguments>-v $(USERPROFILE)/.kube:/root/.kube -v azure:/root/.azure -v /c/Windows/System32/drivers/etc/:/windows_etc/</DockerfileRunArguments>
     <IsPackable>true</IsPackable>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!--Tool-->
     <PackAsTool>true</PackAsTool>
