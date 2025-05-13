@@ -14,13 +14,13 @@ using System.Threading.Tasks;
 
 namespace Krp.EndpointExplorer;
 
-public class EndpointExplorerHandler
+public class EndpointExplorer
 {
     private readonly EndpointManager _endpointManager;
-    private readonly ILogger<EndpointExplorerHandler> _logger;
-    private readonly List<Regex> _compiledFilters = new();
+    private readonly ILogger<EndpointExplorer> _logger;
+    private readonly List<Regex> _compiledFilters = [];
 
-    public EndpointExplorerHandler(IOptions<EndpointExplorerOptions> options, EndpointManager endpointManager, ILogger<EndpointExplorerHandler> logger)
+    public EndpointExplorer(IOptions<EndpointExplorerOptions> options, EndpointManager endpointManager, ILogger<EndpointExplorer> logger)
     {
         _endpointManager = endpointManager;
         _logger = logger;
