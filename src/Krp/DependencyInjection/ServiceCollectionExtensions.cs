@@ -39,8 +39,8 @@ public static class ServiceCollectionExtensions
 
     private static void RegisterEndpoints(IConfiguration configuration, KubernetesForwarderBuilder builder)
     {
-        var httpEndpoints = configuration.GetSection("Krp:HttpEndpoints").Get<List<HttpEndpoint>>() ?? new List<HttpEndpoint>();
-        var endpoints = configuration.GetSection("Krp:Endpoints").Get<List<KubernetesEndpoint>>() ?? new List<KubernetesEndpoint>();
+        var httpEndpoints = configuration.GetSection("Krp:HttpEndpoints").Get<List<HttpEndpoint>>() ?? [];
+        var endpoints = configuration.GetSection("Krp:Endpoints").Get<List<KubernetesEndpoint>>() ?? [];
 
         foreach (var endpoint in httpEndpoints)
         {
