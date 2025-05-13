@@ -8,7 +8,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddHttpForwarder();
-        services.AddSingleton<HttpForwarderHandler>();
+        services.AddSingleton<HttpForwarder>();
     }
 
     public void Configure(IApplicationBuilder app)
@@ -16,7 +16,7 @@ public class Startup
         app.UseRouting();
         app.UseEndpoints(endpoints =>
         {
-            endpoints.Map("/{**catch-all}", async (HttpForwarderHandler handler, HttpContext httpContext) =>
+            endpoints.Map("/{**catch-all}", async (HttpForwarder handler, HttpContext httpContext) =>
             {
                 await handler.HandleRequest(httpContext);
             });
