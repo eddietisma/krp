@@ -7,6 +7,7 @@
     <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
     <IsPackable>true</IsPackable>
     <UserSecretsId>ee254248-617e-45f1-be8b-552348a35864</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <!--Package-->
     <Authors>Eddie Tisma</Authors>
