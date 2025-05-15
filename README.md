@@ -21,7 +21,7 @@
 ## **How `krp` Works**
 
 1. **Host File Modifications:**  
-   `krp` adds cluster-internal names (e.g., `my-service.namespace.svc.cluster.local`) to the local hosts file, resolving them to `127.0.0.1`.
+   `krp` adds cluster-internal names (e.g., `my-service.namespace`) to the local hosts file, resolving them to `127.0.0.1`.
 
 2. **Port Forwarding with `kubectl`:**  
    `krp` forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
