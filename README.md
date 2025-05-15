@@ -21,10 +21,10 @@
 ## **How `krp` Works**
 
 1. **Host File Modifications:**  
-   `krp` adds cluster-internal names (e.g., `my-service.namespace`) to the local hosts file, resolving them to `127.0.0.1`.
+   `krp` adds cluster-internal names (eg. `service.namespace`) to the local hosts file, resolving them to loopback addresses `127.0.0.x`.
 
 2. **Port Forwarding with `kubectl`:**  
-   `krp` forwards Kubernetes service or pod ports to local machine ports, dynamically selecting available free ports for each forward.
+   `krp` forwards traffic to Kubernetes service or pod ports to local machine ports, using looback IP as routing.
 
 3. **Reverse Proxying with YARP:**  
    YARP listens on the local machine and proxies HTTP(S) requests to the appropriate port-forwarded targets.
