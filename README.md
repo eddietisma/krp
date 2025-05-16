@@ -21,19 +21,32 @@
 ## **How `krp` Works**
 
 1. **Host File Modifications:**  
-   `krp` adds cluster-internal names (eg. `service.namespace`) to the local hosts file, resolving them to loopback addresses `127.0.0.x`.
+   Adds cluster-internal names  to the local hosts file, resolving them to loopback addresses (eg. `127.0.0.x myapi.namespace`).
 
-2. **Port Forwarding with `kubectl`:**  
-   `krp` forwards traffic to Kubernetes service or pod ports to local machine ports, using looback IP as routing.
-
-3. **Reverse Proxying with YARP:**  
+2. **Reverse Proxying with YARP:**  
    YARP listens on the local machine and proxies HTTP(S) requests to the appropriate port-forwarded targets.
+   
+3. **Port Forwarding with `kubectl`:**  
+   Dynamically runs `kubectl port-forward` to forwards traffic to Kubernetes pods to local machine ports (using looback IPs as routing).
+
+### Use Case
+
+Assume your cluster has a service exposed at `myapi.namespace:8080`. With `krp` running:
+
+- The hosts file will be modified to resolve `myservice.myapi` to `127.0.0.x`.
+- HTTP traffic will be routed through the local port-forward and proxied via YARP.
+
+You can then make requests as if the service was hosted locally:
+
+```cli
+curl http://myservice.myapi
+```
 
 ## **Getting Started** 🚀
 
 ### Prerequisites
-- **`kubectl`**: Must be installed and authenticated against your Kubernetes cluster.
-- **Administrator Permissions**: Because `krp` modifies the Windows hosts file, the application must be run with administrator privileges.
+- `kubectl` must be installed and authenticated against your Kubernetes cluster.
+- `hosts` file modifications requires administrator privileges.
 
 ### Installation
 
@@ -48,20 +61,12 @@ dotnet tool install --global dotnet-krp
 krp
 ```
 
-## **Usage**
-
-### Use Case
-
-Assume your cluster has a service exposed at `myservice.myapi:8080`. With `krp` running:
-
-- The Windows hosts file will be modified to resolve `myservice.myapi` to `127.0.0.1`.
-- HTTP traffic will be routed through the local port-forward and proxied via YARP.
-
-You can then make requests as if the service was hosted locally:
-
 ```cli
-curl http://myservice.myapi
+docker pull krp:latest
+docker run -d --name krp krp:latest
 ```
+
+## **Usage**
 
 ### Configuration
 
