@@ -18,7 +18,7 @@
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes service or pod ports to local machine ports.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
 
-## **How `krp` Works**
+## **How `krp` works**
 
 1. **Host File Modifications:**  
    Adds cluster-internal names  to the local hosts file, resolving them to loopback addresses (eg. `127.0.0.x myapi.namespace`).
@@ -29,7 +29,7 @@
 3. **Port Forwarding with `kubectl`:**  
    Dynamically runs `kubectl port-forward` to forwards traffic to Kubernetes pods to local machine ports (using looback IPs as routing).
 
-### Use Case
+### Use case
 
 Assume your cluster has a service exposed at `myapi.namespace:8080`. With `krp` running:
 
@@ -42,7 +42,7 @@ You can then make requests as if the service was hosted locally:
 curl http://myservice.myapi
 ```
 
-## **Getting Started** 🚀
+## **Getting started** 🚀
 
 ### Prerequisites
 - `kubectl` must be installed and authenticated against your Kubernetes cluster.
@@ -106,7 +106,7 @@ services.AddKubernetesForwarder()
     .UseRouting(DnsOptions.WindowsHostsFile);
 ```
 
-### Forwarders Available
+### Forwarders available
 `UseHttpForwarder`
 - Supports HTTP (only).
 - Supports domain based routing.
