@@ -104,7 +104,6 @@ public static class KubernetesBuilderExtension
         };
 
         builder.Services.Configure(optionsAction);
-        builder.Services.AddSingleton<HttpForwarder>();
         builder.Services.AddHostedService<HttpForwarderBackgroundService>();
         builder.Services.AddSingleton(builder.Services);
         return builder;
@@ -132,8 +131,8 @@ public static class KubernetesBuilderExtension
 
                     options.Path = path;
                 });
-                //builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
-                builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
+                builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
+                //builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, null);

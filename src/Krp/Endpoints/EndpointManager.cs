@@ -131,17 +131,36 @@ public class EndpointManager
     {
         return _handlers;
     }
-    
+
     public void RemoveAllHandlers()
     {
         foreach (var handler in _handlers)
         {
-            handler.Dispose();  
+            handler.Dispose();
         }
 
         _handlers.RemoveAll(handler => !handler.IsStatic);
     }
-    
+
+    public void RemovePortForwardHandlerByResource(string resource)
+    {
+        var handlers = _handlers.Where(x => x.GetType() == typeof(PortForwardEndpointHandler));
+
+        foreach (var endpointHandler in handlers)
+        {
+            var handler = (PortForwardEndpointHandler)endpointHandler;
+            if (!handler.Resource.Equals(resource))
+            {
+                continue;
+            }
+
+            _logger.LogDebug("Removing port-forward handler for {resource}", resource);
+            handler.Dispose();
+        }
+
+        _handlers.RemoveAll(handler => !handler.IsStatic);
+    }
+
     public void TriggerEndPointsChangedEvent()
     {
         EndPointsChangedEvent?.Invoke();
