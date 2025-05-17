@@ -50,7 +50,6 @@ public class ContextSwitchingWatcher : BackgroundService
 
                     _currentContext = config.CurrentContext;
                 }
-
             }
             catch (Exception ex)
             {
