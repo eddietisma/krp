@@ -104,7 +104,6 @@ public static class KubernetesBuilderExtension
         };
 
         builder.Services.Configure(optionsAction);
-        builder.Services.AddSingleton<HttpForwarder>();
         builder.Services.AddHostedService<HttpForwarderBackgroundService>();
         builder.Services.AddSingleton(builder.Services);
         return builder;

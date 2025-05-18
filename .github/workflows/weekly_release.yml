@@ -1,0 +1,91 @@
+name: Weekly Release
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # Runs every Sunday at 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+
+  check_date:
+    name: Check latest commit is recent
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine latest commit time
+        id: check
+        if: ${{ github.event_name == 'schedule' }}
+        run: |
+          latest_commit_date=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          diff=$((now - latest_commit_date))
+          if [ "$diff" -le 86400 ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-publish:
+    needs: [check_date]
+    if: ${{ github.event_name != 'schedule' || needs.check_date.outputs.should_run == 'true' }}
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.x'
+
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "release" ]; then
+          echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+        else
+          short_sha=$(git rev-parse --short HEAD)
+          latest_release=$(git tag -l --sort=-creatordate | head -n 1)
+          if [ -z "$latest_release" ]; then
+            latest_release="1.0.0"
+          fi
+          echo "version=${latest_release}-beta${{ github.run_number }}-${short_sha}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Restore
+      run: dotnet restore --locked-mode
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack NuGet package
+      run: |
+        dotnet pack --configuration Release \
+          --no-build \
+          --output ./nupkgs \
+          -p:PackageVersion=${{ steps.version.outputs.version }}
+
+    - name: Push to NuGet
+      run: |
+        dotnet nuget push "./nupkgs/*.nupkg" \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/krp:${{ steps.version.outputs.version }}
+          ${{ secrets.DOCKER_USERNAME }}/krp:latest
