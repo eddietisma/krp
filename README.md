@@ -32,7 +32,7 @@
 7. **Port forwarding endpoints:**  
    Runs `kubectl port-forward` and forwards traffic to Kubernetes pods to local ports. Re-uses existing process if already exists, and if the pod dies the process also dies in which case a new one will spawn on-demand.
         
-9. **HTTP proxy endpoints:**:  
+9. **HTTP proxy endpoints:**  
     Routes to local port if up, otherwise routes to original IP.
 
 ### Use case
@@ -129,7 +129,7 @@ services.AddKubernetesForwarder()
 
 #### `HttpForwarder`
 - Supports HTTP requests (only).
-- Supports domain based routing.
+- Supports domain based routing (using HTTP headers).
 - Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS **is not supported**.
 - Uses SSL termination (for HTTPS either disable certificate validation on client or setup certificate for each domain).
 
@@ -143,9 +143,9 @@ services.AddKubernetesForwarder()
 - Forwards HTTP/x request to `HttpForwarder` using packet inspection. Inspects TCP traffic and routes HTTP requests to different server ports based on protocol (81 for HTTP/1.1 and 82 for HTTP/2).
 
 > [!NOTE]
-> **When running Docker using Windows hosts:** No support for domain based routing **for low-level TCP** due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all IP originates from Docker gateway). Limiting routing to HTTP requests only for Windows hosts.
+> **When running Docker using Windows hosts:** No support for domain based routing **for low-level TCP** due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all loopback IPs will originate from Docker gateway). Limiting routing to HTTP requests only for Windows hosts.
 >
-> For HTTPS we could use SNI to detect hostnames for routing but ran into issues with reacting to network changes due to already established TCP tunnels (need some more work to break existing TCP connections when needed).
+> For HTTPS we could use SNI to detect hostnames and use for routing but ran into issues with reacting to network changes due to already established TCP tunnels (need some more work to break existing TCP connections when needed).
 
 ## **Running in Docker**
 
