@@ -3,18 +3,22 @@ services:
   krp:
     build:
       context: .
-    image: krp/krp:latest
+    image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     environment:
       KRP_ENDPOINT_EXPLORER: false
       KRP_WINDOWS_HOSTS: /windows_etc/hosts
+      ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
     volumes:
       - ~/.kube:/root/.kube
+      - ~/.krp:/root/.krp
       - azure:/root/.azure 
       - /c/Windows/System32/drivers/etc/:/windows_etc/ 
-
+    
 volumes:
     azure:
