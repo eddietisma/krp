@@ -70,17 +70,18 @@ krp
 ```
 
 ```cli
-docker pull eddietisma/krp:latest
 dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --trust
+docker compose -f https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml up
+docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login  --use-device-code
 
 docker run -d `
    --name krp `
    -v "${env:USERPROFILE}\.kube:/root/.kube" `
    -v "${env:USERPROFILE}\.krp:/root/.krp" `
-   -v "krp_azure:/root/.azure" `
-   -v "/c/Windows/System32/drivers/etc/:/windows_etc/" `
+   -v "${env:USERPROFILE}\.krp\azure:/root/.azure" `
+   -v "c/Windows/System32/drivers/etc/:/windows_etc/" `
    -e ASPNETCORE_Kestrel__Certificates__Default__Password="your-cert-password" `
-   -e ASPNETCORE_Kestrel__Certificates__Default__Path="/root/.https/localhost.pfx" `
+   -e ASPNETCORE_Kestrel__Certificates__Default__Path="/root/.krp/krp.pfx" `
    eddietisma/krp:latest
 ```
 
