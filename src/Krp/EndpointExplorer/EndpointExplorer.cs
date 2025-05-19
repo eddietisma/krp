@@ -90,7 +90,7 @@ public class EndpointExplorer
         catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == HttpStatusCode.Forbidden)
         {
             _logger.LogInformation("namespace/{namespace} (skipping due to access)", ns);
-            return Enumerable.Empty<V1Service>();
+            return [];
         }
     }
 }

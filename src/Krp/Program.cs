@@ -22,14 +22,14 @@ public class Program
                     //.UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
                     //.UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
                     //.UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
-                    .UseEndpointExplorer(options =>
-                    {
-                        //options.Filter = [
-                        //    "namespace/meetings/*",
-                        //    "namespace/*/service/person*",
-                        //];
-                        options.RefreshInterval = TimeSpan.FromHours(1);
-                    })
+                    //.UseEndpointExplorer(options =>
+                    //{
+                    //    //options.Filter = [
+                    //    //    "namespace/meetings/*",
+                    //    //    "namespace/*/service/person*",
+                    //    //];
+                    //    options.RefreshInterval = TimeSpan.FromHours(1);
+                    //})
                     .UseDnsLookup(options =>
                     {
                         options.Nameserver = "8.8.8.8";

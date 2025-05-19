@@ -9,11 +9,6 @@ using System.Threading.Tasks;
 
 namespace Krp.Dns;
 
-public interface IDnsHandler
-{
-    Task UpdateAsync(List<string> hostnames);
-}
-
 public class DnsWindowsHostsHandler : IDnsHandler
 {
     private const string MARKER_START = "# Added by krp";
