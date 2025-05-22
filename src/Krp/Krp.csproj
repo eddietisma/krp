@@ -19,10 +19,13 @@
     <PackageProjectUrl>https://github.com/eddietisma/krp</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageOutputPath>./nupkg</PackageOutputPath>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PackageTags>kubernetes;networking;proxy;developer-tools;port-forwarding;krp</PackageTags>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <IncludeSymbols>true</IncludeSymbols>
+
+    <!-- Symbol package -->
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IncludeSymbols>true</IncludeSymbols>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
