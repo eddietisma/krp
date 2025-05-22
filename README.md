@@ -12,7 +12,7 @@
 - **Dynamic Traffic Routing:** Routes traffic to localhost through the hosts file.
 - **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
 
-### **Core Dependencies**
+### **Dependencies**
 - [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) traffic routing capabilities.
 - [DnsClient](https://github.com/MichaCo/DnsClient.NET): Facilitates DNS lookups when resolving HTTP endpoints.
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes pod ports to local machine ports.
@@ -21,10 +21,10 @@
 ## **How `krp` works**
 
 1. **Endpoint registration**:  
-   Uses static configuration or dynamic endpoint discovery.
+   Uses static configuration or dynamic discovery for endpoints.
 
 3. **Routing configuration:**  
-   Adds endpoints to local hosts file, resolving to loopback addresses. Each endpoint will get a unique loopback address (eg. `127.0.0.x myapi.namespace`).
+   Adds endpoints to local hosts files. Each endpoint will get a unique loopback address (eg. `127.0.0.x myapi.namespace`).
 
 5. **Reverse proxying:**  
    Listens on the local machine and proxies requests to endpoint targets.
@@ -35,20 +35,31 @@
 9. **HTTP proxy endpoints:**  
     Routes to local port if up, otherwise routes to original IP.
 
-### Use case
+## Examples 
 
-Assume your cluster has a service exposed at `myapi.namespace:80`. 
+### Use case: Kubernetes endpoint
 
-With `krp` running:
-- The hosts file will be modified to resolve `myapi.namespace` to `127.0.0.x`.
-- Traffic will be proxied to krp.
-- `krp` will find corresponding service based on loopback address and run `kubectl port-forward` to forward traffic to the local port.
-
-You can then make requests as if the service was hosted locally:
-
-```cli
-curl http://myapi.namespace:80
 ```
+.UseEndpoint(0, 80, "namespace", "myapi") // 0 for dynamic local port selection
+```
+
+- Assume your cluster has a service exposed at `myapi.namespace:80`. 
+- The hosts file will be modified to resolve `myapi.namespace` to `127.0.0.x`.
+- Traffic will be proxied to `krp`.
+- `krp` will find corresponding service based on loopback address and run `kubectl port-forward` to forward traffic to local port.
+- You can then make requests as if the service was hosted locally: `curl myapi.namespace`
+
+### Use case: HTTP proxy endpoint
+
+```
+.UseHttpEndpoint(5001, "domain.com", "api/service/v2")
+```
+
+- Assume your API gateway is using `domain.com/api/service/v2`. 
+- The hosts file will be modified to resolve `domain.com` to `127.0.0.x`.
+- Traffic will be proxied to `krp`.
+- `krp` will find corresponding service based on loopback address and forwards traffic to local port 5001 if up.
+- You can then make requests to the URL which will be proxied locally: `curl domain.com/api/service/v2`
 
 ## **Getting started** 🚀
 
@@ -58,31 +69,27 @@ curl http://myapi.namespace:80
 
 ### Installation
 
-```cli
+```bash
+# Using local code
 git clone https://github.com/eddietisma/krp.git
 cd krp
 dotnet run
 ```
 
-```cli
+```bash
+# Using dotnet tool
 dotnet tool install --global dotnet-krp
 krp
 ```
 
-```cli
-dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --trust
+```bash
+# Using docker
 docker compose -f https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml up
-docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login  --use-device-code
+```
 
-docker run -d `
-   --name krp `
-   -v "${env:USERPROFILE}\.kube:/root/.kube" `
-   -v "${env:USERPROFILE}\.krp:/root/.krp" `
-   -v "${env:USERPROFILE}\.krp\azure:/root/.azure" `
-   -v "c/Windows/System32/drivers/etc/:/windows_etc/" `
-   -e ASPNETCORE_Kestrel__Certificates__Default__Password="your-cert-password" `
-   -e ASPNETCORE_Kestrel__Certificates__Default__Path="/root/.krp/krp.pfx" `
-   eddietisma/krp:latest
+```bash
+# Setup HTTPS
+dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --trust
 ```
 
 ## **Usage**
@@ -96,7 +103,7 @@ services.AddKubernetesForwarder()
     .UseHttpEndpoint(5000, "api.domain.com", "/api")
     .UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
     .UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
-    .UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
+    .UseEndpoint(0, 80, "namespace", "myapi") // 0 for dynamic local port selection
     .UseEndpointExplorer(options =>
     {
         // Filters to map specific namespaces, services, or pods
@@ -158,31 +165,43 @@ To run `krp` in a Docker container, follow these steps:
    docker compose up -d
    ```
 
-3. **For AKS (Azure Kubernetes Service):**  
-   Run `docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login` to authenticate with Azure.
+3. **Authenticate kubectl with cluster:**  
+   Most providers will encrypt the auth config for the specific machine. Hence mounting the config folder won't work inside the container.
+   ```bash
+   # For AKS
+   docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login  --use-device-code
 
-4. **For Windows environments:**  
-   Ensure the **host network mode** is enabled in the Docker configuration.
+   # For GKE
+   todo..
+
+   # For EKS
+   todo...
+   ```
 
 ### Example `docker-compose.yml`
 
 ```yaml
 services:
   krp:
-    image: krp/krp:latest
+    build:
+      context: .
+    image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
     ports:
       - "80:80"
+    #  - "443:443"
     environment:
+    #  ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
+    #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
+      AZURE_CONFIG_DIR: /root/.krp/.azure
       KRP_ENDPOINT_EXPLORER: false
-      KRP_WINDOWS_HOSTS: /windows_etc/hosts
+      KRP_WINDOWS_HOSTS: /mnt/hosts
     volumes:
       - ~/.kube:/root/.kube
-      - azure:/root/.azure 
-      - /c/Windows/System32/drivers/etc/:/windows_etc/ 
-volumes:
-    azure:
+      - ~/.krp:/root/.krp
+      - /c/Windows/System32/drivers/etc/:/host_etc/ # win
+      # - /etc/hosts:/mtn/hosts/ # Linux/macOS
 ```
 
 ## Roadmap / Ideas
@@ -194,3 +213,4 @@ volumes:
 - [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
 - [ ] Cross-platform support (Linux/macOS).
 - [ ] User interface.
+- [ ] Add GIF recordings of terminal use cases in README.
