@@ -1,0 +1,48 @@
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+    outputs:
+      version:
+        value: ${{ inputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      - name: dotnet restore
+        run: dotnet restore --locked-mode
+
+      - name: dotnet build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: dotnet pack
+        run: |
+          dotnet pack --configuration Release \
+            --no-build \
+            --output ./nupkgs \
+            -p:PackageVersion=${{ inputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: |
+            ./nupkgs/*.nupkg
+            ./nupkgs/*.snupkg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker
+          path: .

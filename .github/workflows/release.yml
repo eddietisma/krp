@@ -1,0 +1,20 @@
+on:
+  release:
+    types: [ released ]
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  publish-nuget:
+    needs: build
+    uses: ./.github/workflows/publish-nuget.yml
+
+  publish-docker:
+    needs: build
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      version: ${{ github.ref_name }}
+          
