@@ -15,77 +15,135 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Determine latest commit time
+      - name: Check for commits in the past week
         id: check
         if: ${{ github.event_name == 'schedule' }}
         run: |
-          latest_commit_date=$(git log -1 --format=%ct)
-          now=$(date +%s)
-          diff=$((now - latest_commit_date))
-          if [ "$diff" -le 86400 ]; then
+          recent_commits=$(git log --since="7 days ago" --pretty=oneline)
+          if [ -n "$recent_commits" ]; then
+            echo "Commits found in the past 7 days."
             echo "should_run=true" >> $GITHUB_OUTPUT
           else
+            echo "No commits in the past 7 days."
             echo "should_run=false" >> $GITHUB_OUTPUT
           fi
 
-  build-and-publish:
-    needs: [check_date]
+  build:
+    name: Build
+    needs: check_date
     if: ${{ github.event_name != 'schedule' || needs.check_date.outputs.should_run == 'true' }}
     runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
 
-    - name: Determine version
-      id: version
-      run: |
-        if [ "${{ github.event_name }}" == "release" ]; then
-          echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-        else
+      - name: Determine version
+        id: version
+        run: |
           short_sha=$(git rev-parse --short HEAD)
           latest_release=$(git tag -l --sort=-creatordate | head -n 1)
-          if [ -z "$latest_release" ]; then
-            latest_release="1.0.0"
-          fi
-          echo "version=${latest_release}-beta${{ github.run_number }}-${short_sha}" >> $GITHUB_OUTPUT
-        fi
+          base_version=${latest_release:-1.0.0}
+          version="${base_version}-beta${{ github.run_number }}-${short_sha}"
+          echo "Determined version: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
-    - name: Restore
-      run: dotnet restore --locked-mode
+      - name: Restore
+        run: dotnet restore --locked-mode
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
-    - name: Pack NuGet package
-      run: |
-        dotnet pack --configuration Release \
-          --no-build \
-          --output ./nupkgs \
-          -p:PackageVersion=${{ steps.version.outputs.version }}
+      - name: Pack NuGet package
+        run: |
+          dotnet pack --configuration Release \
+            --no-build \
+            --output ./nupkgs \
+            -p:PackageVersion=${{ steps.version.outputs.version }}
 
-    - name: Push to NuGet
-      run: |
-        dotnet nuget push "./nupkgs/*.nupkg" \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
-          --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate
+      - name: Upload NuGet Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: |
+            ./nupkgs/*.nupkg
+            ./nupkgs/*.snupkg
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Upload Docker context
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker
+          path: .
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/krp:${{ steps.version.outputs.version }}
-          ${{ secrets.DOCKER_USERNAME }}/krp:latest
+  publish-nuget:
+    name: Publish to NuGet
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download NuGet artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget
+
+      - name: Push NuGet packages
+        run: |
+          dotnet nuget push "*.nupkg" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+  publish-docker:
+    name: Publish Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Docker context
+        uses: actions/download-artifact@v4
+        with:
+          name: docker
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/krp:${{ needs.build.outputs.version }}
+            ${{ secrets.DOCKER_USERNAME }}/krp:latest
+
+  release:
+    name: Create Release
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.check_date.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download NuGet Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget
+          path: ./nupkgs
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: Weekly Beta Release v${{ needs.build.outputs.version }}
+          files: |
+            ./nupkgs/*.nupkg
+            ./nupkgs/*.snupkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
