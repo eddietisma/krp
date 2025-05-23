@@ -5,7 +5,8 @@ jobs:
   publish-nuget:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download
+        uses: actions/download-artifact@v4
         with:
           name: nuget
 
