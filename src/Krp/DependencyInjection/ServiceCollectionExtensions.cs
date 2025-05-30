@@ -1,5 +1,6 @@
 ﻿using Krp.ContextSwitching;
 using Krp.Endpoints;
+using Krp.Endpoints.HttpProxy;
 using Krp.Endpoints.Models;
 using Krp.Endpoints.PortForward;
 using Meziantou.Framework.Win32;
@@ -13,7 +14,7 @@ namespace Krp.DependencyInjection;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the <see cref="T:Krp.ReverseProxy.KubernetesForwarder" /> service for Kubernetes forwarding.
+    /// Registers services for Kubernetes forwarding.
     /// </summary>
     public static KubernetesForwarderBuilder AddKubernetesForwarder(this IServiceCollection services, IConfiguration configuration)
     {
@@ -31,8 +32,9 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointManager>();
-        services.AddTransient<PortForwardEndpointHandler>();
         services.AddSingleton<ProcessRunner>();
+        services.AddTransient<PortForwardEndpointHandler>();
+        services.AddTransient<HttpProxyEndpointHandler>();
 
         return builder;
     }

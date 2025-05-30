@@ -36,7 +36,7 @@ public class HttpForwarder
     {
         var requestUrl = httpContext.Request.GetEncodedUrl();
 
-        _logger.LogDebug("Received {requestUrl}", requestUrl);
+        _logger.LogDebug("Received request from {requestUrl}", requestUrl);
 
         var destinationUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
 
