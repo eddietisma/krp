@@ -16,8 +16,9 @@ namespace Krp.Endpoints;
 public class EndpointManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly List<IEndpointHandler> _handlers = new();
+    private readonly List<IEndpointHandler> _handlers = [];
     private readonly ILogger<EndpointManager> _logger;
+
     public EndpointManager(IServiceProvider serviceProvider, ILogger<EndpointManager> logger, IOptions<KubernetesForwarderOptions> options)
     {
         _serviceProvider = serviceProvider;
@@ -42,16 +43,14 @@ public class EndpointManager
     /// <param name="endpoint"></param>
     public void AddEndpoint(HttpEndpoint endpoint)
     {
-        var handler = new HttpProxyEndpointHandler
-        {
-            IsStatic = true,
-            LocalIp = _handlers.FirstOrDefault(x => x.Host == endpoint.Host)?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"), // Re-use IP if already exists.
-            LocalPort = endpoint.LocalPort,
-            Url = $"{endpoint.Host}{endpoint.Path}",
-            Host = endpoint.Host,
-            Path = endpoint.Path,
-        };
-
+        var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
+        handler.IsStatic = true;
+        handler.LocalIp = _handlers.FirstOrDefault(x => x.Host == endpoint.Host)?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
+        handler.LocalPort = endpoint.LocalPort;
+        handler.Url = $"{endpoint.Host}{endpoint.Path}";
+        handler.Host = endpoint.Host;
+        handler.Path = endpoint.Path;
+        
         if (_handlers.Any(x => x.Url == handler.Url))
         {
             _logger.LogWarning("Skipped already existing HTTP endpoint for {url}", handler.Url);
@@ -95,16 +94,6 @@ public class EndpointManager
     public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
     {
         return _handlers.FirstOrDefault(x => x.GetType() == typeof(HttpProxyEndpointHandler) && x.Host == host && path.StartsWith($"{x.Path}/"));
-    }
-
-    /// <summary>
-    /// Used for Kubernetes endpoints to find the correct handler by host.
-    /// </summary>
-    /// <param name="host"></param>
-    /// <returns></returns>
-    public List<IEndpointHandler> GetHandlersByHost(string host)
-    {
-        return _handlers.Where(x => x.Host == host).ToList();
     }
 
     /// <summary>
