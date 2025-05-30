@@ -52,36 +52,33 @@ public class TcpForwarder
     {
         try
         {
-            using (client)
+            using var tcpClient = client;
+            using var target = new TcpClient();
+
+            var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
+            var localIp = localEndPoint?.Address;
+            var localPort = localEndPoint?.Port;
+
+            _logger.LogDebug("Received request from {ip}:{port}", localIp, localPort);
+
+            var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
+            if (portForwardHandler == null)
             {
-                using (var target = new TcpClient())
-                {
-                    var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
-                    var localIp = localEndPoint?.Address;
-                    var localPort = localEndPoint?.Port;
-
-                    _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
-
-                    var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
-                    if (portForwardHandler == null)
-                    {
-                        _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);
-                        var errorMessageBytes = GetErrorMessageBytes(localIp, localPort);
-                        await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
-                        return;
-                    }
-
-                    await portForwardHandler.EnsureRunningAsync();
-
-                    // Setup live TCP connection between client and downstream port to let data flow.
-                    await target.ConnectAsync(IPAddress.Loopback, portForwardHandler.LocalPort, stoppingToken);
-                    var clientStream = client.GetStream();
-                    var targetStream = target.GetStream();
-                    var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
-                    var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
-                    await Task.WhenAny(clientToTarget, targetToClient);
-                }
+                _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);
+                var errorMessageBytes = GetErrorMessageBytes(localIp, localPort);
+                await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
+                return;
             }
+
+            await portForwardHandler.EnsureRunningAsync();
+
+            // Setup live TCP connection between client and downstream port to let data flow.
+            await target.ConnectAsync(IPAddress.Loopback, portForwardHandler.LocalPort, stoppingToken);
+            var clientStream = client.GetStream();
+            var targetStream = target.GetStream();
+            var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
+            var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
+            await Task.WhenAny(clientToTarget, targetToClient);
         }
         catch (Exception ex)
         {

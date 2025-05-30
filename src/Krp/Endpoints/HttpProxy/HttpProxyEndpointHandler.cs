@@ -20,9 +20,9 @@ public class HttpProxyEndpointHandler : IEndpointHandler
 
     public string GetDestinationUrl()
     {
-        return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" ?
-            $"http://host.docker.internal:{LocalPort}" : 
-            $"http://localhost:{LocalPort}";
+        return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" 
+            ? $"http://host.docker.internal:{LocalPort}"
+            : $"http://localhost:{LocalPort}";
     }
 
     public void Dispose()
