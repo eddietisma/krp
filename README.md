@@ -1,7 +1,9 @@
 # `krp` - Kubernetes Reverse Proxy
 
-[![NuGet](https://img.shields.io/nuget/v/krp?color=brightgreen&label=krp )](https://www.nuget.org/packages/krp)
-[![NuGet](https://img.shields.io/nuget/v/dotnet-krp?color=brightgreen&label=dotnet-krp)](https://www.nuget.org/packages/dotnet-krp)
+[![NuGet](https://img.shields.io/nuget/v/krp?color=brightgreen&label=krp&logo=nuget&logoColor=white)](https://www.nuget.org/packages/krp)
+[![dotnet tool](https://img.shields.io/nuget/v/dotnet-krp?color=brightgreen&label=dotnet-krp&logo=dotnet&logoColor=white)](https://www.nuget.org/packages/dotnet-krp)
+[![docker](https://img.shields.io/docker/v/eddietisma/krp?color=brightgreen&label=docker&logo=docker&logoColor=white)](https://hub.docker.com/r/eddietisma/krp)
+
 
 `krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless forwarding to internal Kubernetes resources. The tool facilitates automatic port forwards and provides dynamic routing via localhost using the hosts file.
 
@@ -137,8 +139,9 @@ services.AddKubernetesForwarder()
 #### `HttpForwarder`
 - Supports HTTP requests (only).
 - Supports domain based routing (using HTTP headers).
-- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS **is not supported**.
-- Uses SSL termination (for HTTPS either disable certificate validation on client or setup certificate for each domain).
+- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation) (https://github.com/dotnet/aspnetcore/issues/13502).
+- Uses SSL termination.
+  - For HTTPS either disable certificate validation on client or setup certificate for each domain.
 
 #### `TcpForwarder`
 - Supports low-level TCP requests.
@@ -147,10 +150,11 @@ services.AddKubernetesForwarder()
 #### `TcpWithHttpForwarder` (**default**)
 - Supports low-level TCP requests.
 - Supports domain based routing (using domain-based IP per hostname in hosts file)
-- Forwards HTTP/x request to `HttpForwarder` using packet inspection. Inspects TCP traffic and routes HTTP requests to different server ports based on protocol (81 for HTTP/1.1 and 82 for HTTP/2).
+- Forwards HTTP/x request to `HttpForwarder` using packet inspection.
+  - Inspects TCP traffic and routes HTTP requests to different server ports based on protocol (81 for HTTP/1.1 and 82 for HTTP/2).
 
 > [!NOTE]
-> **When running Docker using Windows hosts:** No support for domain based routing **for low-level TCP** due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all loopback IPs will originate from Docker gateway). Limiting routing to HTTP requests only for Windows hosts.
+> **When running Docker on Windows:** No support for domain based routing **for low-level TCP** due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all loopback IPs will originate from Docker gateway). Limiting routing to HTTP requests only for Windows hosts.
 >
 > For HTTPS we could use SNI to detect hostnames and use for routing but ran into issues with reacting to network changes due to already established TCP tunnels (need some more work to break existing TCP connections when needed).
 
