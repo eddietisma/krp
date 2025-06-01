@@ -4,48 +4,50 @@ on:
       version:
         required: true
         type: string
-
-    outputs:
-      version:
-        value: ${{ inputs.version }}
+      commit:
+        required: true
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    permissions: # needed so the action can write to the cache API
+      actions: write
+      contents: read
     outputs:
       version: ${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
+          fetch-depth: 0
 
-      - name: dotnet restore
-        run: dotnet restore --locked-mode
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: dotnet build
-        run: dotnet build --configuration Release --no-restore
+      - name: Docker build and test
+        uses: docker/bake-action@v6
+        env:
+          VERSION: ${{ inputs.version }}
+          COMMIT:  ${{ inputs.commit }}
+        # with:
+        #   set: |
+        #     base.cache-from=type=gha,scope=krp
+        #     build.cache-to=type=gha,scope=krp,mode=max
 
-      - name: dotnet pack
+      - name: Save Docker image as tarball
         run: |
-          dotnet pack --configuration Release \
-            --no-build \
-            --output ./nupkgs \
-            -p:PackageVersion=${{ inputs.version }}
+          docker save eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }} -o krp-${{ inputs.version }}-${{ inputs.commit }}.tar
 
-      - name: Upload nuget
+      - name: Upload nuget artifacts
         uses: actions/upload-artifact@v4
         with:
           name: nuget
-          path: |
-            ./nupkgs/*.nupkg
-            ./nupkgs/*.snupkg
+          path: output/pack
 
       - name: Upload docker
         uses: actions/upload-artifact@v4
         with:
           name: docker
-          path: .
+          path: krp-${{ inputs.version }}-${{ inputs.commit }}.tar
+
