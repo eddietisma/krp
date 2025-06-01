@@ -10,6 +10,8 @@ jobs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check for commits in the past week
         id: check
         if: ${{ github.event_name == 'schedule' }}
@@ -29,6 +31,7 @@ jobs:
     if: ${{ github.event_name != 'schedule' || needs.determine_date.outputs.should_run == 'true' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
       - name: Determine version
@@ -37,15 +40,18 @@ jobs:
           short_sha=$(git rev-parse --short HEAD)
           latest_release=$(git tag -l --sort=-creatordate | head -n 1)
           base_version=${latest_release:-1.0.0}
-          version="${base_version}-beta.${{ github.run_number }}-${short_sha}"
-          echo "Determined version: $version"
+          version="${base_version}-beta.${{ github.run_number }}"
+          commit="${short_sha}"
+          echo "Determined version: $version-$commit"
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "commit=$commit" >> $GITHUB_OUTPUT
 
   build:
     needs: determine_version
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.determine_version.outputs.version }}
+      commit: ${{ needs.determine_version.outputs.commit }}
 
   publish-nuget:
     needs: [build, determine_version]
@@ -57,4 +63,5 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     with:
       version: ${{ needs.determine_version.outputs.version }}
+      commit: ${{ needs.determine_version.outputs.commit }}
     secrets: inherit

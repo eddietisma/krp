@@ -1,4 +1,6 @@
 .azure/
+dist
+*.tar
 
 ## Arcade specific things
 
