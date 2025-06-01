@@ -10,7 +10,7 @@ jobs:
         with:
           name: nuget
 
-      - name: dotnet nuget push
+      - name: Nuget push
         run: |
           dotnet nuget push "*.nupkg" \
             --api-key ${{ secrets.NUGET_API_KEY }} \
