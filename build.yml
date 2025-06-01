@@ -1,0 +1,28 @@
+version: v1beta
+
+variables:
+  VERSION: "1.0.0-local"
+  COMMIT: "0000000000000000000000000000000000000000"
+
+targets:
+  krp.sln:
+    type: build
+    with:
+      base: mcr.microsoft.com/dotnet/sdk:10.0
+
+  src/dotnet-krp/dotnet-krp.csproj:
+    type: nuget
+
+  src/Krp/Krp.csproj:
+    - type: nuget
+    - type: docker
+      with:
+        base: mcr.microsoft.com/dotnet/aspnet:10.0
+        tags: ["docker.io/eddietisma/krp:${VERSION}-${COMMIT}"]
+
+  test/Krp.Tests/Krp.Tests.csproj:
+    type: test
+
+  test/Krp.Tests1/Krp.Tests1.csproj:
+    type: test
+
