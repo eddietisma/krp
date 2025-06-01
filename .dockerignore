@@ -1,0 +1,15 @@
+.dockerignore
+.env
+#.git # needed for sourcelink when building the image inside docker
+.gitignore
+.vs
+.vscode
+docker-bake.hcl
+docker-compose.yml
+docker-compose.*.yml
+**/bin
+**/obj
+bin/
+obj/
+output
+*.tar

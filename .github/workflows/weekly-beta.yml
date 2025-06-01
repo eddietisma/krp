@@ -1,60 +1,59 @@
 on:
   schedule:
-    - cron: "0 0 * * 0"  # Runs every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0' # every Sunday 00:00 UTC
   workflow_dispatch:
 
 jobs:
-  determine_date:
+  prebuild:
     runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check for commits in the past week
-        id: check
-        if: ${{ github.event_name == 'schedule' }}
-        run: |
-          recent_commits=$(git log --since="7 days ago" --pretty=oneline)
-          if [ -n "$recent_commits" ]; then
-            echo "Commits found in the past 7 days."
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "No commits in the past 7 days."
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
-
-  determine_version:
-    runs-on: ubuntu-latest
-    needs: determine_date
-    if: ${{ github.event_name != 'schedule' || needs.determine_date.outputs.should_run == 'true' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
+      commit:  ${{ steps.version.outputs.commit }}
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Determine version
-        id: version
-        run: |
-          short_sha=$(git rev-parse --short HEAD)
-          latest_release=$(git tag -l --sort=-creatordate | head -n 1)
-          base_version=${latest_release:-1.0.0}
-          version="${base_version}-beta.${{ github.run_number }}-${short_sha}"
-          echo "Determined version: $version"
-          echo "version=$version" >> $GITHUB_OUTPUT
+    - uses: actions/checkout@v4
+      with: { fetch-depth: 0 }
+
+    - name: Skip job if no commits
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        if [ -z "$(git log --since='1 week ago' -1)" ]; then
+          echo "::warning::No commits in 7 days - skipping"
+          exit 78
+        fi
+
+    - name: Calculate version
+      id: version
+      run: |
+        short_sha=$(git rev-parse --short HEAD)
+
+        # latest tag or 0.0.1 if none
+        latest_release=$(git tag -l --sort=-creatordate | head -n 1)
+        base_version=${latest_release:-0.0.1}
+        base_version=${base_version#v}
+
+        version="${base_version}-beta.${{ github.run_number }}"
+        echo "Calculated version: $version ($short_sha)"
+
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "commit=$short_sha" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: determine_version
+    needs: [prebuild]
     uses: ./.github/workflows/build.yml
     with:
-      version: ${{ needs.determine_version.outputs.version }}
+      version: ${{ needs.prebuild.outputs.version }}
+      commit: ${{ needs.prebuild.outputs.commit }}
 
   publish-nuget:
-    needs: [build, determine_version]
+    needs: [prebuild, build]
     uses: ./.github/workflows/publish-nuget.yml
     secrets: inherit
 
   publish-docker:
-    needs: [build, determine_version]
+    needs: [prebuild, build]
     uses: ./.github/workflows/publish-docker.yml
     with:
-      version: ${{ needs.determine_version.outputs.version }}
+      version: ${{ needs.prebuild.outputs.version }}
+      commit: ${{ needs.prebuild.outputs.commit }}
     secrets: inherit
