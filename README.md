@@ -9,7 +9,7 @@
 
 ### **Features**
 - **On-Demand Port Forwarding:** Forward internal Kubernetes resources to your local machine automatically.
-- **Context-Sensitive Port Management:** Automatically adapts to changes in Kubernetes context and cluster.
+- **Context Aware:** Automatically adapts to changes in Kubernetes context and cluster.
 - **Automatic Cleanup:** All active port forwards are cleaned up on application exit.
 - **Dynamic Traffic Routing:** Routes traffic to localhost through the hosts file.
 - **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
