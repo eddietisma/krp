@@ -47,6 +47,7 @@ public class EndpointManager
         handler.IsStatic = true;
         handler.LocalIp = _handlers.FirstOrDefault(x => x.Host == endpoint.Host)?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
         handler.LocalPort = endpoint.LocalPort;
+        handler.LocalScheme = endpoint.LocalScheme;
         handler.Url = $"{endpoint.Host}{endpoint.Path}";
         handler.Host = endpoint.Host;
         handler.Path = endpoint.Path;
@@ -94,6 +95,17 @@ public class EndpointManager
     public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
     {
         return _handlers.FirstOrDefault(x => x.GetType() == typeof(HttpProxyEndpointHandler) && x.Host == host && path.StartsWith($"{x.Path}/"));
+    }
+
+
+    /// <summary>
+    /// Used for xxx to find the correct handler by URL and path.
+    /// </summary>
+    /// <param name="host"></param>
+    /// <returns></returns>
+    public IEnumerable<IEndpointHandler> GetHandlerByHost(string host)
+    {
+        return _handlers.Where(x => x.Host == host);
     }
 
     /// <summary>
