@@ -55,10 +55,11 @@ public static class KubernetesBuilderExtension
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="localPort"></param>
+    /// <param name="localScheme"></param>
     /// <param name="host"></param>
     /// <param name="path"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseHttpEndpoint(this KubernetesForwarderBuilder builder, int localPort, string host, string path = null)
+    public static KubernetesForwarderBuilder UseHttpEndpoint(this KubernetesForwarderBuilder builder, int localPort, string localScheme, string host, string path = null)
     {
         builder.Services.Configure<KubernetesForwarderOptions>(options =>
         {
@@ -66,6 +67,7 @@ public static class KubernetesBuilderExtension
             {
                 Host = host,
                 LocalPort = localPort,
+                LocalScheme = localScheme,
                 Path = path,
             });
         });

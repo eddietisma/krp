@@ -82,6 +82,9 @@ public class HttpForwarder
             };
         }
 
+        // Ignore all SSL certificate errors.
+        socketsHandler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+
         var httpClient = new HttpMessageInvoker(socketsHandler);
 
         var requestConfig = new ForwarderRequestConfig
