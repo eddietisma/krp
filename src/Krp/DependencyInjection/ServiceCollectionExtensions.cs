@@ -46,7 +46,7 @@ public static class ServiceCollectionExtensions
 
         foreach (var endpoint in httpEndpoints)
         {
-            builder.UseHttpEndpoint(endpoint.LocalPort, endpoint.Host, endpoint.Path);
+            builder.UseHttpEndpoint(endpoint.LocalPort, endpoint.LocalScheme, endpoint.Host, endpoint.Path);
         }
 
         foreach (var endpoint in endpoints)
