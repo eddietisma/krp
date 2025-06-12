@@ -10,6 +10,7 @@ public class HttpProxyEndpointHandler : IEndpointHandler
     public bool IsStatic { get; set; }
     public IPAddress LocalIp { get; set; }
     public int LocalPort { get; set; }
+    public string LocalScheme { get; set; }
     public string Url { get; set; }
     public string Path { get; set; }
 
@@ -21,8 +22,8 @@ public class HttpProxyEndpointHandler : IEndpointHandler
     public string GetDestinationUrl()
     {
         return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" 
-            ? $"http://host.docker.internal:{LocalPort}"
-            : $"http://localhost:{LocalPort}";
+            ? $"{LocalScheme}://host.docker.internal:{LocalPort}"
+            : $"{LocalScheme}://localhost:{LocalPort}";
     }
 
     public void Dispose()

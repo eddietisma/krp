@@ -1,4 +1,5 @@
-﻿using Krp.Dns;
+﻿using Krp.Common;
+using Krp.Dns;
 using Krp.Endpoints;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
@@ -109,7 +110,7 @@ public class TcpWithHttpForwarder
             var targetIp = localIp;
             var targetPort = 0;
 
-            if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+            if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
             {
                 var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
                 if (portForwardHandler != null)
@@ -137,8 +138,8 @@ public class TcpWithHttpForwarder
                         // Forward to HttpForwarder for routing using HTTP headers.
                         targetPort = _httpOptions.HttpsPort;
 
-                        // TODO: Since TCP connections are stream based, once the tunnel is setup we can no longer react to when HTTP endpoints check switches state.
-                        // TODO: Idea - once a hostname has been setup, react to when ANY HTTP endpoint changes state and disconnect all active HTTP tunnels.
+                        //// TODO: Since TCP connections are stream based, once the tunnel is setup we can no longer react to when HTTP endpoints check switches state.
+                        //// TODO: Idea - once a hostname has been setup, react to when ANY HTTP endpoint changes state and disconnect all active HTTP tunnels.
                         //if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
                         //{
                         //    // Fetch HOST from SNI since we can't use loopback IPs for routing.
@@ -146,7 +147,7 @@ public class TcpWithHttpForwarder
                         //    var host = ParseSniHostname(buffer, bytesRead);
                         //    if (!string.IsNullOrEmpty(host))
                         //    {
-                        //        var endpointHandler = _endpointManager.GetHandlersByHost(host);
+                        //        var endpointHandler = _endpointManager.GetHandlerByHost(host);
                         //        if (endpointHandler.Any(x => !PortChecker.TryIsPortAvailable(x.LocalPort)))
                         //        {
                         //            // Send to HTTP forwarder if at least one endpoint has an active port for this host.
