@@ -1,14 +1,11 @@
 ﻿using Krp.Common;
-using Krp.Dns;
 using Krp.Endpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Yarp.ReverseProxy.Forwarder;
 
@@ -21,14 +18,14 @@ public class HttpForwarder
 {
     private readonly EndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
-    private readonly IDnsLookupHandler _dnsLookupHandler;
+    private readonly SocketsHttpHandler _socketsHttpHandler;
     private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, IDnsLookupHandler dnsLookupHandler, ILogger<HttpForwarder> logger)
+    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, SocketsHttpHandler socketsHttpHandler, ILogger<HttpForwarder> logger)
     {
         _endpointManager = endpointManager;
         _forwarder = forwarder;
-        _dnsLookupHandler = dnsLookupHandler;
+        _socketsHttpHandler = socketsHttpHandler;
         _logger = logger;
     }
 
@@ -60,32 +57,7 @@ public class HttpForwarder
         
         _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", requestUrl, destinationUrl);
 
-        var socketsHandler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.None,
-            UseCookies = false,
-            EnableMultipleHttp2Connections = true,
-            ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
-            ConnectTimeout = TimeSpan.FromSeconds(15),
-        };
-    
-        if (!destinationUrl.Contains("localhost") && !destinationUrl.Contains("host.docker.internal"))
-        {
-            socketsHandler.ConnectCallback = async (context, cancellationToken) =>
-            {
-                var ipAddress = await _dnsLookupHandler.QueryAsync(httpContext.Request.Host.Host);
-                var socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(new IPEndPoint(ipAddress, context.DnsEndPoint.Port), cancellationToken);
-                return new NetworkStream(socket, ownsSocket: true);
-            };
-        }
-
-        // Ignore all SSL certificate errors.
-        socketsHandler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-
-        var httpClient = new HttpMessageInvoker(socketsHandler);
+        var httpClient = new HttpMessageInvoker(_socketsHttpHandler);
 
         var requestConfig = new ForwarderRequestConfig
         {
