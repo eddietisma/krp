@@ -4,9 +4,9 @@
     "net9.0": {
       "CliWrap": {
         "type": "Direct",
-        "requested": "[3.8.2, )",
-        "resolved": "3.8.2",
-        "contentHash": "FTfHUYVt69M0wzcCfQQok3JnmaPQzrqKIB8xBiyTwzocGmG7N3MpDbMC9+qeeAvPclRgUDj3EpMvXwJBwY4/mw=="
+        "requested": "[3.9.0, )",
+        "resolved": "3.9.0",
+        "contentHash": "3IpuZUbTsWhgD3jhd5mKK7VVyVu/LhfsHXUlYrAOV8mZkJCTasum8Klgv7wyMIl5tttwUralTuTQzCNDLicMRw=="
       },
       "DnsClient": {
         "type": "Direct",
@@ -16,9 +16,9 @@
       },
       "KubernetesClient": {
         "type": "Direct",
-        "requested": "[16.0.7, )",
-        "resolved": "16.0.7",
-        "contentHash": "hH+YN18bpIRO/rq2CiMGDpLpc/KjSMlAn4EelFB4PgiswbSie4jANLAOou1Q39Kx7en2jO1Qp73y3SkjxGJIMg==",
+        "requested": "[17.0.4, )",
+        "resolved": "17.0.4",
+        "contentHash": "cpWJdHP2HM2/p+GCeZf5vdIZrmGcRmfJeCJYg7YCbyYrWvIPFdR0daFdBj1k1DDZ9hIgqf6h4EvXF8pz49lDAA==",
         "dependencies": {
           "Fractions": "7.3.0",
           "YamlDotNet": "16.3.0"
