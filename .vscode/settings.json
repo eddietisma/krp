@@ -1,0 +1,9 @@
+{
+  "javascript.inlayHints.parameterNames.suppressWhenArgumentMatchesName": false,
+  "workbench.colorCustomizations": {
+    // "activityBar.background": "#000", // Sidebar top color
+    "titleBar.activeBackground": "#213b37", // Window title bar color
+    "titleBar.inactiveBackground": "#213b37", // Window title bar color
+    // "statusBar.background": "#213b37" // Bottom bar color
+  },
+}

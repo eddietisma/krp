@@ -1,3 +1,4 @@
+.buildcharts
 .azure/
 dist
 *.tar

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet-krp", "src\dotnet-kr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krp.Tests", "test\Krp.Tests\Krp.Tests.csproj", "{1117C544-761B-479B-9426-75EA059767B9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krp.Tests1", "test\Krp.Tests1\Krp.Tests1.csproj", "{C090BDC9-30ED-7F78-796F-EF6B3B5185CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{1117C544-761B-479B-9426-75EA059767B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1117C544-761B-479B-9426-75EA059767B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1117C544-761B-479B-9426-75EA059767B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C090BDC9-30ED-7F78-796F-EF6B3B5185CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C090BDC9-30ED-7F78-796F-EF6B3B5185CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C090BDC9-30ED-7F78-796F-EF6B3B5185CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C090BDC9-30ED-7F78-796F-EF6B3B5185CB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
