@@ -11,22 +11,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    permissions: # needed so the action can write to the cache API
+
+    permissions:
       actions: write
       contents: read
-    outputs:
-      version: ${{ inputs.version }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Set up BuildCharts
+        uses: buildcharts/setup-action@v1
+        
+      - name: Generate BuildCharts
+        uses: buildcharts/generate-action@v1
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Docker build and test
         uses: docker/bake-action@v6
+        with:
+          source: .
+          files: ./buildcharts.hcl
         env:
           VERSION: ${{ inputs.version }}
           COMMIT:  ${{ inputs.commit }}
@@ -35,15 +44,24 @@ jobs:
         #     base.cache-from=type=gha,scope=krp
         #     build.cache-to=type=gha,scope=krp,mode=max
 
-      - name: Save Docker image as tarball
+      - name: BuildCharts Summary
+        uses: buildcharts/summary-action@v1
+
+      - name: Save Docker image
         run: |
           docker save eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }} -o krp-${{ inputs.version }}-${{ inputs.commit }}.tar
 
-      - name: Upload nuget artifacts
+      - name: Upload nuget
         uses: actions/upload-artifact@v4
         with:
           name: nuget
-          path: output/pack
+          path: .buildcharts/output/nuget
+
+      - name: Upload nuget
+        uses: actions/upload-artifact@v4
+        with:
+          name: test
+          path: .buildcharts/output/test
 
       - name: Upload docker
         uses: actions/upload-artifact@v4

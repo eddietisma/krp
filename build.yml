@@ -1,0 +1,35 @@
+version: latest
+
+environment:
+  - VERSION
+  - COMMIT
+
+targets:
+  krp.sln:
+    type: build
+    with:
+      base: mcr.microsoft.com/dotnet/sdk:9.0
+
+  src/dotnet-krp/dotnet-krp.csproj:
+    type: nuget
+
+  src/Krp/Krp.csproj:
+    type: [nuget, docker]
+    with:
+      base: mcr.microsoft.com/dotnet/aspnet:9.0
+      tags: ["docker.io/eddietisma/krp:${VERSION}-${COMMIT}"]
+    stage:
+      pre-stage:|
+        HJERE
+      EOT
+    copy-from: 
+      - from: pre-stage
+        path: /usr/local/bin/kubectl
+        dest: /usr/local/bin/
+
+  test/Krp.Tests/Krp.Tests.csproj:
+    type: test
+
+  test/Krp.Tests1/Krp.Tests1.csproj:
+    type: test
+

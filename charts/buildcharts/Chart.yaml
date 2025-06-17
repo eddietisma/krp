@@ -1,0 +1,27 @@
+apiVersion: v2
+name: buildcharts
+version: 0.0.1
+description: A meta-chart to define build pipeline targets and templates
+type: application
+
+dependencies:
+  - name: dotnet-build
+    alias: build
+    version: 0.0.1
+    repository: oci://registry-1.docker.io/buildcharts
+
+  - name: dotnet-docker
+    alias: docker
+    version: 0.0.2
+    repository: oci://registry-1.docker.io/buildcharts
+
+  - name: dotnet-nuget
+    alias: nuget
+    version: 0.0.1
+    repository: oci://registry-1.docker.io/buildcharts
+
+  - name: dotnet-test
+    alias: test
+    version: 0.0.1
+    repository: oci://registry-1.docker.io/buildcharts
+

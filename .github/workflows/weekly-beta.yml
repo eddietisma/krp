@@ -10,6 +10,9 @@ jobs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Check for commits in the past week
         id: check
         if: ${{ github.event_name == 'schedule' }}
@@ -32,12 +35,16 @@ jobs:
       commit: ${{ steps.version.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Determine version
         id: version
         run: |
           short_sha=$(git rev-parse --short HEAD)
           latest_release=$(git tag -l --sort=-creatordate | head -n 1)
           base_version=${latest_release:-1.0.0}
+          base_version=${base_version#v}
           version="${base_version}-beta.${{ github.run_number }}"
           commit="${short_sha}"
           echo "Determined version: $version-$commit"
