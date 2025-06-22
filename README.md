@@ -139,8 +139,8 @@ services.AddKubernetesForwarder()
 #### `HttpForwarder`
 - Supports HTTP requests (only).
 - Supports domain based routing (using HTTP headers).
-- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported].
-   - Read more at (https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation) (https://github.com/dotnet/aspnetcore/issues/13502).
+- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation) .
+   - Read more at (https://github.com/dotnet/aspnetcore/issues/13502).
 - Uses SSL termination.
   - For HTTPS either disable certificate validation on client or setup certificate for each domain.
 
