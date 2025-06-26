@@ -48,7 +48,7 @@
 - Assume your cluster has a service exposed at `myapi.namespace:80`. 
 - The hosts file will be modified to resolve `myapi.namespace` to `127.0.0.x`.
 - Traffic will be proxied to `krp`.
-- `krp` will find corresponding service based on loopback address and run `kubectl port-forward` to forward traffic to local port.
+- `krp` will find corresponding target endpoint based on loopback address and run `kubectl port-forward` to forward traffic to local port.
 - You can then make requests as if the service was hosted locally: `curl myapi.namespace`
 
 ### Use case: HTTP proxy endpoint
