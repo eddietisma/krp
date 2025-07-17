@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="CliWrap" Version="3.9.0" />
+    <PackageVersion Include="Aigio.WinDivertSharp" Version="1.4.4.5" />
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="KubernetesClient" Version="17.0.4" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
@@ -16,6 +17,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageVersion Include="MSTest" Version="3.9.3" />
+    <PackageVersion Include="WinDivertSharp" Version="1.4.3.3" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 </Project>

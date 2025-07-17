@@ -6,4 +6,9 @@ public enum DnsOptions
     /// Use Windows HOSTS file DNS routing.
     /// </summary>
     WindowsHostsFile,
+
+    /// <summary>
+    /// Use WinDivert for DNS routing.
+    /// </summary>
+    WinDivert,
 }
