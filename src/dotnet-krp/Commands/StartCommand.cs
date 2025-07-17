@@ -31,8 +31,8 @@ public class StartCommand
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
     public string Forwarder { get; init; } = "hybrid";
 
-    [Option("--routing|-r <ROUTING>", Description = "Routing method (currently only 'hosts')")]
-    [AllowedValues("hosts", IgnoreCase = true)]
+    [Option("--routing|-r <ROUTING>", Description = "Routing method")]
+    [AllowedValues("hosts", "windivert", IgnoreCase = true)]
     public string Routing { get; init; } = "hosts";
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
@@ -58,6 +58,9 @@ public class StartCommand
         {
             case "hosts":
                 builder.UseRouting(DnsOptions.HostsFile);
+                break;
+            case "windivert":
+                builder.UseRouting(DnsOptions.WinDivert);
                 break;
         }
         switch (Forwarder)

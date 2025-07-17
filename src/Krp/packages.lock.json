@@ -46,6 +46,18 @@
         "resolved": "1.21.2",
         "contentHash": "kN58RveGig9YjWAoYI3flDWC/jWCU0Xzzmp3f49fbnPwZLsVJu9qMt+VSrIz7I3Gn6jkeY1l7cVJopiRDOq3CQ=="
       },
+      "PacketDotNet": {
+        "type": "Direct",
+        "requested": "[1.4.8, )",
+        "resolved": "1.4.8",
+        "contentHash": "j4C4QaJmaPCk0KXsIdsZqmBteKWj5znXBmfbPpu48rE5SW2xwXKVlRf7C3g7VM9aZqMHIQedApEuC71nNX5PaQ=="
+      },
+      "WinDivertSharp": {
+        "type": "Direct",
+        "requested": "[1.4.3.3, )",
+        "resolved": "1.4.3.3",
+        "contentHash": "yjmTvL1TtdTowrFPGe9uoy6vrpOE6gsROr8KK50+fw2WD7XC0E9xK7aEuaTSXXBye29h+rHQxN2C2ZufsfA/fw=="
+      },
       "Yarp.ReverseProxy": {
         "type": "Direct",
         "requested": "[2.3.0, )",
