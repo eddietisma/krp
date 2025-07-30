@@ -1,8 +1,14 @@
 services:
 
   krp:
-    build:
+    build: 
+      # Used when building using docker compose:
+      # docker compose up --pull always --build --force-recreate -d
       context: .
+      target: final
+      args:
+        VERSION: 1.0.0
+        COMMIT: abcdefg
     image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
