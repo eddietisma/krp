@@ -175,6 +175,7 @@ To run `krp` in a Docker container, follow these steps:
    ```bash
    # For AKS
    docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") az login  --use-device-code
+   docker exec -it $(docker ps --filter "name=krp" --format "{{.ID}}") kubelogin convert-kubeconfig -l azurecli
 
    # For GKE
    todo..
