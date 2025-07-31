@@ -40,7 +40,7 @@ public class StartCommand
                 switch (Routing)
                 {
                     case "hosts":
-                        builder.UseRouting(DnsOptions.WindowsHostsFile);
+                        builder.UseRouting(DnsOptions.HostsFile);
                         break;
                 }
 
