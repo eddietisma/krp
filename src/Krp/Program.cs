@@ -45,7 +45,7 @@ public class Program
                         options.ListenAddress = IPAddress.Any;
                         options.ListenPorts = [80, 443];
                     })
-                    .UseRouting(DnsOptions.WindowsHostsFile);
+                    .UseRouting(DnsOptions.HostsFile);
             });
 
 }

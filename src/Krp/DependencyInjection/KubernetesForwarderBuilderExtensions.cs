@@ -1,4 +1,5 @@
-﻿using Krp.Dns;
+﻿using Krp.Common;
+using Krp.Dns;
 using Krp.EndpointExplorer;
 using Krp.Endpoints.Models;
 using Krp.Forwarders.HttpForwarder;
@@ -7,6 +8,7 @@ using Krp.Forwarders.TcpWithHttpForwarder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Krp.DependencyInjection;
 
@@ -120,23 +122,25 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, DnsOptions routing)
     {
         builder.Services.AddHostedService<DnsUpdateBackgroundService>();
+
         switch (routing)
         {
-            case DnsOptions.WindowsHostsFile:
-                builder.Services.Configure<DnsWindowsHostsOptions>(options =>
-                {
-                    var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts");
-                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS")))
-                    {
-                        path = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS");
-                    }
+            case DnsOptions.HostsFile:
+                var hostsPath = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS") ??
+                    (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
+                        : "/etc/hosts");
 
-                    options.Path = path;
-                });
                 builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
+                builder.Services.AddOptions<DnsWindowsHostsOptions>()
+                    .Configure(o => o.Path = hostsPath)
+                    .Validate(o => File.Exists(o.Path), $"Hosts file not found at '{hostsPath}'")
+                    .Validate(o => FileHelper.HasWriteAccess(o.Path), $"The process cannot write to '{hostsPath}'")
+                    .ValidateOnStart();
                 break;
+
             default:
-                throw new ArgumentOutOfRangeException(nameof(routing), routing, null);
+                throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");
         }
 
         return builder;
