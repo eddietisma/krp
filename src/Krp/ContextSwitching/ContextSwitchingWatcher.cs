@@ -33,7 +33,6 @@ public class ContextSwitchingWatcher : BackgroundService
 
                 if (string.IsNullOrEmpty(_currentContext))
                 {
-                    _logger.LogInformation("Starting dynamic proxying for Kubernetes cluster: {context}.", config.CurrentContext);
                     _currentContext = config.CurrentContext;
                 }
 

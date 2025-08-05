@@ -24,5 +24,3 @@ public class TcpWithHttpForwarderBackgroundService : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 }
-
-

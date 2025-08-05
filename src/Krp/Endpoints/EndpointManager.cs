@@ -59,7 +59,7 @@ public class EndpointManager
         }
 
         _handlers.Add(handler);
-        _logger.LogDebug("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
+        _logger.LogInformation("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public class EndpointManager
         }
 
         _handlers.Add(handler);
-        _logger.LogDebug("Registered endpoint for {url}", handler.Url);
+        _logger.LogInformation("Registered endpoint for {url}", handler.Url);
     }
 
     /// <summary>
@@ -96,7 +96,6 @@ public class EndpointManager
     {
         return _handlers.FirstOrDefault(x => x.GetType() == typeof(HttpProxyEndpointHandler) && x.Host == host && path.StartsWith($"{x.Path}/"));
     }
-
 
     /// <summary>
     /// Used for xxx to find the correct handler by URL and path.

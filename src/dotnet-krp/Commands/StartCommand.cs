@@ -1,5 +1,6 @@
 ﻿using Krp.DependencyInjection;
 using Krp.Dns;
+using Krp.Logging;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -29,6 +30,10 @@ public class StartCommand
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
         var builder = Host.CreateDefaultBuilder()
+            .ConfigureLogging(logging =>
+            {
+                logging.AddKrpLogger();
+            })
             .ConfigureServices((context, services) =>
             {
                 var builder = services.AddKubernetesForwarder(context.Configuration)
