@@ -1,6 +1,6 @@
 ﻿namespace Krp.Dns;
 
-public class DnsWindowsHostsOptions
+public class DnsHostsOptions
 {
     /// <summary>
     /// Path to HOSTS file.
