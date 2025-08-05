@@ -14,14 +14,14 @@ public interface IDnsHandler
     Task UpdateAsync(List<string> hostnames);
 }
 
-public class DnsWindowsHostsHandler : IDnsHandler
+public class DnsHostsHandler : IDnsHandler
 {
     private const string MARKER_START = "# Added by krp";
     private const string MARKER_END = "# End of section";
-    private readonly DnsWindowsHostsOptions _options;
-    private readonly ILogger<DnsWindowsHostsHandler> _logger;
+    private readonly DnsHostsOptions _options;
+    private readonly ILogger<DnsHostsHandler> _logger;
 
-    public DnsWindowsHostsHandler(IOptions<DnsWindowsHostsOptions> options, ILogger<DnsWindowsHostsHandler> logger)
+    public DnsHostsHandler(IOptions<DnsHostsOptions> options, ILogger<DnsHostsHandler> logger)
     {
         _options = options.Value;
         _logger = logger;

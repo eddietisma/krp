@@ -1,10 +1,10 @@
-﻿using Krp.Common;
-using Krp.Dns;
+﻿using Krp.Dns;
 using Krp.EndpointExplorer;
 using Krp.Endpoints.Models;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Krp.Forwarders.TcpWithHttpForwarder;
+using Krp.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
@@ -122,27 +122,39 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, DnsOptions routing)
     {
         builder.Services.AddHostedService<DnsUpdateBackgroundService>();
-
+        
         switch (routing)
         {
             case DnsOptions.HostsFile:
-                var hostsPath = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS") ??
-                    (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
-                        : "/etc/hosts");
+                var hostsPath = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS") ?? (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
+                    : "/etc/hosts");
+                
+                builder.Services.AddSingleton<IDnsHandler, DnsHostsHandler>();
+                builder.Services.Configure<DnsHostsOptions>(o => o.Path = hostsPath);
+                
+                Console.WriteLine("Validating...");
 
-                builder.Services.AddSingleton<IDnsHandler, DnsWindowsHostsHandler>();
-                builder.Services.AddOptions<DnsWindowsHostsOptions>()
-                    .Configure(o => o.Path = hostsPath)
-                    .Validate(o => File.Exists(o.Path), $"Hosts file not found at '{hostsPath}'")
-                    .Validate(o => FileHelper.HasWriteAccess(o.Path), $"The process cannot write to '{hostsPath}'")
-                    .ValidateOnStart();
+                var hostValidation = HostsValidator.Validate(hostsPath);
+                var kubeValidation = KubernetesValidator.Validate();
+
+                if (!hostValidation || !kubeValidation)
+                {
+                    Console.Error.WriteLine("Validation failed. Terminating...");
+                    Environment.Exit(1);
+                }
+                else
+                {
+                    Console.WriteLine("Validation OK.");
+                    Console.WriteLine("Starting...");
+                }
+
                 break;
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");
         }
-
+        
         return builder;
     }
 

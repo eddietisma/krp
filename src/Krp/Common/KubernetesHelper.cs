@@ -18,7 +18,6 @@ public static class KubernetesHelper
         {
             lock (_lockObj)
             {
-                Console.Error.WriteLine("Verifying kubeconfig...");
                 var cfg = KubernetesClientConfiguration.BuildConfigFromConfigFile();
                 return !string.IsNullOrEmpty(cfg.AccessToken);
             }
