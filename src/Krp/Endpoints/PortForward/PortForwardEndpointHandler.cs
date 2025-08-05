@@ -84,7 +84,7 @@ public class PortForwardEndpointHandler : IEndpointHandler
 
             foreach (var log in logs)
             {
-                if (!ReverseStructuredLogging.TryParse("Forwarding from 127.0.0.1:{port}-> {targetPort}", log, out var values))
+                if (!ReverseStructuredLogging.TryParse("Forwarding from 127.0.0.1:{port} -> {targetPort}", log, out var values))
                 {
                     continue;
                 }

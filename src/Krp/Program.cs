@@ -1,5 +1,6 @@
 ﻿using Krp.DependencyInjection;
 using Krp.Dns;
+using Krp.Logging;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -15,6 +16,10 @@ public class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
+            .ConfigureLogging(logging =>
+            {
+                logging.AddKrpLogger();
+            })
             .ConfigureServices((context, services) =>
             {
                 services.AddKubernetesForwarder(context.Configuration)
