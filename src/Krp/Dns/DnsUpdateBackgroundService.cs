@@ -42,7 +42,7 @@ public class DnsUpdateBackgroundService : BackgroundService
         }
 
         // Configures all endpoints set using UseEndpointExplorer.
-        _logger.LogInformation("Updating DNS entries due to new endpoint changes....");
+        _logger.LogInformation("Updating DNS entries...");
         await UpdateDns();
     }
 
