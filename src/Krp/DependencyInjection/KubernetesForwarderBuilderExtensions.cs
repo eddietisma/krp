@@ -4,7 +4,6 @@ using Krp.Endpoints.Models;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Krp.Forwarders.TcpWithHttpForwarder;
-using Krp.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
@@ -132,23 +131,6 @@ public static class KubernetesBuilderExtension
                 
                 builder.Services.AddSingleton<IDnsHandler, DnsHostsHandler>();
                 builder.Services.Configure<DnsHostsOptions>(o => o.Path = hostsPath);
-                
-                Console.WriteLine("Validating...");
-
-                var hostValidation = HostsValidator.Validate(hostsPath);
-                var kubeValidation = KubernetesValidator.Validate();
-
-                if (!hostValidation || !kubeValidation)
-                {
-                    Console.Error.WriteLine("Validation failed. Terminating...");
-                    Environment.Exit(1);
-                }
-                else
-                {
-                    Console.WriteLine("Validation OK.");
-                    Console.WriteLine("Starting...");
-                }
-
                 break;
 
             default:
