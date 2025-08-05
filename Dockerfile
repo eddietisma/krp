@@ -24,12 +24,6 @@ FROM cake AS build
 ARG VERSION
 ARG COMMIT
 
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    /cake/build.sh /src/build.cake -- --version=$VERSION --commit=$COMMIT
-
 RUN --mount=type=cache,id=apt,target=/var/cache/apt \
     apt-get update && \
     apt-get install -y curl jq unzip lsb-release sudo gnupg apt-transport-https ca-certificates
@@ -46,6 +40,12 @@ RUN KUBELOGIN_VERSION=$(curl -s https://api.github.com/repos/Azure/kubelogin/rel
     unzip kubelogin-linux-amd64.zip && \
     install -m 0755 bin/linux_amd64/kubelogin /usr/local/bin/ && \
     rm -rf bin kubelogin-linux-amd64.zip
+
+WORKDIR /src
+COPY . .
+
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    /cake/build.sh /src/build.cake -- --version=$VERSION --commit=$COMMIT
 
 ###################################
 # Final image
