@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Krp.Logging;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +25,10 @@ public class WebHost
     public async Task Start(CancellationToken stoppingToken)
     {
         var hostBuilder = Host.CreateDefaultBuilder()
+            .ConfigureLogging(logging =>
+            {
+                logging.AddKrpLogger();
+            })
             .ConfigureServices(services =>
             {
                 // Forward all registered services to the web host.

@@ -38,7 +38,7 @@ public class DnsHostsHandler : IDnsHandler
             }
 
             var lines = (await File.ReadAllLinesAsync(_options.Path)).ToList();
-            _logger.LogInformation("Read {count} lines from HOSTS file", lines.Count);
+            _logger.LogInformation("Loaded hosts file '{path}' ({count} entries)", _options.Path, lines.Count);
 
             var startIndex = lines.FindIndex(line => line.Trim() == MARKER_START);
             if (startIndex != -1)
@@ -71,10 +71,10 @@ public class DnsHostsHandler : IDnsHandler
             var backupPath = _options.Path + $".bak.krp_{DateTime.Now:yyyyMMdd_HHmmss}";
 
             File.Copy(_options.Path, backupPath, overwrite: true);
-            _logger.LogInformation("Backup created at: {path}", backupPath);
+            _logger.LogInformation("Backup created '{path}'", backupPath);
 
             await File.WriteAllLinesAsync(_options.Path, lines, Encoding.UTF8);
-            _logger.LogInformation("HOSTS file updated with {count} entries", hostnames.Count);
+            _logger.LogInformation("Successfully updated hosts file ({count} entries)", hostnames.Count);
         }
         catch (Exception e)
         {
