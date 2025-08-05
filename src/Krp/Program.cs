@@ -1,6 +1,4 @@
-﻿using k8s;
-using Krp.Common;
-using Krp.DependencyInjection;
+﻿using Krp.DependencyInjection;
 using Krp.Dns;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -12,20 +10,6 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        if (!KubernetesHelper.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2)))
-        {
-            Console.Error.WriteLine(
-                "\u001b[31m❌ Terminating... Unable to reach Kubernetes (30s timeout). \n" +
-                $"   • Kube-config: {KubernetesClientConfiguration.KubeConfigDefaultLocation}\n" +
-                "   • Authenticate or refresh credentials using your cloud CLI:\n" +
-                "     ▸ Azure :  az login …\n" +
-                "     ▸ AWS   :  aws login …\n" +
-                "     ▸ GCP   :  gcloud auth login …\n" +
-                "   • Or set KUBECONFIG to a valid file and retry.\u001b[0m");
-
-            Environment.Exit(1);
-        }
-
         CreateHostBuilder(args).Build().Run();
     }
 
