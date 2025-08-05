@@ -1,0 +1,92 @@
+﻿using k8s;
+using Krp.Common;
+using Krp.Dns;
+using Krp.Endpoints;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Krp.Validation;
+
+public class ValidationService : IHostedService
+{
+    private readonly ILogger<ValidationService> _logger;
+    private readonly IOptions<DnsHostsOptions> _dnsOptions;
+    private readonly EndpointManager _endpointManager;
+
+    public ValidationService(ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions, EndpointManager endpointManager)
+    {
+        _logger = logger;
+        _dnsOptions = dnsOptions;
+        _endpointManager = endpointManager;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        var hostsPath = _dnsOptions.Value.Path;
+        
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+        {
+            _logger.LogInformation("✅ Detected running inside docker container");
+            _logger.LogInformation("    - All traffic will be forwarded to host.docker.internal");
+            _logger.LogInformation("    - Endpoint targets will be selected using IP:PORT");
+        }
+
+        var validationSuccess = string.IsNullOrEmpty(hostsPath) || ValidateHosts(hostsPath);
+        validationSuccess = ValidateKubernetes() && validationSuccess;
+        
+        if (!validationSuccess)
+        {
+            _logger.LogError("Validation failed. Terminating...");
+            Environment.Exit(1);
+        }
+
+        _endpointManager.Initialize();
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    
+    private  bool ValidateHosts(string hostsPath)
+    {
+        var fileExists = File.Exists(hostsPath);
+        var hasAccess = FileHelper.HasWriteAccess(hostsPath);
+
+        _logger.LogInformation(fileExists ? "✅ Found hosts file: '{HostsPath}'" : "❌ Hosts file not found: '{HostsPath}'", hostsPath);
+        _logger.LogInformation(hasAccess ? "✅ Permission to hosts file" : "❌ Write-access to hosts file is denied");
+
+        return fileExists && hasAccess;
+    }
+
+    private bool ValidateKubernetes()
+    {
+        var fileExists = File.Exists(KubernetesClientConfiguration.KubeConfigDefaultLocation);
+
+        _logger.LogInformation(fileExists ? "✅ Found kubeconfig: '{ConfigPath}'" : "❌ Kubeconfig not found: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
+
+        var hasAccess = KubernetesHelper.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
+        if (hasAccess)
+        {
+            _logger.LogInformation("✅ Successfully connected to {Context}", KubernetesClientConfiguration.BuildConfigFromConfigFile().CurrentContext);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "\u001b[31m❌ Unable to reach Kubernetes (30s timeout).\n" +
+                "   • Kube-config: {ConfigPath}\n" +
+                "   • Authenticate or refresh credentials using your cloud CLI:\n" +
+                "     ▸ Azure :  az login …\n" +
+                "     ▸ AWS   :  aws login …\n" +
+                "     ▸ GCP   :  gcloud auth login …\n" +
+                "   • Or set KUBECONFIG to a valid file and retry.\u001b[0m",
+                KubernetesClientConfiguration.KubeConfigDefaultLocation);
+        }
+
+        return fileExists && hasAccess;
+    }
+}

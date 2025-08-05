@@ -18,25 +18,29 @@ public class EndpointManager
     private readonly IServiceProvider _serviceProvider;
     private readonly List<IEndpointHandler> _handlers = [];
     private readonly ILogger<EndpointManager> _logger;
+    private readonly KubernetesForwarderOptions _options;
+
+    public event Func<Task> EndPointsChangedEvent;
 
     public EndpointManager(IServiceProvider serviceProvider, ILogger<EndpointManager> logger, IOptions<KubernetesForwarderOptions> options)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-
-        foreach (var endpoint in options.Value.HttpEndpoints)
+        _options = options.Value;
+    }
+    
+    public void Initialize()
+    {
+        foreach (var endpoint in _options.HttpEndpoints)
         {
             AddEndpoint(endpoint);
         }
 
-        foreach (var endpoint in options.Value.Endpoints)
+        foreach (var endpoint in _options.Endpoints)
         {
             AddEndpoint(endpoint);
         }
     }
-
-    public event Func<Task> EndPointsChangedEvent;
-
     /// <summary>
     /// Create and add a new HTTP proxy handler.
     /// </summary>
