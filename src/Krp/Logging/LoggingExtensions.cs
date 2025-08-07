@@ -25,7 +25,7 @@ public static class LoggingBuilderExtensions
         });
 
         builder.AddFilter("Default", LogLevel.Information);
-        builder.AddFilter("Krp", LogLevel.Debug);
+        builder.AddFilter("Krp", LogLevel.None);
         builder.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         builder.AddFilter("Yarp.ReverseProxy.Forwarder.HttpForwarder", LogLevel.Warning);
 
