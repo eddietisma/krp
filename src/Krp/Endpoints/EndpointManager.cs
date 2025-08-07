@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -16,7 +17,7 @@ namespace Krp.Endpoints;
 public class EndpointManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly List<IEndpointHandler> _handlers = [];
+    private readonly ConcurrentDictionary<string, IEndpointHandler> _handlers = new();
     private readonly ILogger<EndpointManager> _logger;
     private readonly KubernetesForwarderOptions _options;
 
@@ -49,20 +50,20 @@ public class EndpointManager
     {
         var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = true;
-        handler.LocalIp = _handlers.FirstOrDefault(x => x.Host == endpoint.Host)?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
+        handler.LocalIp = _handlers.FirstOrDefault(x => x.Value.Host == endpoint.Host).Value?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
         handler.LocalPort = endpoint.LocalPort;
         handler.LocalScheme = endpoint.LocalScheme;
         handler.Url = $"{endpoint.Host}{endpoint.Path}";
         handler.Host = endpoint.Host;
         handler.Path = endpoint.Path;
         
-        if (_handlers.Any(x => x.Url == handler.Url))
+        if (_handlers.ContainsKey(handler.Url))
         {
             _logger.LogWarning("Skipped already existing HTTP endpoint for {url}", handler.Url);
             return;
         }
 
-        _handlers.Add(handler);
+        _handlers.TryAdd(handler.Url, handler);
         _logger.LogInformation("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
     }
 
@@ -80,13 +81,13 @@ public class EndpointManager
         handler.RemotePort = endpoint.RemotePort;
         handler.Resource = endpoint.Resource;
 
-        if (_handlers.Any(x => x.Url == handler.Url))
+        if (_handlers.ContainsKey(handler.Url))
         {
             _logger.LogWarning("Skipped already existing endpoint for {url}", handler.Url);
             return;
         }
 
-        _handlers.Add(handler);
+        _handlers.TryAdd(handler.Url, handler);
         _logger.LogInformation("Registered endpoint for {url}", handler.Url);
     }
 
@@ -107,7 +108,7 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
     {
-        return _handlers.FirstOrDefault(x => x.GetType() == typeof(HttpProxyEndpointHandler) && x.Host == host && path.StartsWith($"{x.Path}/"));
+        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler) && x.Value.Host == host && path.StartsWith($"{x.Value.Path}/")).Value;
     }
 
     /// <summary>
@@ -117,7 +118,7 @@ public class EndpointManager
     /// <returns></returns>
     public IEnumerable<IEndpointHandler> GetHandlerByHost(string host)
     {
-        return _handlers.Where(x => x.Host == host);
+        return _handlers.Where(x => x.Value.Host == host).Select(x => x.Value);
     }
 
     /// <summary>
@@ -127,7 +128,7 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetPortForwardHandlerByHost(string host)
     {
-        return _handlers.FirstOrDefault(x => x.GetType() == typeof(PortForwardEndpointHandler) && x.Host == host);
+        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.Value.Host, host)).Value;
     }
 
     /// <summary>
@@ -137,22 +138,25 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetHandlerByIpPort(IPAddress ip)
     {
-        return _handlers.FirstOrDefault(x => x.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.LocalIp, ip));
+        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.Value.LocalIp, ip)).Value;
     }
 
-    public List<IEndpointHandler> GetAllHandlers()
+    public IEnumerable<IEndpointHandler> GetAllHandlers()
     {
-        return _handlers;
+        return _handlers.Select(x => x.Value).ToList();
     }
     
     public void RemoveAllHandlers()
     {
         foreach (var handler in _handlers)
         {
-            handler.Dispose();  
+            handler.Value.Dispose();  
         }
 
-        _handlers.RemoveAll(handler => !handler.IsStatic);
+        foreach (var handler in _handlers.Where(x => !x.Value.IsStatic))
+        {
+            _handlers.TryRemove(handler);
+        }
     }
     public void TriggerEndPointsChangedEvent()
     {
