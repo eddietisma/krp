@@ -51,6 +51,10 @@ public class PortForwardEndpointHandler : IEndpointHandler
         get => $"{Resource.Substring("service/".Length)}.{Namespace}";
         set => throw new NotImplementedException();
     }
+    public bool IsActive
+    {
+        get => _process is { HasExited: false };
+    }
 
     public IPAddress LocalIp { get; set; }
 
