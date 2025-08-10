@@ -106,9 +106,7 @@ public static class KubernetesBuilderExtension
             options.HttpsPort = 443;
         };
 
-        builder.Services.Configure(optionsAction);
-        builder.Services.AddHostedService<HttpForwarderBackgroundService>();
-        builder.Services.AddSingleton(builder.Services);
+        builder.Services.AddHttpForwarder(optionsAction);
         return builder;
     }
 
