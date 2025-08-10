@@ -29,6 +29,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="TerminalUi\Panels\**" />
+    <EmbeddedResource Remove="TerminalUi\Panels\**" />
+    <None Remove="TerminalUi\Panels\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="" Link="README.md" />
   </ItemGroup>
 
@@ -46,10 +52,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Krp\Krp.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="TerminalUi\Panels\" />
   </ItemGroup>
 
 </Project>

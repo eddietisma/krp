@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-namespace Krp.Tool.TerminalUi;
+namespace Krp.Tool.TerminalUi.Extensions;
 
 public enum SortField { Url, Resource, Namespace, Ip, PortForward }
 
@@ -43,6 +43,6 @@ public static class SortExtensions
         }
 
         var bytes = ip.GetAddressBytes();
-        return ((uint)bytes[0] << 24) | ((uint)bytes[1] << 16) | ((uint)bytes[2] << 8) | (uint)bytes[3]; // bytes are in network-order (big-endian) → pack manually
+        return (uint)bytes[0] << 24 | (uint)bytes[1] << 16 | (uint)bytes[2] << 8 | bytes[3]; // bytes are in network-order (big-endian) → pack manually
     }
 }
