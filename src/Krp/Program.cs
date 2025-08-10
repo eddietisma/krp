@@ -1,7 +1,8 @@
 ﻿using Krp.DependencyInjection;
 using Krp.Dns;
+using Krp.Forwarders.HttpForwarder;
 using Krp.Logging;
-using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Builder;
 using System;
 using System.Net;
 
@@ -11,46 +12,45 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        CreateHostBuilder(args).Build().Run();
-    }
+        var builder = WebApplication.CreateBuilder(args);
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureLogging(logging =>
+        // Configure logging
+        builder.Logging.AddKrpLogger();
+
+        // Register the forwarder and its extensions
+        builder.Services.AddKubernetesForwarder(builder.Configuration)
+            //.UseHttpEndpoint(5000, "api.domain.com", "/api")
+            //.UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
+            //.UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
+            //.UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
+            .UseEndpointExplorer(options =>
             {
-                logging.AddKrpLogger();
+                //options.Filter = [
+                //    "namespace/meetings/*",
+                //    "namespace/*/service/person*",
+                //];
+                options.RefreshInterval = TimeSpan.FromHours(1);
             })
-            .ConfigureServices((context, services) =>
+            .UseDnsLookup(options =>
             {
-                services.AddKubernetesForwarder(context.Configuration)
-                    //.UseHttpEndpoint(5000, "api.domain.com", "/api")
-                    //.UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
-                    //.UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
-                    //.UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
-                    .UseEndpointExplorer(options =>
-                    {
-                        //options.Filter = [
-                        //    "namespace/meetings/*",
-                        //    "namespace/*/service/person*",
-                        //];
-                        options.RefreshInterval = TimeSpan.FromHours(1);
-                    })
-                    .UseDnsLookup(options =>
-                    {
-                        options.Nameserver = "8.8.8.8";
-                    })
-                    //.UseHttpForwarder()
-                    //.UseTcpForwarder(options =>
-                    // {
-                    //    options.ListenAddress = IPAddress.Any;
-                    //    options.ListenPorts = [80, 443];
-                    // })
-                    .UseTcpWithHttpForwarder(options =>
-                    {
-                        options.ListenAddress = IPAddress.Any;
-                        options.ListenPorts = [80, 443];
-                    })
-                    .UseRouting(DnsOptions.HostsFile);
-            });
+                options.Nameserver = "8.8.8.8";
+            })
+            //.UseHttpForwarder()
+            //.UseTcpForwarder(options =>
+            // {
+            //    options.ListenAddress = IPAddress.Any;
+            //    options.ListenPorts = [80, 443];
+            // })
+            .UseTcpWithHttpForwarder(options =>
+            {
+                options.ListenAddress = IPAddress.Any;
+                options.ListenPorts = [80, 443];
+            })
+            .UseRouting(DnsOptions.HostsFile);
 
+        var app = builder.Build();
+
+        app.UseKubernetesForwarder();
+        app.Run();
+    }
 }
