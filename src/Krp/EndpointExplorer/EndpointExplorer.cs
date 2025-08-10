@@ -97,7 +97,6 @@ public class EndpointExplorer
         try
         {
             var namespaceServices = await client.ListNamespacedServiceAsync(ns, cancellationToken: ct);
-            _logger.LogInformation("namespace/{namespace}", ns);
             return namespaceServices.Items;
         }
         catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == HttpStatusCode.Forbidden)

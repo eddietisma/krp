@@ -1,7 +1,9 @@
 ﻿using Krp.DependencyInjection;
 using Krp.Dns;
+using Krp.Forwarders.HttpForwarder;
 using Krp.Logging;
 using McMaster.Extensions.CommandLineUtils;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -29,62 +31,55 @@ public class StartCommand
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
-        var builder = Host.CreateDefaultBuilder()
-            .ConfigureLogging(logging =>
+        var builder = WebApplication.CreateBuilder();
+
+        builder.Logging.AddKrpLogger();
+        var kubernetesForwarderBuilder = builder.Services.AddKubernetesForwarder(builder.Configuration)
+            .UseDnsLookup(options =>
             {
-                logging.AddKrpLogger();
-            })
-            .ConfigureServices((context, services) =>
-            {
-                var builder = services.AddKubernetesForwarder(context.Configuration)
-                    .UseDnsLookup(options =>
-                    {
-                        options.Nameserver = Nameservers;
-                    });
-
-                switch (Routing)
-                {
-                    case "hosts":
-                        builder.UseRouting(DnsOptions.HostsFile);
-                        break;
-                }
-
-                switch (Forwarder)
-                {
-                    case "http":
-                        builder.UseHttpForwarder();
-                        break;
-                    case "tcp":
-                        builder.UseTcpForwarder(options =>
-                        {
-                            options.ListenAddress = IPAddress.Any;
-                            options.ListenPorts = [80, 443];
-
-                        });
-                        break;
-                    case "hybrid":
-                        builder.UseTcpWithHttpForwarder(options =>
-                        {
-                            options.ListenAddress = IPAddress.Any;
-                            options.ListenPorts = [80, 443];
-                        });
-                        break;
-                }
-                
-                if (!NoDiscovery)
-                {
-                    builder.UseEndpointExplorer(options =>
-                    {
-                        //options.Filter = [
-                        //    "namespace/meetings/*",
-                        //    "namespace/*/service/person*",
-                        //];
-                        options.RefreshInterval = TimeSpan.FromHours(1);
-                    });
-                }
+                options.Nameserver = Nameservers;
             });
 
-        await builder.Build().RunAsync(ct);
+        switch (Routing)
+        {
+            case "hosts":
+                kubernetesForwarderBuilder.UseRouting(DnsOptions.HostsFile);
+                break;
+        }
+        switch (Forwarder)
+        {
+            case "http":
+                kubernetesForwarderBuilder.UseHttpForwarder();
+                break;
+            case "tcp":
+                kubernetesForwarderBuilder.UseTcpForwarder(options =>
+                {
+                    options.ListenAddress = IPAddress.Any;
+                    options.ListenPorts = [80, 443];
+
+                });
+                break;
+            case "hybrid":
+                kubernetesForwarderBuilder.UseTcpWithHttpForwarder(options =>
+                {
+                    options.ListenAddress = IPAddress.Any;
+                    options.ListenPorts = [80, 443];
+                });
+                break;
+        }
+
+        if (!NoDiscovery)
+        {
+            kubernetesForwarderBuilder.UseEndpointExplorer(options =>
+            {
+                options.RefreshInterval = TimeSpan.FromHours(1);
+            });
+        }
+
+        var app = builder.Build();
+
+        app.UseKubernetesForwarder();
+        await app.RunAsync(ct);
         return 0;
     }
 }
