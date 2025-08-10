@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Krp.Tool.TerminalUi;
+namespace Krp.Tool.TerminalUi.Extensions;
 
 
 public static class TerminalExtensions
