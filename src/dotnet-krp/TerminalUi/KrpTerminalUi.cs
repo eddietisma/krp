@@ -305,15 +305,14 @@ public class KrpTerminalUi
         }
 
         return new Panel(tbl)
-            .Header($"logs [[{_logProvider!.CountLogs()}]] ", Justify.Center)
+            .Header($"logs[[[white]{_logProvider!.CountLogs()}[/]]] ", Justify.Center)
             .NoBorder()
-            .BorderColor(Color.Cyan1)
+            .BorderColor(new Color(136, 206, 250))
             .Border(BoxBorder.Square)
             .Padding(1, 0, 0, 0)
             .Expand();
     }
-
-
+    
     private Panel BuildTablePanel()
     {
         var items = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().Sort(_sortField, _sortAsc);
@@ -385,7 +384,7 @@ public class KrpTerminalUi
         }
 
         return new Panel(tbl)
-            .Header($"endpoints [[{items.Count}]] ", Justify.Center)
+            .Header($"endpoints[[[white]{items.Count}[/]]]", Justify.Center)
             .NoBorder()
             .BorderColor(new Color(136, 206, 250))
             .Border(BoxBorder.Square)
