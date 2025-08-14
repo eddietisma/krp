@@ -15,8 +15,8 @@ public static class SortExtensions
         var ordered = sortField switch
         {
             SortField.PortForward => sortAsc
-                ? list.OrderBy(h => h.IsActive)
-                : list.OrderByDescending(h => h.IsActive),
+                ? list.OrderBy(h => h.IsActive).ThenBy(h => h.Url, StringComparer.OrdinalIgnoreCase)
+                : list.OrderByDescending(h => h.IsActive).ThenBy(h => h.Url, StringComparer.OrdinalIgnoreCase),
             SortField.Resource => sortAsc
                 ? list.OrderBy(h => h.Resource ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 : list.OrderByDescending(h => h.Resource ?? string.Empty, StringComparer.OrdinalIgnoreCase),
@@ -43,6 +43,6 @@ public static class SortExtensions
         }
 
         var bytes = ip.GetAddressBytes();
-        return (uint)bytes[0] << 24 | (uint)bytes[1] << 16 | (uint)bytes[2] << 8 | bytes[3]; // bytes are in network-order (big-endian) → pack manually
+        return ((uint)bytes[0] << 24) | ((uint)bytes[1] << 16) | ((uint)bytes[2] << 8) | bytes[3]; // bytes are in network-order (big-endian) → pack manually
     }
 }
