@@ -20,7 +20,7 @@ public class KrpTerminalUi
     private const int CROPPING_MARGIN = 3;          // Space (chars) treated as "near edge".
     private const int MIN_COL_WIDTH = 4;            // Space (chars) for minimum column width.
 
-    private static SortField _sortField = SortField.Url;
+    private static SortField _sortField = SortField.PortForward;
     private static readonly Dictionary<string, int> _measurementLookup = new();
     private static readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
     private static readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
@@ -30,7 +30,7 @@ public class KrpTerminalUi
     private static int _maxColumnOffset;            // Right‑most allowed offset.
     private static int _selectedRowIndex;           // Row cursor.
     private static int _selectedTableIndex;         // Table cursor.
-    private static bool _sortAsc = true;            // Current sort direction.
+    private static bool _sortAsc;                   // Current sort direction.
     private static bool _lastColumnClipped;         // True when right‑most col is trimmed.
     private static bool _windowGrew;                // True when console width increased.
 
@@ -316,13 +316,13 @@ public class KrpTerminalUi
     private Panel BuildTablePanel()
     {
         var items = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().Sort(_sortField, _sortAsc);
-        var columns = new List<(string header, int width, SortField sort, Func<PortForwardEndpointHandler, string> valueSelector)>
+        var columns = new List<(string header, int width, SortField sort, Func<PortForwardEndpointHandler, string> valueSelector, bool allowGrow)>
         {
-            ("[bold]URL[/]",       0, SortField.Url,        h => h.Url),
-            ("[bold]PF[/]",        0, SortField.PortForward,h => h.IsActive ? "[#E800E8]:black_circle:[/]" : ":white_circle:"),
-            ("[bold]RESOURCE[/]",  0, SortField.Resource,   h => h.Resource),
-            ("[bold]NAMESPACE[/]", 0, SortField.Namespace,  h => h.Namespace),
-            ("[bold]IP[/]",        0, SortField.Ip,         h => h.LocalIp.ToString()),
+            ("[bold]URL[/]",       0, SortField.Url,        h => h.Url, true),
+            ("[bold]PF[/]",        0, SortField.PortForward,h => h.IsActive ? "[#E800E8]:black_circle:[/]" : ":white_circle:", false),
+            ("[bold]RESOURCE[/]",  0, SortField.Resource,   h => h.Resource, true),
+            ("[bold]NAMESPACE[/]", 0, SortField.Namespace,  h => h.Namespace, true),
+            ("[bold]IP[/]",        0, SortField.Ip,         h => h.LocalIp.ToString(), true),
         };
 
         var total = columns.Count;
@@ -341,7 +341,7 @@ public class KrpTerminalUi
                 }
 
                 _columnOffset--;
-                columns = columns.Select(c => (c.header, 0, c.sort, c.valueSelector)).ToList();
+                columns = columns.Select(c => (c.header, 0, c.sort, c.valueSelector, c.allowGrow)).ToList();
                 totalVisibleColumns = CalculateColumns(items, columns, out slack);
             }
             _windowGrew = false;
@@ -401,7 +401,7 @@ public class KrpTerminalUi
     /// - Sets <see cref="_lastColumnClipped"/> if the right-most column is cropped or near the margin.
     /// - Outputs <paramref name="slackBeforeSpread"/> as free space before spreading.
     /// </summary>
-    private static int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> value)> columns, out int slackBeforeSpread)
+    private static int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> valueSelector, bool allowGrow)> columns, out int slackBeforeSpread)
     {
         var width = Console.WindowWidth;
         var n = columns.Count;
@@ -413,7 +413,7 @@ public class KrpTerminalUi
         {
             var col = columns[i];
             var header = VisibleLen(col.header);
-            var longest = items.Any() ? items.Max(h => VisibleLen(col.value(h))) : 0;
+            var longest = items.Any() ? items.Max(h => VisibleLen(col.valueSelector(h))) : 0;
             nat[i] = Math.Max(MIN_COL_WIDTH, Math.Max(header, longest));
         }
 
@@ -424,7 +424,7 @@ public class KrpTerminalUi
         for (var i = _columnOffset; i < n && remain > 0; i++)
         {
             var shown = Math.Min(nat[i], remain);
-            columns[i] = (columns[i].header, shown, columns[i].sort, columns[i].value);
+            columns[i] = (columns[i].header, shown, columns[i].sort, columns[i].valueSelector, columns[i].allowGrow);
             visibleIdx.Add(i);
             remain -= shown;
         }
@@ -433,7 +433,7 @@ public class KrpTerminalUi
         if (visibleIdx.Count == 0 && _columnOffset < n)
         {
             var shown = Math.Min(nat[_columnOffset], width);
-            columns[_columnOffset] = (columns[_columnOffset].header, shown, columns[_columnOffset].sort, columns[_columnOffset].value);
+            columns[_columnOffset] = (columns[_columnOffset].header, shown, columns[_columnOffset].sort, columns[_columnOffset].valueSelector, columns[_columnOffset].allowGrow);
             visibleIdx.Add(_columnOffset);
             remain = width - shown;
         }
@@ -444,14 +444,19 @@ public class KrpTerminalUi
         slackBeforeSpread = slack; // Free space before spreading.
         if (slack > 0 && visibleIdx.Count > 0)
         {
-            var even = slack / visibleIdx.Count;
-            var leftover = slack % visibleIdx.Count;
-
-            foreach (var idx in visibleIdx)
+            // Only spread to columns that can grow.
+            var growable = visibleIdx.Where(i => columns[i].allowGrow).ToList();
+            if (growable.Count > 0)
             {
-                var c = columns[idx];
-                c.width += even + (leftover-- > 0 ? 1 : 0);
-                columns[idx] = c;
+                var even = slack / growable.Count;
+                var leftover = slack % growable.Count;
+
+                foreach (var idx in growable)
+                {
+                    var c = columns[idx];
+                    c.width += even + (leftover-- > 0 ? 1 : 0);
+                    columns[idx] = c;
+                }
             }
         }
 
