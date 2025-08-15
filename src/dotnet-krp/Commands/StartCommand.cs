@@ -19,7 +19,7 @@ namespace Krp.Tool.Commands;
 public class StartCommand
 {
     [Option("--ui", Description = "Use Terminal UI")]
-    public bool TerminalUi { get; init; } = true;
+    public bool TerminalUi { get; init; } = false;
 
     [Option("--no-discovery|-nd", Description = "Disable automatic endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
@@ -91,12 +91,17 @@ public class StartCommand
         }
 
         var app = webApplicationBuilder.Build();
-
         app.UseKubernetesForwarder();
 
-        var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
-
-        await Task.WhenAll(app.RunAsync(ct), terminalUi.RunUiAsync());
+        if (TerminalUi)
+        {
+            var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
+            await Task.WhenAll(app.RunAsync(ct), terminalUi.RunUiAsync());
+        }
+        else
+        {
+            await app.RunAsync(ct);
+        }
 
         return 0;
     }

@@ -14,39 +14,47 @@ using System.Threading.Tasks;
 
 namespace Krp.Tool.TerminalUi;
 
+public enum WindowSize { XS, SM, MD, LG }
+
 public class KrpTerminalUi
 {
-    private const int HEADER_SIZE = 2;
-    private const int CROPPING_MARGIN = 3;          // Space (chars) treated as "near edge".
-    private const int MIN_COL_WIDTH = 4;            // Space (chars) for minimum column width.
+    private const int HEADER_SIZE = 8;
+    private const int CROP_MARGIN = 4;              // Space (chars) treated as "near edge".
+    private const int MIN_COL_WIDTH = 5;            // Space (chars) for minimum column width.
 
-    private static SortField _sortField = SortField.PortForward;
-    private static readonly Dictionary<string, int> _measurementLookup = new();
-    private static readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
-    private static readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
-    private static readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
+    private SortField _sortField = SortField.PortForward;
+    private readonly Dictionary<string, int> _measurementLookup = new();
+    private readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
+    private readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
+    private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
+    private readonly int[] _selectedRowIndex = new int[2];         // Row cursor per table.
+    
+    private int _columnOffset;               // Index of first visible column.
+    private int _maxColumnOffset;            // Right‑most allowed offset.
+    private int _selectedTableIndex;         // Table cursor.
+    private bool _sortAsc;                   // Current sort direction.
+    private bool _lastColumnClipped;         // True when right‑most col is trimmed.
+    private bool _windowGrew;                // True when console width increased.
+    private WindowSize _windowSize;
+    private int _currentWindowWidth;                
+    private int _currentWindowHeight;
+    private string _kubeCurrentContext;
 
-    private static int _columnOffset;               // Index of first visible column.
-    private static int _maxColumnOffset;            // Right‑most allowed offset.
-    private static int _selectedRowIndex;           // Row cursor.
-    private static int _selectedTableIndex;         // Table cursor.
-    private static bool _sortAsc;                   // Current sort direction.
-    private static bool _lastColumnClipped;         // True when right‑most col is trimmed.
-    private static bool _windowGrew;                // True when console width increased.
-
-    private static EndpointManager _endpointManager;
+    private readonly EndpointManager _endpointManager;
     private readonly InMemoryLoggingProvider _logProvider;
+    private readonly FigletFont _logoFont;
 
     public KrpTerminalUi(EndpointManager endpointManager, InMemoryLoggingProvider inMemoryLoggingProvider)
     {
         _endpointManager = endpointManager;
         _logProvider = inMemoryLoggingProvider;
+        _logoFont = FigletFont.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream($"{typeof(KrpTerminalUi).Namespace}.Fonts.3D.flf") ?? throw new InvalidOperationException("Embedded font '3D.flf' not found."));
     }
 
     public async Task RunUiAsync()
     {
         var kubeCfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
-        var kubeContextName = kubeCfg.CurrentContext ?? "unknown";
+        _kubeCurrentContext = kubeCfg.CurrentContext ?? "unknown";
 
         var handlerCount = _endpointManager.GetAllHandlers().Count();
         var handlerActiveCount = 0;
@@ -56,201 +64,235 @@ public class KrpTerminalUi
 
         while (true)
         {
-            var layout = BuildLayout(kubeContextName);
-            await AnsiConsole.Live(layout).StartAsync(async ctx =>
+            var init = true;
+            try
             {
-                var lastCtx = DateTime.MinValue;
-                while (true)
+                var layout = BuildLayout();
+                await AnsiConsole.Live(layout).StartAsync(async ctx =>
                 {
-                    try
+                    var lastCtx = DateTime.MinValue;
+                    while (true)
                     {
-                        var newW = Console.WindowWidth;
-                        var newH = Console.WindowHeight;
-
-                        var handlers = _endpointManager.GetAllHandlers().ToList();
-                        var redraw = false;
-                        var redrawInfo = false;
-
-                        // Keyboard handling.
-                        if (Console.KeyAvailable)
+                        try
                         {
-                            var key = Console.ReadKey(true);
-                            var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
-                            var ctrl = (key.Modifiers & ConsoleModifiers.Control) != 0;
+                            _currentWindowWidth = Console.WindowWidth;
+                            _currentWindowHeight = Console.WindowHeight;
 
-                            switch (key.Key)
-                            {
-                                case ConsoleKey.LeftArrow: _columnOffset = Math.Max(0, _columnOffset - 1); redraw = true; break;
-                                case ConsoleKey.RightArrow: _columnOffset = Math.Min(_columnOffset + 1, _maxColumnOffset); redraw = true; break;
-                                case ConsoleKey.UpArrow: _selectedRowIndex = Math.Max(0, _selectedRowIndex - 1); redraw = true; break;
-                                case ConsoleKey.DownArrow: _selectedRowIndex = Math.Min(handlers.Count() - 1, _selectedRowIndex + 1); redraw = true; break;
-                                case ConsoleKey.D1 when ctrl: _selectedTableIndex = 0; _selectedRowIndex = 0; redraw = true; break;
-                                case ConsoleKey.D2 when ctrl: _selectedTableIndex = 1; _selectedRowIndex = 0; redraw = true; break;
-                                case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
-                                case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
-                                case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
-                                case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
-                                case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
-                                case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
-                            }
-                        }
+                            var handlers = _endpointManager.GetAllHandlers().OrderByDescending(x => x.Url).ToList();
+                            var redraw = init || true;
+                            var redrawInfo = false;
 
-                        // Context change check (1s).
-                        if (!redraw && DateTime.UtcNow - lastCtx >= TimeSpan.FromSeconds(1))
-                        {
-                            var cfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
-                            if (cfg.CurrentContext != kubeContextName)
+                            // Keyboard handling.
+                            if (Console.KeyAvailable)
                             {
-                                kubeContextName = cfg.CurrentContext ?? "unknown";
-                                redrawInfo = true;
+                                var key = Console.ReadKey(true);
+                                var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
+
+                                switch (key.Key)
+                                {
+                                    case ConsoleKey.Home: _selectedRowIndex[_selectedTableIndex] = 0; redraw = true; break;
+                                    case ConsoleKey.End: _selectedRowIndex[_selectedTableIndex] = _selectedTableIndex == 0 ? handlers.Count : _logProvider!.ReadLogs(0, int.MaxValue).ToList().Count; redraw = true; break;
+                                    case ConsoleKey.LeftArrow: _columnOffset = Math.Max(0, _columnOffset - 1); redraw = true; break;
+                                    case ConsoleKey.RightArrow: _columnOffset = Math.Min(_columnOffset + 1, _maxColumnOffset); redraw = true; break;
+                                    case ConsoleKey.UpArrow: _selectedRowIndex[_selectedTableIndex] = Math.Max(0, _selectedRowIndex[_selectedTableIndex] - 1); redraw = true; break;
+                                    case ConsoleKey.DownArrow: _selectedRowIndex[_selectedTableIndex] = Math.Min(handlers.Count - 2, _selectedRowIndex[_selectedTableIndex] + 1); redraw = true; break;
+                                    case ConsoleKey.D1: _selectedTableIndex = 0; redraw = true; break;
+                                    case ConsoleKey.D2: _selectedTableIndex = 1; redraw = true; break;
+                                    case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
+                                    case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
+                                    case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
+                                    case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
+                                    case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
+                                    case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
+                                }
                             }
 
-                            lastCtx = DateTime.UtcNow;
-                        }
-
-                        // Handler list size.
-                        var newHandlersCount = handlers.Count();
-                        if (!redraw && newHandlersCount != handlerCount)
-                        {
-                            handlerCount = newHandlersCount;
-                            _selectedRowIndex = Math.Clamp(_selectedRowIndex, 0, Math.Max(0, newHandlersCount - 1));
-                            redraw = true;
-                        }
-                        
-                        // Active handlers.
-                        var newHandlersActiveCount = handlers.OfType<PortForwardEndpointHandler>().Count(x => x.IsActive);
-                        if (!redraw && newHandlersActiveCount != handlerActiveCount)
-                        {
-                            handlerActiveCount = newHandlersActiveCount;
-                            redraw = true;
-                        }
-
-                        // Logs count.
-                        var newLogsCount = _logProvider.CountLogs();
-                        if (!redraw && newLogsCount != logsCount)
-                        {
-                            logsCount = newLogsCount;
-                            if (_selectedTableIndex == 1)
+                            // Context change check (1s).
+                            if (!redraw && DateTime.UtcNow - lastCtx >= TimeSpan.FromSeconds(1))
                             {
-                                _selectedRowIndex = 0;
+                                var cfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
+                                if (cfg.CurrentContext != _kubeCurrentContext)
+                                {
+                                    _kubeCurrentContext = cfg.CurrentContext ?? "unknown";
+                                    redrawInfo = true;
+                                }
+
+                                lastCtx = DateTime.UtcNow;
                             }
-                            redraw = true;
-                        }
 
-                        // Window resizing.
-                        if (!redraw && (newW != baseW || newH != baseH))
-                        {
-                            try
+                            // Handler list size.
+                            var newHandlersCount = handlers.Count;
+                            if (!redraw && newHandlersCount != handlerCount)
                             {
+                                handlerCount = newHandlersCount;
+                                _selectedRowIndex[_selectedTableIndex] = Math.Clamp(_selectedRowIndex[_selectedTableIndex], 0, Math.Max(0, newHandlersCount - 1));
+                                redraw = true;
+                            }
+
+                            // Active handlers.
+                            var newHandlersActiveCount = handlers.OfType<PortForwardEndpointHandler>().Count(x => x.IsActive);
+                            if (!redraw && newHandlersActiveCount != handlerActiveCount)
+                            {
+                                handlerActiveCount = newHandlersActiveCount;
+                                redraw = true;
+                            }
+
+                            // Logs count.
+                            var newLogsCount = _logProvider.CountLogs();
+                            if (!redraw && newLogsCount != logsCount)
+                            {
+                                logsCount = newLogsCount;
+                                if (_selectedTableIndex == 1)
+                                {
+                                    _selectedRowIndex[_selectedTableIndex] = 0;
+                                }
+                                redraw = true;
+                            }
+
+                            // Window resizing.
+                            if (init || (!redraw && (_currentWindowWidth != baseW || _currentWindowHeight != baseH)))
+                            {
+                                try
+                                {
 #pragma warning disable CA1416
-                                Console.SetBufferSize(Console.WindowLeft + newW, Console.WindowTop + newH);
+                                    Console.SetBufferSize(Console.WindowLeft + _currentWindowWidth, Console.WindowTop + _currentWindowHeight);
 #pragma warning restore CA1416
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                                                         
+                                var previousWindowSize = _windowSize;
+
+                                _windowGrew = _currentWindowWidth > baseW;
+                                _windowSize = _currentWindowWidth switch
+                                {
+                                    < 75 => WindowSize.XS,
+                                    < 100 => WindowSize.SM,
+                                    < 130 => WindowSize.MD,
+                                    _ => WindowSize.LG,
+                                };
+
+                                baseW = _currentWindowWidth;
+                                baseH = _currentWindowHeight;
+                                
+                                if (_windowSize != previousWindowSize)
+                                {
+                                    return;
+                                }
+
+                                redraw = true;
                             }
-                            catch
+
+                            // Redraw panels.
+                            if (redraw)
                             {
-                                // ignored
+                                layout["main"].Update(BuildMainPanel());
+                                ctx.Refresh();
                             }
 
-                            _windowGrew = newW > baseW;
-                            baseW = newW;
-                            baseH = newH;
-                            redraw = true;
-                        }
+                            if (redrawInfo)
+                            {
+                                layout["info"].Update(BuildInfoPanel());
+                                ctx.Refresh();
+                            }
 
-                        // Redraw panels.
-                        if (redraw)
+                            await Task.Delay(1);
+                        }
+                        catch (Exception ex)
                         {
-                            layout["main"].Update(BuildSelectedPanel());
-                            layout["main"].Visible();
-                            ctx.Refresh();
+                            AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
                         }
-
-                        if (redrawInfo)
-                        {
-                            layout["info"].Update(BuildInfoPanel(kubeContextName));
-                            ctx.Refresh();
-                        }
-
-                        await Task.Delay(1);
                     }
-                    catch (Exception ex)
-                    {
-                        AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
-                    }
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
+            }
         }
     }
 
-    private Layout BuildLayout(string ctxName)
+    private Layout BuildLayout()
     {
         var root = new Layout("root");
 
-        // Header (fixed height) + Body (fills the rest).
         root.SplitRows(
-            new Layout("header") { Size = HEADER_SIZE },
-            new Layout("body"));
-
-        // Header: info + hotkeys.
+                new Layout("header") { Size = HEADER_SIZE },
+                new Layout("main"));
+    
         root["header"].SplitColumns(
-            new Layout("info"),
-            new Layout("commands1"),
-            new Layout("commands2"),
-            new Layout("commands3"));
+            new Layout("logo") { Ratio = 5 },
+            new Layout("info") { Ratio = 3, IsVisible = _windowSize != WindowSize.XS },
+            new Layout("menu") { Ratio = 2, IsVisible = _windowSize > WindowSize.SM },
+            new Layout("contextmenu") { Ratio = 3, IsVisible = _windowSize > WindowSize.MD });
 
-        root["info"].Update(BuildInfoPanel(ctxName));
-        var cmd = BuildCommandPanel();
-        root["commands1"].Update(cmd);
-        root["commands2"].Update(cmd);
-        root["commands3"].Update(cmd);
-
-        //// Body: left + right panels.
-        //root["body"].SplitColumns(
-        //    new Layout("main"),
-        //    new Layout("right"));
-
-        //// Body: left + right panels.
-        root["body"].SplitColumns(
-            new Layout("main"));
-
-
-        // Left: your existing TUI table.
-        // Right: replace with whatever you want (logs, details, etc.).
-        //root["right"].Update());
-        root["main"].Update(BuildSelectedPanel());
+        root["logo"].Update(BuildLogoPanel());
+        root["info"].Update(BuildInfoPanel());
+        root["menu"].Update(BuildMenuPanel());
+        root["contextmenu"].Update(BuildContextMenuPanel());
+        root["main"].Update(BuildMainPanel());
         return root;
     }
 
-    private Panel BuildSelectedPanel()
+    private Panel BuildMainPanel()
     {
-        return _selectedTableIndex switch
+        var panel = _selectedTableIndex switch
         {
             0 => BuildTablePanel(),
             1 => BuildLogsPanel(),
-            _ => throw new ArgumentOutOfRangeException(nameof(_selectedTableIndex), _selectedTableIndex, "Invalid selected table index.")
+            _ => throw new ArgumentOutOfRangeException(nameof(_selectedTableIndex), _selectedTableIndex, "Invalid selected table index."),
         };
+        return panel.NoBorder().BorderColor(new Color(136, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
     }
 
-    private Panel BuildInfoPanel(string ctx)
+    private Panel BuildInfoPanel()
     {
-        return new Panel(new Table()
+        var panel = new Panel(new Table()
             .NoBorder().HideHeaders()
             .AddColumn("")
             .AddColumn("")
-            .AddRow(new Text("context:", new Style(Color.Orange1, Color.Black)), new Text(ctx, Color.White))
-            .AddRow(new Text("version:", Color.Orange1), new Text(_version, Color.White))
-        ).NoBorder().Padding(1, 0, 0, 0);
+            .AddRow(new Text("context:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(_kubeCurrentContext, Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("version:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(_version, Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("last refresh:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(DateTime.Now.ToString("HH:mm:ss"), Color.White) { Overflow = Overflow.Ellipsis }));
+        return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
     }
 
-    private Panel BuildCommandPanel()
+    private Panel BuildMenuPanel()
     {
-        return new Panel(new Table()
+        var panel = new Panel(new Table()
             .NoBorder().HideHeaders()
             .AddColumn("")
             .AddColumn("")
-            .AddRow(new Text("<ctrl+1>", Color.Blue), new Text("logs", Color.White))
-            .AddRow(new Text("<ctrl+2>", Color.Blue), new Text("endpoints", Color.White)))
-        .NoBorder().Padding(1, 0, 0, 0);
+            .AddRow(new Text("<1>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("logs", Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("<2>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("port-forwards", Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("<3>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("http-proxies", Color.White) { Overflow = Overflow.Ellipsis }));
+        return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
+    }
+
+    private Panel BuildContextMenuPanel()
+    {
+        var panel = new Panel(new Table()
+            .NoBorder().HideHeaders()
+            .AddColumn("")
+            .AddColumn("")
+            .AddRow(new Text("<shift+f>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("port-forward", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
+            .AddRow(new Text("<shift+l>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("logs", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
+        return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
+    }
+
+    private Panel BuildLogoPanel()
+    {
+        var figlet = new FigletText(_logoFont, "KRP").Color(Color.Orange1);
+        var panel = new Panel(figlet);
+
+        if (_windowSize == WindowSize.XS)
+        {
+            figlet.Centered();
+        }
+
+        return panel.NoBorder().Padding(1, 0, 0, 0);
     }
 
     private Panel BuildLogsPanel()
@@ -267,16 +309,15 @@ public class KrpTerminalUi
         // _selectedRowIndex is "start row from the top"
         // Down (index++)  => start increases => scrolls down (newer)
         // Up   (index--)  => start decreases => scrolls up   (older)
-        _selectedRowIndex = Math.Clamp(_selectedRowIndex, 0, maxStart);
+        _selectedRowIndex[_selectedTableIndex] = Math.Clamp(_selectedRowIndex[_selectedTableIndex], 0, maxStart);
 
-        if (_selectedRowIndex == 0 && /* first-time / follow-tail state */ true)
+        if (_selectedRowIndex[_selectedTableIndex] == 0 && /* first-time / follow-tail state */ true)
         {
-            _selectedRowIndex = maxStart;  // start at the tail
+            _selectedRowIndex[_selectedTableIndex] = maxStart;  // start at the tail
         }
 
-        var start = _selectedRowIndex;
+        var start = _selectedRowIndex[_selectedTableIndex];
         var slice = all.Skip(start).Take(rowsVis).ToList();
-
 
         var tbl = new Table().NoBorder().Expand().HideHeaders();
         tbl.AddColumn(new TableColumn("[bold]TIME[/]") { NoWrap = true, Width = 7, Padding = new Padding(1) });
@@ -289,9 +330,7 @@ public class KrpTerminalUi
             var msgText = new Text(log.Message ?? string.Empty);
             IRenderable msgCell = log.Exception == null
                 ? msgText
-                : new Rows(
-                    msgText,
-                    log.Exception.GetRenderable(new ExceptionSettings { Format = ExceptionFormats.ShortenEverything }));
+                : new Rows(msgText, log.Exception.GetRenderable(new ExceptionSettings { Format = ExceptionFormats.ShortenEverything }));
 
             tbl.AddRow(
                 new Markup(log.Timestamp.ToString("HH:mm:ss")),
@@ -305,23 +344,18 @@ public class KrpTerminalUi
         }
 
         return new Panel(tbl)
-            .Header($"logs[[[white]{_logProvider!.CountLogs()}[/]]] ", Justify.Center)
-            .NoBorder()
-            .BorderColor(new Color(136, 206, 250))
-            .Border(BoxBorder.Square)
-            .Padding(1, 0, 0, 0)
-            .Expand();
+            .Header(new PanelHeader($"[##00ffff] logs([magenta1]all[/])[[[white]{_logProvider!.CountLogs()}[/]]] [/]", Justify.Center));
     }
     
     private Panel BuildTablePanel()
     {
-        var items = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().Sort(_sortField, _sortAsc);
+        var items = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList().Sort(_sortField, _sortAsc);
         var columns = new List<(string header, int width, SortField sort, Func<PortForwardEndpointHandler, string> valueSelector, bool allowGrow)>
         {
-            ("[bold]URL[/]",       0, SortField.Url,        h => h.Url, true),
-            ("[bold]PF[/]",        0, SortField.PortForward,h => h.IsActive ? "[#E800E8]:black_circle:[/]" : ":white_circle:", false),
+            ("[bold]PF[/]",        0, SortField.PortForward,h => h.IsActive ? "[magenta1]⬤[/]" : "", false),
             ("[bold]RESOURCE[/]",  0, SortField.Resource,   h => h.Resource, true),
             ("[bold]NAMESPACE[/]", 0, SortField.Namespace,  h => h.Namespace, true),
+            ("[bold]URL[/]",       0, SortField.Url,        h => h.Url , true),
             ("[bold]IP[/]",        0, SortField.Ip,         h => h.LocalIp.ToString(), true),
         };
 
@@ -359,19 +393,34 @@ public class KrpTerminalUi
         var shownCols = columns.Skip(_columnOffset).Take(totalVisibleColumns).ToList();
         foreach (var col in shownCols)
         {
-            tbl.AddColumn(CreateColumn(col.header, col.width, col.sort));
+            var column = new TableColumn($"{col.header}{(_sortField == col.sort ? _sortAsc ? "[#00ffff]↑[/]" : "[#00ffff]↓[/]" : "")}")
+            {
+                Width = col.width,
+                NoWrap = true,
+                Padding = new Padding(0),
+            };
+
+            tbl.AddColumn(column);
         }
         
         // Print rows
-        var first = Math.Clamp(_selectedRowIndex - maxRows + 1, 0, Math.Max(0, items.Count - maxRows));
+        var first = Math.Clamp(_selectedRowIndex[_selectedTableIndex] - maxRows + 1, 0, Math.Max(0, items.Count - maxRows));
         for (var i = first; i < Math.Min(items.Count, first + maxRows); i++)
         {
-            var isSelected = i == _selectedRowIndex;
+            var isSelected = i == _selectedRowIndex[_selectedTableIndex];
             var cells = new List<Markup>();
 
             foreach (var col in shownCols)
             {
-                cells.Add(CreateCell(col.valueSelector(items[i]), col.width, isSelected));
+                // Pad selected cells to the column width so the highlight covers the entire cell.
+                // This is done inside markup so Spectre doesn't trim the spaces.
+                var cell = new Markup(isSelected 
+                    ? $"[black on #87cefa]{RightPad(col.valueSelector(items[i]), col.width)}[/]" 
+                    : $"[#87cefa]{col.valueSelector(items[i])}[/]")
+                {
+                    Overflow = Overflow.Crop,
+                };
+                cells.Add(cell);
             }
 
             var row = new TableRow(cells.ToArray());
@@ -384,12 +433,7 @@ public class KrpTerminalUi
         }
 
         return new Panel(tbl)
-            .Header($"endpoints[[[white]{items.Count}[/]]]", Justify.Center)
-            .NoBorder()
-            .BorderColor(new Color(136, 206, 250))
-            .Border(BoxBorder.Square)
-            .Padding(1, 0, 0, 1)
-            .Expand();
+            .Header(new PanelHeader($"[##00ffff] port-forwards([magenta1]all[/])[[[white]{items.Count}[/]]] [/]", Justify.Center));
     }
 
     /// <summary>
@@ -401,7 +445,7 @@ public class KrpTerminalUi
     /// - Sets <see cref="_lastColumnClipped"/> if the right-most column is cropped or near the margin.
     /// - Outputs <paramref name="slackBeforeSpread"/> as free space before spreading.
     /// </summary>
-    private static int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> valueSelector, bool allowGrow)> columns, out int slackBeforeSpread)
+    private int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> valueSelector, bool allowGrow)> columns, out int slackBeforeSpread)
     {
         var width = Console.WindowWidth;
         var n = columns.Count;
@@ -463,7 +507,7 @@ public class KrpTerminalUi
         // 4. Flag when the right-most column is cropped or near the edge.
         var last = visibleIdx[^1];
         var cropped = columns[last].width < nat[last];
-        var nearMargin = slack <= CROPPING_MARGIN;
+        var nearMargin = slack <= CROP_MARGIN;
         _lastColumnClipped = cropped || nearMargin;
 
         // 5. Clamp offset and return count.
@@ -471,37 +515,14 @@ public class KrpTerminalUi
         return visibleIdx.Count;
     }
 
-    private static void ToggleSort(SortField field, ref bool redraw)
+    private void ToggleSort(SortField field, ref bool redraw)
     {
         _sortAsc = _sortField != field || !_sortAsc;
         _sortField = field;
-        _selectedRowIndex = 0; // Reset cursor to top.
+        _selectedRowIndex[_selectedTableIndex] = 0; // Reset cursor to top.
         redraw = true;
     }
-
-    private static TableColumn CreateColumn(string header, int width, SortField sortField)
-    {
-        if (_sortField == sortField)
-        {
-            header += _sortAsc ? "[cyan]↑[/]" : "[cyan]↓[/]";
-        }
-
-        return new TableColumn(header)
-        {
-            Width = width, 
-            NoWrap = true, 
-            Padding = new Padding(0)
-        };
-    }
-
-    private static Markup CreateCell(string text, int width, bool isSelected)
-    {
-        // Pad selected cells to the column width so the highlight covers the entire cell.
-        // This is done inside markup so Spectre doesn't trim the spaces.
-        return new Markup(isSelected ? $"[black on #87cefa]{RightPad(text, width)}[/]" : $"[#87cefa]{text}[/]") { Overflow = Overflow.Crop };
-    }
-
-    private static string RightPad(string s, int w)
+    private string RightPad(string s, int w)
     {
         var len = VisibleLen(s);
         var padLength = w;
@@ -521,7 +542,7 @@ public class KrpTerminalUi
         return result;
     }
 
-    private static int VisibleLen(string markup)
+    private int VisibleLen(string markup)
     {
         // Fast path: Plain text (no Spectre markup or emoji) uses raw length.
         if (!_spectreMarkup.IsMatch(markup) && !_spectreEmoji.IsMatch(markup))
