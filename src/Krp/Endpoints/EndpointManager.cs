@@ -90,6 +90,15 @@ public class EndpointManager
         _logger.LogInformation("Registered endpoint for {url}", handler.Url);
     }
 
+    public void AddEndpoints(List<KubernetesEndpoint> endpoints)
+    {
+        // Sort to get deterministic order to prevent unnecessary DNS hosts changes.
+        foreach (var endpoint in endpoints.OrderBy(x => x.Resource))
+        {
+            AddEndpoint(endpoint);
+        }
+    }
+
     /// <summary>
     /// Used for HTTP endpoints to find the correct handler by URL and path.
     /// </summary>
@@ -145,7 +154,6 @@ public class EndpointManager
 
         _handlers.RemoveAll(handler => !handler.IsStatic);
     }
-    
     public void TriggerEndPointsChangedEvent()
     {
         EndPointsChangedEvent?.Invoke();
