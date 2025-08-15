@@ -42,7 +42,7 @@ Task("Clean")
 });
 
 Task("Restore")
-    .IsDependentOn("Clean")
+    // .IsDependentOn("Clean")
     .Does<BuildParameters>((context, parameters) =>
 {
     DotNetRestore(parameters.Solution, new DotNetRestoreSettings()
@@ -147,7 +147,7 @@ Task("Verify")
 //////////////////////////////////////////////////////////////////////
 
 Task("default")
-    .IsDependentOn("Clean")
+    // .IsDependentOn("Clean")
     .IsDependentOn("Restore")
     .IsDependentOn("Build")
     .IsDependentOn("Test")
