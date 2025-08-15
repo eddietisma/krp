@@ -72,7 +72,6 @@ public static class KubernetesBuilderExtension
                 Path = path,
             });
         });
-
         return builder;
     }
 
@@ -87,7 +86,6 @@ public static class KubernetesBuilderExtension
         builder.Services.Configure(optionsAction);
         builder.Services.AddSingleton<EndpointExplorer.EndpointExplorer>();
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
-
         return builder;
     }
 

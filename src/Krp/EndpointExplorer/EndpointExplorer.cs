@@ -1,11 +1,9 @@
 ﻿using k8s;
 using k8s.Models;
-using Krp.Common;
 using Krp.Endpoints;
 using Krp.Endpoints.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,6 +66,8 @@ public class EndpointExplorer
                     return _compiledFilters.Count == 0 || _compiledFilters.Any(regex => regex.IsMatch(fullName));
                 });
 
+            var endpoints = new List<KubernetesEndpoint>();
+
             foreach (var service in filteredServices)
             {
                 foreach (var port in service.Spec.Ports)
@@ -80,10 +80,11 @@ public class EndpointExplorer
                         Resource = $"service/{service.Name()}",
                     };
 
-                    _endpointManager.AddEndpoint(endpoint);
+                    endpoints.Add(endpoint);
                 }
             }
 
+            _endpointManager.AddEndpoints(endpoints);
             _endpointManager.TriggerEndPointsChangedEvent();
         }
         finally
