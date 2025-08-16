@@ -143,7 +143,7 @@ public class EndpointManager
 
     public IEnumerable<IEndpointHandler> GetAllHandlers()
     {
-        return _handlers.Select(x => x.Value).ToList();
+        return _handlers.Select(x => x.Value);
     }
     
     public void RemoveAllHandlers()

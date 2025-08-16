@@ -15,47 +15,58 @@ using System.Threading.Tasks;
 namespace Krp.Tool.TerminalUi;
 
 public enum WindowSize { XS, SM, MD, LG }
+public enum KrpTable { PortForwards, Logs }
 
 public class KrpTerminalUi
 {
     private const int HEADER_SIZE = 8;
-    private const int CROP_MARGIN = 4;              // Space (chars) treated as "near edge".
-    private const int MIN_COL_WIDTH = 5;            // Space (chars) for minimum column width.
+    private const int CROP_MARGIN = 4;      // Space (chars) treated as "near edge".
+    private const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
 
-    private SortField _sortField = SortField.PortForward;
     private readonly Dictionary<string, int> _measurementLookup = new();
     private readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
     private readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
     private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
-    private readonly int[] _selectedRowIndex = new int[2];         // Row cursor per table.
-    
-    private int _columnOffset;               // Index of first visible column.
-    private int _maxColumnOffset;            // Right‑most allowed offset.
-    private int _selectedTableIndex;         // Table cursor.
-    private bool _sortAsc;                   // Current sort direction.
-    private bool _lastColumnClipped;         // True when right‑most col is trimmed.
-    private bool _windowGrew;                // True when console width increased.
-    private WindowSize _windowSize;
-    private int _currentWindowWidth;                
-    private int _currentWindowHeight;
-    private string _kubeCurrentContext;
-
     private readonly EndpointManager _endpointManager;
     private readonly InMemoryLoggingProvider _logProvider;
     private readonly FigletFont _logoFont;
+
+    // Sorting
+    private SortField _sortField;
+    private bool _sortAsc;
+
+    // Table state
+    private KrpTable _selectedTableIndex;
+    private readonly Dictionary<KrpTable, int> _selectedRowIndex;
+    private int _columnOffset;              // Index of first visible column.
+    private int _columnOffsetMax;           // Right‑most allowed offset.
+    private bool _lastColumnClipped;        // True when right‑most col is trimmed.
+
+    // Window state
+    private bool _windowGrew;               // True when console width increased.
+    private int _windowWidth;               // Current Console.WindowWidth to prevent interops.           
+    private int _windowHeight;              // Current Console.WindowHeight to prevent interops.
+    private WindowSize _windowSize;         // Current window size category (XS, SM, MD, LG), used for responsive 
+
+    private string _kubeCurrentContext;
 
     public KrpTerminalUi(EndpointManager endpointManager, InMemoryLoggingProvider inMemoryLoggingProvider)
     {
         _endpointManager = endpointManager;
         _logProvider = inMemoryLoggingProvider;
         _logoFont = FigletFont.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream($"{typeof(KrpTerminalUi).Namespace}.Fonts.3D.flf") ?? throw new InvalidOperationException("Embedded font '3D.flf' not found."));
+        _sortField = SortField.PortForward;
+        _selectedRowIndex = new Dictionary<KrpTable, int>
+        {
+            { KrpTable.Logs, 0 },
+            { KrpTable.PortForwards, 0 },
+        };
     }
 
     public async Task RunUiAsync()
     {
         var kubeCfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
         _kubeCurrentContext = kubeCfg.CurrentContext ?? "unknown";
-
         var handlerCount = _endpointManager.GetAllHandlers().Count();
         var handlerActiveCount = 0;
         var logsCount = _logProvider.CountLogs();
@@ -67,6 +78,9 @@ public class KrpTerminalUi
             var init = true;
             try
             {
+                _windowWidth = Console.WindowWidth;
+                _windowHeight = Console.WindowHeight;
+
                 var layout = BuildLayout();
                 await AnsiConsole.Live(layout).StartAsync(async ctx =>
                 {
@@ -75,11 +89,17 @@ public class KrpTerminalUi
                     {
                         try
                         {
-                            _currentWindowWidth = Console.WindowWidth;
-                            _currentWindowHeight = Console.WindowHeight;
+                            _windowWidth = Console.WindowWidth;
+                            _windowHeight = Console.WindowHeight;
 
-                            var handlers = _endpointManager.GetAllHandlers().OrderByDescending(x => x.Url).ToList();
-                            var redraw = init || true;
+                            var count = _selectedTableIndex switch
+                            {
+                                KrpTable.PortForwards => handlerCount,
+                                KrpTable.Logs => logsCount,
+                                _ => 0,
+                            };
+
+                            var redraw = init;
                             var redrawInfo = false;
 
                             // Keyboard handling.
@@ -91,13 +111,13 @@ public class KrpTerminalUi
                                 switch (key.Key)
                                 {
                                     case ConsoleKey.Home: _selectedRowIndex[_selectedTableIndex] = 0; redraw = true; break;
-                                    case ConsoleKey.End: _selectedRowIndex[_selectedTableIndex] = _selectedTableIndex == 0 ? handlers.Count : _logProvider!.ReadLogs(0, int.MaxValue).ToList().Count; redraw = true; break;
+                                    case ConsoleKey.End: _selectedRowIndex[_selectedTableIndex] = count - 1; redraw = true; break;
                                     case ConsoleKey.LeftArrow: _columnOffset = Math.Max(0, _columnOffset - 1); redraw = true; break;
-                                    case ConsoleKey.RightArrow: _columnOffset = Math.Min(_columnOffset + 1, _maxColumnOffset); redraw = true; break;
+                                    case ConsoleKey.RightArrow: _columnOffset = Math.Min(_columnOffset + 1, _columnOffsetMax); redraw = true; break;
                                     case ConsoleKey.UpArrow: _selectedRowIndex[_selectedTableIndex] = Math.Max(0, _selectedRowIndex[_selectedTableIndex] - 1); redraw = true; break;
-                                    case ConsoleKey.DownArrow: _selectedRowIndex[_selectedTableIndex] = Math.Min(handlers.Count - 2, _selectedRowIndex[_selectedTableIndex] + 1); redraw = true; break;
-                                    case ConsoleKey.D1: _selectedTableIndex = 0; redraw = true; break;
-                                    case ConsoleKey.D2: _selectedTableIndex = 1; redraw = true; break;
+                                    case ConsoleKey.DownArrow: _selectedRowIndex[_selectedTableIndex] = Math.Min(Math.Max(0, count - 1), _selectedRowIndex[_selectedTableIndex] + 1); redraw = true; break;
+                                    case ConsoleKey.D1: _selectedTableIndex = KrpTable.PortForwards; redraw = true; break;
+                                    case ConsoleKey.D2: _selectedTableIndex = KrpTable.Logs; redraw = true; break;
                                     case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
                                     case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
                                     case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
@@ -120,17 +140,17 @@ public class KrpTerminalUi
                                 lastCtx = DateTime.UtcNow;
                             }
 
-                            // Handler list size.
-                            var newHandlersCount = handlers.Count;
+                            // Handlers count.
+                            var newHandlersCount = _endpointManager.GetAllHandlers().Count();
                             if (!redraw && newHandlersCount != handlerCount)
                             {
                                 handlerCount = newHandlersCount;
-                                _selectedRowIndex[_selectedTableIndex] = Math.Clamp(_selectedRowIndex[_selectedTableIndex], 0, Math.Max(0, newHandlersCount - 1));
+                                _selectedRowIndex[KrpTable.PortForwards] = Math.Clamp(_selectedRowIndex[_selectedTableIndex], 0, Math.Max(0, newHandlersCount - 1));
                                 redraw = true;
                             }
 
                             // Active handlers.
-                            var newHandlersActiveCount = handlers.OfType<PortForwardEndpointHandler>().Count(x => x.IsActive);
+                            var newHandlersActiveCount = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().Count(x => x.IsActive);
                             if (!redraw && newHandlersActiveCount != handlerActiveCount)
                             {
                                 handlerActiveCount = newHandlersActiveCount;
@@ -142,20 +162,17 @@ public class KrpTerminalUi
                             if (!redraw && newLogsCount != logsCount)
                             {
                                 logsCount = newLogsCount;
-                                if (_selectedTableIndex == 1)
-                                {
-                                    _selectedRowIndex[_selectedTableIndex] = 0;
-                                }
+                                _selectedRowIndex[KrpTable.Logs] = 0;
                                 redraw = true;
                             }
 
                             // Window resizing.
-                            if (init || (!redraw && (_currentWindowWidth != baseW || _currentWindowHeight != baseH)))
+                            if (init || (!redraw && (_windowWidth != baseW || _windowHeight != baseH)))
                             {
                                 try
                                 {
 #pragma warning disable CA1416
-                                    Console.SetBufferSize(Console.WindowLeft + _currentWindowWidth, Console.WindowTop + _currentWindowHeight);
+                                    Console.SetBufferSize(Console.WindowLeft + _windowWidth, Console.WindowTop + _windowHeight);
 #pragma warning restore CA1416
                                 }
                                 catch
@@ -165,8 +182,8 @@ public class KrpTerminalUi
                                                          
                                 var previousWindowSize = _windowSize;
 
-                                _windowGrew = _currentWindowWidth > baseW;
-                                _windowSize = _currentWindowWidth switch
+                                _windowGrew = _windowWidth > baseW;
+                                _windowSize = _windowWidth switch
                                 {
                                     < 75 => WindowSize.XS,
                                     < 100 => WindowSize.SM,
@@ -174,8 +191,8 @@ public class KrpTerminalUi
                                     _ => WindowSize.LG,
                                 };
 
-                                baseW = _currentWindowWidth;
-                                baseH = _currentWindowHeight;
+                                baseW = _windowWidth;
+                                baseH = _windowHeight;
                                 
                                 if (_windowSize != previousWindowSize)
                                 {
@@ -190,6 +207,7 @@ public class KrpTerminalUi
                             {
                                 layout["main"].Update(BuildMainPanel());
                                 ctx.Refresh();
+                                init = false;
                             }
 
                             if (redrawInfo)
@@ -240,8 +258,8 @@ public class KrpTerminalUi
     {
         var panel = _selectedTableIndex switch
         {
-            0 => BuildTablePanel(),
-            1 => BuildLogsPanel(),
+            KrpTable.PortForwards => BuildTablePanel(),
+            KrpTable.Logs => BuildLogsPanel(),
             _ => throw new ArgumentOutOfRangeException(nameof(_selectedTableIndex), _selectedTableIndex, "Invalid selected table index."),
         };
         return panel.NoBorder().BorderColor(new Color(136, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
@@ -265,9 +283,9 @@ public class KrpTerminalUi
             .NoBorder().HideHeaders()
             .AddColumn("")
             .AddColumn("")
-            .AddRow(new Text("<1>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("logs", Color.White) { Overflow = Overflow.Ellipsis })
-            .AddRow(new Text("<2>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("port-forwards", Color.White) { Overflow = Overflow.Ellipsis })
-            .AddRow(new Text("<3>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("http-proxies", Color.White) { Overflow = Overflow.Ellipsis }));
+            .AddRow(new Text("<1>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("port-forwards", Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("<2>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("logs", Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("<?>", Color.Magenta1) { Overflow = Overflow.Ellipsis }, new Text("help", Color.White) { Overflow = Overflow.Ellipsis }));
         return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
     }
 
@@ -277,8 +295,8 @@ public class KrpTerminalUi
             .NoBorder().HideHeaders()
             .AddColumn("")
             .AddColumn("")
-            .AddRow(new Text("<shift+f>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("port-forward", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
-            .AddRow(new Text("<shift+l>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("logs", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
+            .AddRow(new Text("<ctrl+enter>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force start", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
+            .AddRow(new Text("<ctrl+del>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force stop", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
         return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
     }
 
@@ -298,7 +316,7 @@ public class KrpTerminalUi
     private Panel BuildLogsPanel()
     {
         var fixedRows = 2 + HEADER_SIZE;
-        var rowsVis = Math.Max(1, Console.WindowHeight - fixedRows);
+        var rowsVis = Math.Max(1, _windowHeight - fixedRows);
 
         var all = _logProvider!.ReadLogs(0, int.MaxValue).ToList();
         var total = all.Count;
@@ -309,11 +327,11 @@ public class KrpTerminalUi
         // _selectedRowIndex is "start row from the top"
         // Down (index++)  => start increases => scrolls down (newer)
         // Up   (index--)  => start decreases => scrolls up   (older)
-        _selectedRowIndex[_selectedTableIndex] = Math.Clamp(_selectedRowIndex[_selectedTableIndex], 0, maxStart);
+        _selectedRowIndex[KrpTable.Logs] = Math.Clamp(_selectedRowIndex[KrpTable.Logs], 0, maxStart);
 
-        if (_selectedRowIndex[_selectedTableIndex] == 0 && /* first-time / follow-tail state */ true)
+        if (_selectedRowIndex[KrpTable.Logs] == 0) // first-time / follow-tail state
         {
-            _selectedRowIndex[_selectedTableIndex] = maxStart;  // start at the tail
+            _selectedRowIndex[KrpTable.Logs] = maxStart;  // start at the tail
         }
 
         var start = _selectedRowIndex[_selectedTableIndex];
@@ -340,7 +358,7 @@ public class KrpTerminalUi
 
         if (slice.Count == 0)
         {
-            tbl.AddRow(new Text("No logs available", Color.Grey), Text.Empty, Text.Empty);
+            tbl.AddRow(Text.Empty, new Text("No logs available", Color.Grey), Text.Empty, Text.Empty);
         }
 
         return new Panel(tbl)
@@ -381,11 +399,11 @@ public class KrpTerminalUi
             _windowGrew = false;
         }
 
-        _maxColumnOffset = Math.Max(0, total - totalVisibleColumns + (_lastColumnClipped ? 1 : 0));
+        _columnOffsetMax = Math.Max(0, total - totalVisibleColumns + (_lastColumnClipped ? 1 : 0));
 
         // Rows that fit.
         var fixedRows = 3 + HEADER_SIZE;
-        var maxRows = Math.Max(1, Console.WindowHeight - fixedRows);
+        var maxRows = Math.Max(1, _windowHeight - fixedRows);
 
         var tbl = new Table().NoBorder();
 
@@ -429,7 +447,13 @@ public class KrpTerminalUi
         
         if (!items.Any())
         {
-            tbl.AddRow(new Text("No endpoints available", Color.Grey), Text.Empty, Text.Empty, Text.Empty, Text.Empty);
+            AnsiConsole.Write(new Align(
+                new Text("Spectre!"),
+                HorizontalAlignment.Left,
+                VerticalAlignment.Bottom
+            ));
+
+            //tbl.AddRow(Text.Empty, new Text("No endpoints available", Color.Grey), Text.Empty, Text.Empty, Text.Empty);
         }
 
         return new Panel(tbl)
@@ -447,11 +471,11 @@ public class KrpTerminalUi
     /// </summary>
     private int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> valueSelector, bool allowGrow)> columns, out int slackBeforeSpread)
     {
-        var width = Console.WindowWidth;
         var n = columns.Count;
         _lastColumnClipped = false; // reset every call
 
         // 1. Natural width per column.
+        // TODO: Optimize using dictionary cache and only recompute when row changes.
         var nat = new int[n];
         for (var i = 0; i < n; i++)
         {
@@ -463,7 +487,7 @@ public class KrpTerminalUi
 
         // 2. Build the slice that fits. Track remaining width.
         var visibleIdx = new List<int>();
-        var remain = width;
+        var remain = _windowWidth;
 
         for (var i = _columnOffset; i < n && remain > 0; i++)
         {
@@ -476,10 +500,10 @@ public class KrpTerminalUi
         // Ensure at least one column is shown.
         if (visibleIdx.Count == 0 && _columnOffset < n)
         {
-            var shown = Math.Min(nat[_columnOffset], width);
+            var shown = Math.Min(nat[_columnOffset], _windowWidth);
             columns[_columnOffset] = (columns[_columnOffset].header, shown, columns[_columnOffset].sort, columns[_columnOffset].valueSelector, columns[_columnOffset].allowGrow);
             visibleIdx.Add(_columnOffset);
-            remain = width - shown;
+            remain = _windowWidth - shown;
         }
 
         var slack = remain;   // ← FREE SPACE **before** we spread it
@@ -498,7 +522,8 @@ public class KrpTerminalUi
                 foreach (var idx in growable)
                 {
                     var c = columns[idx];
-                    c.width += even + (leftover-- > 0 ? 1 : 0);
+                    // TODO: Bug here causing rows to not be fully highlighted.
+                    c.width += even + (leftover-- > 0 ? 1 : 0); 
                     columns[idx] = c;
                 }
             }
