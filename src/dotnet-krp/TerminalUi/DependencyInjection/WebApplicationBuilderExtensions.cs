@@ -1,4 +1,5 @@
 ﻿using Krp.Tool.TerminalUi.Logging;
+using Krp.Tool.TerminalUi.Tables;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +11,9 @@ public static class WebApplicationBuilderExtensions
     {
         webApplicationBuilder.Logging.AddKrpTerminalLogger();
         webApplicationBuilder.Services.AddSingleton<KrpTerminalUi>();
+        webApplicationBuilder.Services.AddSingleton<KrpTerminalState>();
+        webApplicationBuilder.Services.AddSingleton<LogsTable>();
+        webApplicationBuilder.Services.AddSingleton<PortForwardTable>();
         return webApplicationBuilder;
     }
 }
