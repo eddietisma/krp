@@ -226,6 +226,11 @@ public class PortForwardTable
     private int VisibleLen(string markup)
     {
         // Fast path: Plain text (no Spectre markup or emoji) uses raw length.
+        if (markup.IndexOf('[') == -1 && markup.IndexOf(':') == -1)
+        {
+            return markup.Length;
+        }
+
         if (!_spectreMarkup.IsMatch(markup) && !_spectreEmoji.IsMatch(markup))
         {
             return markup.Length;
