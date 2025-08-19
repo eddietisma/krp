@@ -25,14 +25,21 @@ public class LogsTable
     public bool DetectChanges()
     {
         var newLogsCount = _logProvider.CountLogs();
-        if (newLogsCount != Count)
+        if (newLogsCount == Count)
         {
-            Count = newLogsCount;
-            _state.SelectedRow[KrpTable.Logs] = 0; // Forces tail-like behavior when new logs arrive.
-            return true;
+            return false;
         }
-        
-        return false;
+
+        Count = newLogsCount;
+
+        var fixedRows = 2 + KrpTerminalUi.HEADER_SIZE;
+        var rowsVis = Math.Max(1, _state.WindowHeight - fixedRows);
+
+        var total = _logProvider.CountLogs();
+        var maxStart = Math.Max(0, total - rowsVis);
+
+        _state.SelectedRow[KrpTable.Logs] = maxStart; // Forces tail-like behavior when new logs arrive.
+        return true;
     }
 
     public Panel BuildPanel()
@@ -47,11 +54,6 @@ public class LogsTable
         // Down (index++)  => start increases => scrolls down (newer)
         // Up   (index--)  => start decreases => scrolls up   (older)
         _state.SelectedRow[KrpTable.Logs] = Math.Clamp(_state.SelectedRow[KrpTable.Logs], 0, maxStart);
-
-        if (_state.SelectedRow[KrpTable.Logs] == 0) // first-time / follow-tail state
-        {
-            _state.SelectedRow[KrpTable.Logs] = maxStart;  // start at the tail
-        }
 
         var start = _state.SelectedRow[KrpTable.Logs];
         var slice = _logProvider.ReadLogs(start, rowsVis).ToList();
@@ -83,5 +85,4 @@ public class LogsTable
         return new Panel(tbl)
             .Header(new PanelHeader($"[##00ffff] logs([magenta1]all[/])[[[white]{_logProvider!.CountLogs()}[/]]] [/]", Justify.Center));
     }
-
 }
