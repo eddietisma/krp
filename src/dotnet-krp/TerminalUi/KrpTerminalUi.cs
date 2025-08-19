@@ -15,12 +15,12 @@ public class KrpTerminalUi
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
     
     private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
+    private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
     private readonly FigletFont _logoFont;
 
     private string _kubeCurrentContext;
-    private readonly KrpTerminalState _state;
 
     public KrpTerminalUi(KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable)
     {
@@ -104,20 +104,20 @@ public class KrpTerminalUi
                                     _kubeCurrentContext = cfg.CurrentContext ?? "unknown";
                                     redrawInfo = true;
                                 }
+                                
+                                var detectChanges = _state.SelectedTable switch
+                                {
+                                    KrpTable.PortForwards => _portForwardTable.DetectChanges(),
+                                    KrpTable.Logs => _logsTable.DetectChanges(),
+                                    _ => false,
+                                };
+
+                                if (detectChanges)
+                                {
+                                    redraw = true;
+                                }
 
                                 lastCtx = DateTime.UtcNow;
-                            }
-
-                            var detectChanges = _state.SelectedTable switch
-                            {
-                                KrpTable.PortForwards => _portForwardTable.DetectChanges(),
-                                KrpTable.Logs => _logsTable.DetectChanges(),
-                                _ => false,
-                            };
-
-                            if (detectChanges)
-                            {
-                                redraw = true;
                             }
                             
                             // Window resizing.
