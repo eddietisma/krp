@@ -40,10 +40,7 @@ public class LogsTable
         var fixedRows = 2 + KrpTerminalUi.HEADER_SIZE;
         var rowsVis = Math.Max(1, _state.WindowHeight - fixedRows);
 
-        var all = _logProvider!.ReadLogs(0, int.MaxValue).ToList();
-        var total = all.Count;
-
-        // max starting index so the window stays within bounds
+        var total = _logProvider.CountLogs();
         var maxStart = Math.Max(0, total - rowsVis);
 
         // _selectedRowIndex is "start row from the top"
@@ -57,7 +54,7 @@ public class LogsTable
         }
 
         var start = _state.SelectedRow[KrpTable.Logs];
-        var slice = all.Skip(start).Take(rowsVis).ToList();
+        var slice = _logProvider.ReadLogs(start, rowsVis).ToList();
 
         var tbl = new Table().NoBorder().Expand().HideHeaders();
         tbl.AddColumn(new TableColumn("[bold]TIME[/]") { NoWrap = true, Width = 7, Padding = new Padding(1) });
