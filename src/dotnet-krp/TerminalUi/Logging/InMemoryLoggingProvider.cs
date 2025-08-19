@@ -43,7 +43,14 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
     {
         lock (_sync)
         {
-            return _entries.Skip(skip).Take(take).ToList();
+            var available = _entries.Count - skip;
+            if (available <= 0)
+            {
+                return [];
+            }
+
+            var count = take < available ? take : available;
+            return _entries.GetRange(skip, count);
         }
     }
 
