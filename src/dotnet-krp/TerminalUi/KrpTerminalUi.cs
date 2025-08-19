@@ -3,6 +3,7 @@ using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
 using Spectre.Console;
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -50,9 +51,13 @@ public class KrpTerminalUi
                 _state.WindowWidth = Console.WindowWidth;
 
                 var layout = BuildLayout();
+
                 await AnsiConsole.Live(layout).StartAsync(async ctx =>
                 {
-                    var lastCtx = DateTime.MinValue;
+                    var lastCtx = Stopwatch.StartNew();
+                    var lastRedraw = Stopwatch.StartNew();
+                    var lastChangeDetection = Stopwatch.StartNew();
+
                     while (true)
                     {
                         try
@@ -96,7 +101,7 @@ public class KrpTerminalUi
                             }
 
                             // Context change check (1s).
-                            if (!redraw && DateTime.UtcNow - lastCtx >= TimeSpan.FromSeconds(1))
+                            if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
                                 var cfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
                                 if (cfg.CurrentContext != _kubeCurrentContext)
@@ -104,7 +109,12 @@ public class KrpTerminalUi
                                     _kubeCurrentContext = cfg.CurrentContext ?? "unknown";
                                     redrawInfo = true;
                                 }
-                                
+
+                                lastCtx.Restart();
+                            }
+
+                            if (!redraw && lastChangeDetection.Elapsed >= TimeSpan.FromSeconds(1))
+                            {
                                 var detectChanges = _state.SelectedTable switch
                                 {
                                     KrpTable.PortForwards => _portForwardTable.DetectChanges(),
@@ -112,14 +122,14 @@ public class KrpTerminalUi
                                     _ => false,
                                 };
 
+                                lastChangeDetection.Restart();
+
                                 if (detectChanges)
                                 {
                                     redraw = true;
                                 }
-
-                                lastCtx = DateTime.UtcNow;
                             }
-                            
+
                             // Window resizing.
                             if (init || (!redraw && (_state.WindowWidth != baseW || _state.WindowHeight != baseH)))
                             {
@@ -156,6 +166,7 @@ public class KrpTerminalUi
                                 layout["main"].Update(BuildMainPanel());
                                 ctx.Refresh();
                                 init = false;
+                                lastRedraw.Restart();
                             }
 
                             if (redrawInfo)
