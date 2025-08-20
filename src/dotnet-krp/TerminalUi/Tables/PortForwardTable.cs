@@ -141,6 +141,17 @@ public class PortForwardTable
             .Header(new PanelHeader($"[##00ffff] port-forwards([magenta1]all[/])[[[white]{items.Count}[/]]] [/]", Justify.Center));
     }
 
+    public Panel BuildContextMenuPanel()
+    {
+        var panel = new Panel(new Table()
+            .NoBorder().HideHeaders()
+            .AddColumn("")
+            .AddColumn("")
+            .AddRow(new Text("<ctrl+enter>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force start", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
+            .AddRow(new Text("<ctrl+del>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force stop", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
+        return panel;
+    }
+
     /// <summary>
     /// Calculates column widths and returns how many columns are visible starting at <see cref="KrpTerminalState.ColumnOffset"/>.
     /// <para>

@@ -42,7 +42,7 @@ public class LogsTable
         return true;
     }
 
-    public Panel BuildPanel()
+    public Panel BuildMainPanel()
     {
         var fixedRows = 2 + KrpTerminalUi.HEADER_SIZE;
         var rowsVis = Math.Max(1, _state.WindowHeight - fixedRows);
@@ -84,5 +84,10 @@ public class LogsTable
 
         return new Panel(tbl)
             .Header(new PanelHeader($"[##00ffff] logs([magenta1]all[/])[[[white]{_logProvider!.CountLogs()}[/]]] [/]", Justify.Center));
+    }
+
+    public Panel BuildContextMenuPanel()
+    {
+        return new Panel(new Text(""));
     }
 }

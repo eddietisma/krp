@@ -55,7 +55,7 @@ public class KrpTerminalUi
                 await AnsiConsole.Live(layout).StartAsync(async ctx =>
                 {
                     var lastCtx = Stopwatch.StartNew();
-                    var lastRedraw = Stopwatch.StartNew();
+                    var lastRedrawMain = Stopwatch.StartNew();
                     var lastChangeDetection = Stopwatch.StartNew();
 
                     while (true)
@@ -74,6 +74,7 @@ public class KrpTerminalUi
 
                             var redraw = init;
                             var redrawInfo = false;
+                            var redrawContext = false;
 
                             // Keyboard handling.
                             if (Console.KeyAvailable)
@@ -89,8 +90,8 @@ public class KrpTerminalUi
                                     case ConsoleKey.RightArrow: _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); redraw = true; break;
                                     case ConsoleKey.UpArrow: _state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - 1); redraw = true; break;
                                     case ConsoleKey.DownArrow: _state.SelectedRow[_state.SelectedTable] = Math.Min(Math.Max(0, count - 1), _state.SelectedRow[_state.SelectedTable] + 1); redraw = true; break;
-                                    case ConsoleKey.D1: _state.SelectedTable = KrpTable.PortForwards; redraw = true; break;
-                                    case ConsoleKey.D2: _state.SelectedTable = KrpTable.Logs; redraw = true; break;
+                                    case ConsoleKey.D1: _state.SelectedTable = KrpTable.PortForwards; redraw = true; redrawContext = true; break;
+                                    case ConsoleKey.D2: _state.SelectedTable = KrpTable.Logs; redraw = true; redrawContext = true; break;
                                     case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
                                     case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
                                     case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
@@ -100,7 +101,7 @@ public class KrpTerminalUi
                                 }
                             }
 
-                            // Context change check (1s).
+                            // Handle kubernetes context (1s).
                             if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
                                 var cfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
@@ -113,6 +114,7 @@ public class KrpTerminalUi
                                 lastCtx.Restart();
                             }
 
+                            // Handle tables changes (1s).
                             if (!redraw && lastChangeDetection.Elapsed >= TimeSpan.FromSeconds(1))
                             {
                                 var detectChanges = _state.SelectedTable switch
@@ -164,21 +166,29 @@ public class KrpTerminalUi
                             if (redraw)
                             {
                                 layout["main"].Update(BuildMainPanel());
-                                ctx.Refresh();
                                 init = false;
-                                lastRedraw.Restart();
+                                lastRedrawMain.Restart();
                             }
 
                             if (redrawInfo)
                             {
                                 layout["info"].Update(BuildInfoPanel());
+                            }
+
+                            if (redrawContext)
+                            {
+                                layout["context"].Update(BuildContextMenuPanel());
+                            }
+
+                            if (redraw ||redrawInfo || redrawContext)
+                            {
                                 ctx.Refresh();
                             }
 
                             // Throttle spin delay
                             //   • Idle (no redraw ≥ 1s): insert a small 50 ms delay per iteration to lower CPU usage.
                             //   • Active (frequent redraws): no delay to preserve interactive responsiveness (e.g. scrolling).
-                            var idle = lastRedraw.Elapsed >= TimeSpan.FromSeconds(1);
+                            var idle = lastRedrawMain.Elapsed >= TimeSpan.FromSeconds(1);
                             if (idle)
                             {
                                 await Task.Delay(50);
@@ -229,7 +239,7 @@ public class KrpTerminalUi
         var panel = _state.SelectedTable switch
         {
             KrpTable.PortForwards => _portForwardTable.BuildPanel(),
-            KrpTable.Logs => _logsTable.BuildPanel(),
+            KrpTable.Logs => _logsTable.BuildMainPanel(),
             _ => throw new ArgumentOutOfRangeException(nameof(_state.SelectedTable), _state.SelectedTable, "Invalid selected table index."),
         };
 
@@ -262,12 +272,12 @@ public class KrpTerminalUi
 
     private Panel BuildContextMenuPanel()
     {
-        var panel = new Panel(new Table()
-            .NoBorder().HideHeaders()
-            .AddColumn("")
-            .AddColumn("")
-            .AddRow(new Text("<ctrl+enter>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force start", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
-            .AddRow(new Text("<ctrl+del>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force stop", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
+        var panel = _state.SelectedTable switch
+        {
+            KrpTable.PortForwards => _portForwardTable.BuildContextMenuPanel(),
+            KrpTable.Logs => _logsTable.BuildContextMenuPanel(),
+            _ => throw new ArgumentOutOfRangeException(nameof(_state.SelectedTable), _state.SelectedTable, "Invalid selected table index."),
+        };
         return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
     }
 
@@ -275,13 +285,15 @@ public class KrpTerminalUi
     {
         var figlet = new FigletText(_logoFont, "KRP").Color(Color.Orange1);
         var panel = new Panel(figlet);
+        var padding = 1;
 
         if (_state.WindowSize == WindowSize.XS)
         {
             figlet.Centered();
+            padding = 0;
         }
-
-        return panel.NoBorder().Padding(1, 0, 0, 0);
+        
+        return panel.NoBorder().Padding(padding, 0, 0, 0);
     }
     
     private void ToggleSort(SortField field, ref bool redraw)
