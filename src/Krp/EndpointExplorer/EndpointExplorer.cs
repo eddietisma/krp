@@ -44,47 +44,44 @@ public class EndpointExplorer
 
             var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
             var client = new Kubernetes(config);
-            var services = new ConcurrentBag<V1Service>();
 
             var namespaces = await client.ListNamespaceAsync(cancellationToken: ct);
+            var endpoints = new ConcurrentBag<KubernetesEndpoint>();
 
             await Parallel.ForEachAsync(namespaces.Items, new ParallelOptions { MaxDegreeOfParallelism = 100, CancellationToken = ct }, async (ns, cancellationToken) =>
             {
                 var result = await FetchServicesAsync(ns.Metadata.Name, client, cancellationToken);
 
-                foreach (var svc in result)
+                foreach (var service in result)
                 {
-                    services.Add(svc);
+                    if (service.Spec?.Ports == null)
+                    {
+                        continue;
+                    }
+
+                    var fullName = $"namespace/{service.Namespace()}/service/{service.Name()}";
+
+                    if (_compiledFilters.Count != 0 && !_compiledFilters.Any(regex => regex.IsMatch(fullName)))
+                    {
+                        continue;
+                    }
+
+                    foreach (var port in service.Spec.Ports)
+                    {
+                        var endpoint = new KubernetesEndpoint
+                        {
+                            LocalPort = 0,
+                            Namespace = service.Namespace(),
+                            RemotePort = port.Port,
+                            Resource = $"service/{service.Name()}",
+                        };
+
+                        endpoints.Add(endpoint);
+                    }
                 }
             });
 
-            var filteredServices = services
-                .Where(x => x.Spec?.Ports != null)
-                .Where(x =>
-                {
-                    var fullName = $"namespace/{x.Namespace()}/service/{x.Name()}";
-                    return _compiledFilters.Count == 0 || _compiledFilters.Any(regex => regex.IsMatch(fullName));
-                });
-
-            var endpoints = new List<KubernetesEndpoint>();
-
-            foreach (var service in filteredServices)
-            {
-                foreach (var port in service.Spec.Ports)
-                {
-                    var endpoint = new KubernetesEndpoint
-                    {
-                        LocalPort = 0,
-                        Namespace = service.Namespace(),
-                        RemotePort = port.Port,
-                        Resource = $"service/{service.Name()}",
-                    };
-
-                    endpoints.Add(endpoint);
-                }
-            }
-
-            _endpointManager.AddEndpoints(endpoints);
+            _endpointManager.AddEndpoints(endpoints.ToList());
             _endpointManager.TriggerEndPointsChangedEvent();
         }
         finally
