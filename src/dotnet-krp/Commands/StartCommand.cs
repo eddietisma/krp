@@ -37,7 +37,7 @@ public class StartCommand
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
-        WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder();
+        var webApplicationBuilder = WebApplication.CreateSlimBuilder();
 
         if (TerminalUi)
         {
