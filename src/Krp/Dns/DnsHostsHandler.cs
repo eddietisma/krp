@@ -37,7 +37,9 @@ public class DnsHostsHandler : IDnsHandler
                 return;
             }
 
-            var lines = (await File.ReadAllLinesAsync(_options.Path)).ToList();
+            var originalLines = await File.ReadAllLinesAsync(_options.Path);
+            var lines = originalLines.ToList();
+
             _logger.LogInformation("Loaded hosts file '{path}' ({count} entries)", _options.Path, lines.Count);
 
             var startIndex = lines.FindIndex(line => line.Trim() == MARKER_START);
@@ -61,7 +63,7 @@ public class DnsHostsHandler : IDnsHandler
             lines.AddRange(hostnames);
             lines.Add(MARKER_END);
 
-            var hasChanges = !(await File.ReadAllLinesAsync(_options.Path)).ToList().SequenceEqual(lines);
+            var hasChanges = !lines.SequenceEqual(originalLines);
             if (!hasChanges)
             {
                 _logger.LogInformation("Skipped updating DNS due to no changes in HOSTS file");
