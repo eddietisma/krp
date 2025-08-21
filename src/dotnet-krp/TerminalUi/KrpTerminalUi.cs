@@ -1,4 +1,5 @@
 ﻿using k8s;
+using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
 using Spectre.Console;
@@ -16,6 +17,7 @@ public class KrpTerminalUi
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
     
     private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
+    private readonly KubernetesClient _kubernetesClient;
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
@@ -23,8 +25,9 @@ public class KrpTerminalUi
 
     private string _kubeCurrentContext;
 
-    public KrpTerminalUi(KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable)
+    public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable)
     {
+        _kubernetesClient = kubernetesClient;
         _state = state;
         _portForwardTable = portForwardTable;
         _logsTable = logsTable;
@@ -36,8 +39,7 @@ public class KrpTerminalUi
 
     public async Task RunUiAsync()
     {
-        var kubeCfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
-        _kubeCurrentContext = kubeCfg.CurrentContext ?? "unknown";
+        _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
 
         var baseW = Console.WindowWidth;
         var baseH = Console.WindowHeight;
@@ -107,10 +109,10 @@ public class KrpTerminalUi
                             // Handle kubernetes context (1s).
                             if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
-                                var cfg = await KubernetesClientConfiguration.LoadKubeConfigAsync();
-                                if (cfg.CurrentContext != _kubeCurrentContext)
+                                var context = await _kubernetesClient.FetchCurrentContext();
+                                if (context != _kubeCurrentContext)
                                 {
-                                    _kubeCurrentContext = cfg.CurrentContext ?? "unknown";
+                                    _kubeCurrentContext = context;
                                     redrawInfo = true;
                                 }
 

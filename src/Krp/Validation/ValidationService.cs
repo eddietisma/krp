@@ -2,6 +2,7 @@
 using Krp.Common;
 using Krp.Dns;
 using Krp.Endpoints;
+using Krp.Kubernetes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,12 +18,14 @@ public class ValidationService : IHostedService
     private readonly ILogger<ValidationService> _logger;
     private readonly IOptions<DnsHostsOptions> _dnsOptions;
     private readonly EndpointManager _endpointManager;
+    private readonly KubernetesClient _kubernetesClient;
 
-    public ValidationService(ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions, EndpointManager endpointManager)
+    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions)
     {
+        _endpointManager = endpointManager;
+        _kubernetesClient = kubernetesClient;
         _logger = logger;
         _dnsOptions = dnsOptions;
-        _endpointManager = endpointManager;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -69,10 +72,10 @@ public class ValidationService : IHostedService
 
         _logger.LogInformation(fileExists ? "✅ Found kubeconfig: '{ConfigPath}'" : "❌ Kubeconfig not found: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
 
-        var hasAccess = KubernetesHelper.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
+        var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
         if (hasAccess)
         {
-            _logger.LogInformation("✅ Successfully connected to {Context}", KubernetesClientConfiguration.BuildConfigFromConfigFile().CurrentContext);
+            _logger.LogInformation("✅ Successfully connected to {Context}", _kubernetesClient.FetchCurrentContext());
         }
         else
         {

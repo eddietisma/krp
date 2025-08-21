@@ -1,13 +1,10 @@
-﻿using k8s;
-using k8s.Models;
+﻿
 using Krp.Endpoints;
-using Krp.Endpoints.Models;
+using Krp.Kubernetes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,13 +14,15 @@ namespace Krp.EndpointExplorer;
 public class EndpointExplorer
 {
     private readonly EndpointManager _endpointManager;
+    private readonly KubernetesClient _kubernetesClient;
     private readonly ILogger<EndpointExplorer> _logger;
     private readonly List<Regex> _compiledFilters = [];
-    private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public EndpointExplorer(IOptions<EndpointExplorerOptions> options, EndpointManager endpointManager, ILogger<EndpointExplorer> logger)
+    public EndpointExplorer(EndpointManager endpointManager, KubernetesClient kubernetesClient, IOptions<EndpointExplorerOptions> options, ILogger<EndpointExplorer> logger)
     {
         _endpointManager = endpointManager;
+        _kubernetesClient = kubernetesClient;
         _logger = logger;
 
         foreach (var pattern in options.Value.Filter)
@@ -42,65 +41,13 @@ public class EndpointExplorer
         {
             _logger.LogInformation("Discovering endpoints...");
 
-            var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-            var client = new Kubernetes(config);
-
-            var namespaces = await client.ListNamespaceAsync(cancellationToken: ct);
-            var endpoints = new ConcurrentBag<KubernetesEndpoint>();
-
-            await Parallel.ForEachAsync(namespaces.Items, new ParallelOptions { MaxDegreeOfParallelism = 100, CancellationToken = ct }, async (ns, cancellationToken) =>
-            {
-                var result = await FetchServicesAsync(ns.Metadata.Name, client, cancellationToken);
-
-                foreach (var service in result)
-                {
-                    if (service.Spec?.Ports == null)
-                    {
-                        continue;
-                    }
-
-                    var fullName = $"namespace/{service.Namespace()}/service/{service.Name()}";
-
-                    if (_compiledFilters.Count != 0 && !_compiledFilters.Any(regex => regex.IsMatch(fullName)))
-                    {
-                        continue;
-                    }
-
-                    foreach (var port in service.Spec.Ports)
-                    {
-                        var endpoint = new KubernetesEndpoint
-                        {
-                            LocalPort = 0,
-                            Namespace = service.Namespace(),
-                            RemotePort = port.Port,
-                            Resource = $"service/{service.Name()}",
-                        };
-
-                        endpoints.Add(endpoint);
-                    }
-                }
-            });
-
+            var endpoints = await _kubernetesClient.FetchServices(_compiledFilters, ct);
             _endpointManager.AddEndpoints(endpoints.ToList());
             _endpointManager.TriggerEndPointsChangedEvent();
         }
         finally
         {
             _lock.Release();
-        }
-    }
-
-    private async Task<IEnumerable<V1Service>> FetchServicesAsync(string ns, Kubernetes client, CancellationToken ct)
-    {
-        try
-        {
-            var namespaceServices = await client.ListNamespacedServiceAsync(ns, cancellationToken: ct);
-            return namespaceServices.Items;
-        }
-        catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            _logger.LogInformation("namespace/{namespace} (skipping due to access)", ns);
-            return Enumerable.Empty<V1Service>();
         }
     }
 }
