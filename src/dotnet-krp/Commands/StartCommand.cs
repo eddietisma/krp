@@ -2,8 +2,11 @@
 using Krp.Dns;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Logging;
+using Krp.Tool.TerminalUi;
+using Krp.Tool.TerminalUi.DependencyInjection;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
@@ -15,6 +18,9 @@ namespace Krp.Tool.Commands;
 [Command(Name = "", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
 public class StartCommand
 {
+    [Option("--ui", Description = "Use Terminal UI")]
+    public bool TerminalUi { get; init; } = false;
+
     [Option("--no-discovery|-nd", Description = "Disable automatic endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
 
@@ -31,28 +37,36 @@ public class StartCommand
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
-        var builder = WebApplication.CreateBuilder();
+        var webApplicationBuilder = WebApplication.CreateSlimBuilder();
 
-        builder.Logging.AddKrpLogger();
-        var kubernetesForwarderBuilder = builder.Services.AddKubernetesForwarder(builder.Configuration)
-            .UseDnsLookup(options =>
-            {
-                options.Nameserver = Nameservers;
-            });
+        if (TerminalUi)
+        {
+            webApplicationBuilder.AddKrpTerminalUi();
+        }
+        else
+        {
+            webApplicationBuilder.Logging.AddKrpLogger();
+        }
+
+        var builder = webApplicationBuilder.Services.AddKubernetesForwarder(webApplicationBuilder.Configuration)
+                .UseDnsLookup(options =>
+                {
+                    options.Nameserver = Nameservers;
+                });
 
         switch (Routing)
         {
             case "hosts":
-                kubernetesForwarderBuilder.UseRouting(DnsOptions.HostsFile);
+                builder.UseRouting(DnsOptions.HostsFile);
                 break;
         }
         switch (Forwarder)
         {
             case "http":
-                kubernetesForwarderBuilder.UseHttpForwarder();
+                builder.UseHttpForwarder();
                 break;
             case "tcp":
-                kubernetesForwarderBuilder.UseTcpForwarder(options =>
+                builder.UseTcpForwarder(options =>
                 {
                     options.ListenAddress = IPAddress.Any;
                     options.ListenPorts = [80, 443];
@@ -60,7 +74,7 @@ public class StartCommand
                 });
                 break;
             case "hybrid":
-                kubernetesForwarderBuilder.UseTcpWithHttpForwarder(options =>
+                builder.UseTcpWithHttpForwarder(options =>
                 {
                     options.ListenAddress = IPAddress.Any;
                     options.ListenPorts = [80, 443];
@@ -70,16 +84,25 @@ public class StartCommand
 
         if (!NoDiscovery)
         {
-            kubernetesForwarderBuilder.UseEndpointExplorer(options =>
+            builder.UseEndpointExplorer(options =>
             {
                 options.RefreshInterval = TimeSpan.FromHours(1);
             });
         }
 
-        var app = builder.Build();
-
+        var app = webApplicationBuilder.Build();
         app.UseKubernetesForwarder();
-        await app.RunAsync(ct);
+
+        if (TerminalUi)
+        {
+            var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
+            await Task.WhenAll(app.RunAsync(ct), terminalUi.RunUiAsync());
+        }
+        else
+        {
+            await app.RunAsync(ct);
+        }
+
         return 0;
     }
 }
