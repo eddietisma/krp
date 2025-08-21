@@ -81,6 +81,7 @@ public class KrpTerminalUi
                             {
                                 var key = Console.ReadKey(true);
                                 var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
+                                var ctrl = (key.Modifiers & ConsoleModifiers.Control) != 0;
 
                                 switch (key.Key)
                                 {
@@ -97,6 +98,8 @@ public class KrpTerminalUi
                                     case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
                                     case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
                                     case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
+                                    case ConsoleKey.Enter when ctrl && _state.SelectedTable == KrpTable.PortForwards: _ = _portForwardTable.ForceStart(); break;
+                                    case ConsoleKey.Delete when ctrl && _state.SelectedTable == KrpTable.PortForwards: _portForwardTable.ForceStop(); break;
                                     case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
                                 }
                             }

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Krp.Tool.TerminalUi.Tables;
 
@@ -128,13 +129,7 @@ public class PortForwardTable
 
         if (!items.Any())
         {
-            AnsiConsole.Write(new Align(
-                new Text("Spectre!"),
-                HorizontalAlignment.Left,
-                VerticalAlignment.Bottom
-            ));
-
-            //tbl.AddRow(Text.Empty, new Text("No endpoints available", Color.Grey), Text.Empty, Text.Empty, Text.Empty);
+            tbl.AddRow(Text.Empty, new Text("No endpoints available", Color.Grey), Text.Empty, Text.Empty, Text.Empty);
         }
 
         return new Panel(tbl)
@@ -150,6 +145,40 @@ public class PortForwardTable
             .AddRow(new Text("<ctrl+enter>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force start", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left })
             .AddRow(new Text("<ctrl+del>", "#1E90FF") { Overflow = Overflow.Ellipsis }, new Text("force stop", Color.White) { Overflow = Overflow.Ellipsis, Justification = Justify.Left }));
         return panel;
+    }
+
+    public async Task ForceStart()
+    {
+        var handlers = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList().Sort(_state.SortField, _state.SortAscending);
+        var selected = _state.SelectedRow[KrpTable.PortForwards];
+        
+        if (selected < 0 || selected >= handlers.Count)
+        {
+            return; // Invalid index
+        }
+
+        var handler = handlers[selected];
+        if (!handler.IsActive)
+        {
+            await handler.EnsureRunningAsync();
+        }
+    }
+
+    public void ForceStop()
+    {
+        var handlers = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList().Sort(_state.SortField, _state.SortAscending);
+        var selected = _state.SelectedRow[KrpTable.PortForwards];
+
+        if (selected < 0 || selected >= handlers.Count)
+        {
+            return; // Invalid index
+        }
+
+        var handler = handlers[selected];
+        if (handler.IsActive)
+        {
+            handler.Dispose();
+        }
     }
 
     /// <summary>
