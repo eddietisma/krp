@@ -28,7 +28,7 @@ public class DnsUpdateBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (_endpointManager.GetAllHandlers().Count == 0)
+        if (!_endpointManager.GetAllHandlers().Any())
         {
             return;
         }
@@ -48,7 +48,7 @@ public class DnsUpdateBackgroundService : BackgroundService
 
     private async Task OnEndPointsChangedEvent()
     {
-        if (_endpointManager.GetAllHandlers().Count == 0)
+        if (!_endpointManager.GetAllHandlers().Any())
         {
             return;
         }

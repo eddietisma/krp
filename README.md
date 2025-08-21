@@ -218,5 +218,5 @@ services:
 - [ ] Support for translating internal Kubernetes IPs.
 - [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
 - [ ] Cross-platform support (Linux/macOS).
-- [ ] User interface.
+- [x] User interface.
 - [ ] Add GIF recordings of terminal use cases in README.

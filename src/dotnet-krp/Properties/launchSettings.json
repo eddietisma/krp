@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Krp.Tool": {
+      "commandName": "Project",
+      "commandLineArgs": "--ui",
+      "workingDirectory": "$(ProjectDir)"
+    }
+  }
+}
