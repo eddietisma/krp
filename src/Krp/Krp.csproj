@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
