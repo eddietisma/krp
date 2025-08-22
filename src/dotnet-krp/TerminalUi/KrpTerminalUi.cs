@@ -1,7 +1,7 @@
-﻿using k8s;
-using Krp.Kubernetes;
+﻿using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
+using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using System;
 using System.Diagnostics;
@@ -21,16 +21,18 @@ public class KrpTerminalUi
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
+    private readonly ILogger<KrpTerminalUi> _logger;
     private readonly FigletFont _logoFont;
 
     private string _kubeCurrentContext;
 
-    public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable)
+    public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
     {
         _kubernetesClient = kubernetesClient;
         _state = state;
         _portForwardTable = portForwardTable;
         _logsTable = logsTable;
+        _logger = logger;
         _logoFont = FigletFont.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream($"{typeof(KrpTerminalUi).Namespace}.Fonts.3D.flf") ?? throw new InvalidOperationException("Embedded font '3D.flf' not found."));
 
         state.SortField = SortField.PortForward;
@@ -205,14 +207,14 @@ public class KrpTerminalUi
                         }
                         catch (Exception ex)
                         {
-                            AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
+                            _logger.LogError(ex, "Error in inner main UI loop");
                         }
                     }
                 });
             }
             catch (Exception ex)
             {
-                AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
+                _logger.LogError(ex, "Error in outer main UI loop");
             }
         }
     }
