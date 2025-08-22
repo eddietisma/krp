@@ -28,7 +28,7 @@ public class ValidationService : IHostedService
         _dnsOptions = dnsOptions;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         var hostsPath = _dnsOptions.Value.Path;
         
@@ -40,7 +40,7 @@ public class ValidationService : IHostedService
         }
 
         var validationSuccess = string.IsNullOrEmpty(hostsPath) || ValidateHosts(hostsPath);
-        validationSuccess = ValidateKubernetes() && validationSuccess;
+        validationSuccess = await ValidateKubernetes() && validationSuccess;
         
         if (!validationSuccess)
         {
@@ -49,8 +49,6 @@ public class ValidationService : IHostedService
         }
 
         _endpointManager.Initialize();
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -66,7 +64,7 @@ public class ValidationService : IHostedService
         return fileExists && hasAccess;
     }
 
-    private bool ValidateKubernetes()
+    private async Task<bool> ValidateKubernetes()
     {
         var fileExists = File.Exists(KubernetesClientConfiguration.KubeConfigDefaultLocation);
 
@@ -75,7 +73,8 @@ public class ValidationService : IHostedService
         var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
         if (hasAccess)
         {
-            _logger.LogInformation("✅ Successfully connected to {Context}", _kubernetesClient.FetchCurrentContext());
+            var context = await _kubernetesClient.FetchCurrentContext();
+            _logger.LogInformation("✅ Successfully connected to {Context}", context);
         }
         else
         {

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Krp.Tool.TerminalUi.Extensions;
 
-public enum SortField { Url, Resource, Namespace, Ip, PortForward }
+public enum SortField { Url, Resource, Namespace, Ip, PortForward, None }
 
 public static class SortExtensions
 {
