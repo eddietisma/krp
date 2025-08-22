@@ -1,18 +1,19 @@
 ﻿using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace Krp.Tool.TerminalUi.Extensions;
 
 
 public static class TerminalExtensions
 {
-    public static string GetLevelMarkup(this LogLevel level) => level switch
+    public static Text GetLevelText(this LogLevel level) => level switch
     {
-        LogLevel.Trace => "[grey]TRA[/]",
-        LogLevel.Debug => "[grey]DBG[/]",
-        LogLevel.Information => "[green]INF[/]",
-        LogLevel.Warning => "[yellow]WRN[/]",
-        LogLevel.Error => "[red]ERR[/]",
-        LogLevel.Critical => "[red]CRI[/]",
-        _ => level.ToString().ToUpperInvariant()
+        LogLevel.Trace => new Text("TRA", Color.Grey),
+        LogLevel.Debug => new ("DBG", Color.Grey),
+        LogLevel.Information => new ("INF", Color.Green),
+        LogLevel.Warning => new ("WRN", Color.Yellow),
+        LogLevel.Error => new ("ERR", Color.Red),
+        LogLevel.Critical => new ("CRI", Color.Red),
+        _ => new (level.ToString().ToUpperInvariant()),
     };
 }

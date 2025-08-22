@@ -72,8 +72,8 @@ public class LogsTable
                 : new Rows(msgText, log.Exception.GetRenderable(new ExceptionSettings { Format = ExceptionFormats.ShortenEverything }));
 
             tbl.AddRow(
-                new Markup(log.Timestamp.ToString("HH:mm:ss")),
-                new Markup(log.Level.GetLevelMarkup()),
+                new Text(log.Timestamp.ToString("HH:mm:ss")),
+                log.Level.GetLevelText(),
                 msgCell);
         }
 
