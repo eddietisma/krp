@@ -1,8 +1,6 @@
-﻿using Krp.Logging;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using System;
 
 namespace Krp.Tool.TerminalUi.Logging;
@@ -16,17 +14,6 @@ public static class LoggingBuilderExtensions
 
         builder.Services.AddSingleton<InMemoryLoggingProvider>();
         builder.Services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<InMemoryLoggingProvider>());
-
-        builder.AddConsole(options =>
-        {
-            options.FormatterName = "krp";
-        });
-
-        builder.AddConsoleFormatter<KrpConsoleFormatter, SimpleConsoleFormatterOptions>(options =>
-        {
-            options.SingleLine = true;
-            options.TimestampFormat = "HH:mm:ss ";
-        });
 
         builder.AddFilter(_ => false);
         builder.AddFilter<InMemoryLoggingProvider>("Default", LogLevel.Information);
