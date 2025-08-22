@@ -1,12 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
-using Spectre.Console;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading;
 
 namespace Krp.Tool.TerminalUi.Logging;
+
+public record LogEntry(DateTime Timestamp, LogLevel Level, string Category, string Message, Exception Exception);
 
 /// <summary>
 /// Simple in-memory logger that keeps a bounded list of recent log entries.
@@ -66,7 +65,6 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
         }
     }
 
-    public record LogEntry(DateTime Timestamp, LogLevel Level, string Category, string Message, Exception Exception);
 
     private sealed class MemoryLogger : ILogger
     {

@@ -15,13 +15,12 @@ public class PortForwardTable
 {
     private readonly KrpTerminalState _state;
     private readonly EndpointManager _endpointManager;
-    
     private readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
     private readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
     private readonly Dictionary<string, int> _measurementLookup = new();
-    
-    private int _handlersActiveCount;
+    private readonly List<ColumnDefinition<PortForwardEndpointHandler>> _columnDefinitions;
 
+    private int _handlersActiveCount;
     public int Count { get; private set; }
 
     public PortForwardTable(KrpTerminalState state, EndpointManager endpointManager)
@@ -29,14 +28,25 @@ public class PortForwardTable
         _state = state;
         _endpointManager = endpointManager;
 
-        _state.SelectedRow.Add(KrpTable.PortForwards, 0); // Initialize selected row for port forwards.
+        // Initialize selected row for port forwards.
+        _state.SelectedRow.Add(KrpTable.PortForwards, 0);
+
+        // Initialize column definitions.
+        _columnDefinitions =
+        [
+            new ColumnDefinition<PortForwardEndpointHandler>("[bold]PF[/]", 0, SortField.PortForward, h => h.IsActive ? "[magenta1]⬤[/]" : "", false),
+            new ColumnDefinition<PortForwardEndpointHandler>("[bold]RESOURCE[/]", 0, SortField.Resource, h => h.Resource, true),
+            new ColumnDefinition<PortForwardEndpointHandler>("[bold]NAMESPACE[/]", 0, SortField.Namespace, h => h.Namespace, true),
+            new ColumnDefinition<PortForwardEndpointHandler>("[bold]URL[/]", 0, SortField.Url, h => h.Url, true),
+            new ColumnDefinition<PortForwardEndpointHandler>("[bold]IP[/]", 0, SortField.Ip, h => h.LocalIp.ToString(), true),
+        ];
     }
 
     public bool DetectChanges()
     {
         var handlers = _endpointManager.GetAllHandlers().ToList();
 
-        var newHandlersCount = handlers.Count();
+        var newHandlersCount = handlers.Count;
         if (newHandlersCount != Count)
         {
             Count = newHandlersCount;
@@ -57,17 +67,7 @@ public class PortForwardTable
     public Panel BuildPanel()
     {
         var items = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList().Sort(_state.SortField, _state.SortAscending);
-        var columns = new List<(string header, int width, SortField sort, Func<PortForwardEndpointHandler, string> valueSelector, bool allowGrow)>
-        {
-            ("[bold]PF[/]", 0, SortField.PortForward, h => h.IsActive ? "[magenta1]⬤[/]" : "", false),
-            ("[bold]RESOURCE[/]", 0, SortField.Resource, h => h.Resource, true),
-            ("[bold]NAMESPACE[/]", 0, SortField.Namespace, h => h.Namespace, true),
-            ("[bold]URL[/]", 0, SortField.Url, h => h.Url, true),
-            ("[bold]IP[/]", 0, SortField.Ip, h => h.LocalIp.ToString(), true),
-        };
-
-        var total = columns.Count;
-        var totalVisibleColumns = CalculateColumns(items, columns, out var slack);
+        var totalVisibleColumns = CalculateColumns(items, out var slack);
 
         // Auto‑reveal hidden columns when console grows.
         if (_state.WindowGrew)
@@ -75,21 +75,22 @@ public class PortForwardTable
             while (_state.ColumnOffset > 0)
             {
                 var idx = _state.ColumnOffset - 1;
-                var natural = Math.Max(4, Math.Max(VisibleLen(columns[idx].header), items.Any() ? items.Max(h => VisibleLen(columns[idx].valueSelector(h))) : 0));
+                var natural = Math.Max(4, Math.Max(VisibleLen(_columnDefinitions[idx].Header), items.Any() ? items.Max(h => VisibleLen(_columnDefinitions[idx].ValueSelector(h))) : 0));
                 if (natural > slack)
                 {
                     break;
                 }
 
                 _state.ColumnOffset--;
-                columns = columns.Select(c => (c.header, 0, c.sort, c.valueSelector, c.allowGrow)).ToList();
-                totalVisibleColumns = CalculateColumns(items, columns, out slack);
+                _columnDefinitions[idx].Width = 0;
+                totalVisibleColumns = CalculateColumns(items, out slack);
             }
 
             _state.WindowGrew = false;
         }
 
-        _state.ColumnOffsetMax = Math.Max(0, total - totalVisibleColumns + (_state.LastColumnClipped ? 1 : 0));
+        _state.ColumnOffsetMax = Math.Max(0, _columnDefinitions.Count - totalVisibleColumns + (_state.LastColumnClipped ? 1 : 0));
+
 
         // Rows that fit.
         var fixedRows = 3 + KrpTerminalUi.HEADER_SIZE;
@@ -98,10 +99,17 @@ public class PortForwardTable
         var tbl = new Table().NoBorder();
 
         // Print columns
-        var shownCols = columns.Skip(_state.ColumnOffset).Take(totalVisibleColumns).ToList();
+        var shownCols = _columnDefinitions.Skip(_state.ColumnOffset).Take(totalVisibleColumns).ToList();
+
         foreach (var col in shownCols)
         {
-            var column = new TableColumn($"{col.header}{(_state.SortField == col.sort ? _state.SortAscending ? "[#00ffff]↑[/]" : "[#00ffff]↓[/]" : "")}") { Width = col.width, NoWrap = true, Padding = new Padding(0), };
+            var column = new TableColumn($"{col.Header}{(_state.SortField == col.Sort ? _state.SortAscending ? "[#00ffff]↑[/]" : "[#00ffff]↓[/]" : "")}")
+            {
+                Width = col.Width,
+                NoWrap = true,
+                Padding = new Padding(0),
+            };
+
 
             tbl.AddColumn(column);
         }
@@ -111,15 +119,18 @@ public class PortForwardTable
         for (var i = first; i < Math.Min(items.Count, first + maxRows); i++)
         {
             var isSelected = i == _state.SelectedRow[_state.SelectedTable];
-            var cells = new List<Markup>();
+            var cells = new List<IRenderable>();
 
             foreach (var col in shownCols)
             {
                 // Pad selected cells to the column width so the highlight covers the entire cell.
                 // This is done inside markup so Spectre doesn't trim the spaces.
-                var cell = new Markup(isSelected
-                    ? $"[black on #87cefa]{RightPad(col.valueSelector(items[i]), col.width)}[/]"
-                    : $"[#87cefa]{col.valueSelector(items[i])}[/]") { Overflow = Overflow.Crop, };
+                var cell = isSelected
+                    ? new Text(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, Color.LightSkyBlue1))
+                    : new Text(col.ValueSelector(items[i]), Color.LightSkyBlue1)
+                    { 
+                        Overflow = Overflow.Crop
+                    };
                 cells.Add(cell);
             }
 
@@ -192,9 +203,9 @@ public class PortForwardTable
     /// - Outputs <paramref name="slackBeforeSpread"/> as free space before spreading.<br/>
     /// </para>
     /// </summary>
-    private int CalculateColumns<T>(List<T> items, List<(string header, int width, SortField sort, Func<T, string> valueSelector, bool allowGrow)> columns, out int slackBeforeSpread)
+    private int CalculateColumns(List<PortForwardEndpointHandler> items, out int slackBeforeSpread)
     {
-        var n = columns.Count;
+        var n = _columnDefinitions.Count;
         _state.LastColumnClipped = false; // reset every call
 
         // 1. Natural width per column.
@@ -202,9 +213,9 @@ public class PortForwardTable
         var nat = new int[n];
         for (var i = 0; i < n; i++)
         {
-            var col = columns[i];
-            var header = VisibleLen(col.header);
-            var longest = items.Any() ? items.Max(h => VisibleLen(col.valueSelector(h))) : 0;
+            var col = _columnDefinitions[i];
+            int header = VisibleLen(col.Header);
+            var longest = items.Any() ? items.Max(h => VisibleLen(col.ValueSelector(h))) : 0;
             nat[i] = Math.Max(KrpTerminalUi.MIN_COL_WIDTH, Math.Max(header, longest));
         }
 
@@ -215,7 +226,7 @@ public class PortForwardTable
         for (var i = _state.ColumnOffset; i < n && remain > 0; i++)
         {
             var shown = Math.Min(nat[i], remain);
-            columns[i] = (columns[i].header, shown, columns[i].sort, columns[i].valueSelector, columns[i].allowGrow);
+            _columnDefinitions[i].Width = shown;
             visibleIdx.Add(i);
             remain -= shown;
         }
@@ -224,7 +235,9 @@ public class PortForwardTable
         if (visibleIdx.Count == 0 && _state.ColumnOffset < n)
         {
             var shown = Math.Min(nat[_state.ColumnOffset], _state.WindowWidth);
-            columns[_state.ColumnOffset] = (columns[_state.ColumnOffset].header, shown, columns[_state.ColumnOffset].sort, columns[_state.ColumnOffset].valueSelector, columns[_state.ColumnOffset].allowGrow);
+
+            _columnDefinitions[_state.ColumnOffset].Width = shown;
+
             visibleIdx.Add(_state.ColumnOffset);
             remain = _state.WindowWidth - shown;
         }
@@ -236,7 +249,7 @@ public class PortForwardTable
         if (slack > 0 && visibleIdx.Count > 0)
         {
             // Only spread to columns that can grow.
-            var growable = visibleIdx.Where(i => columns[i].allowGrow).ToList();
+            var growable = visibleIdx.Where(i => _columnDefinitions[i].AllowGrow).ToList();
             if (growable.Count > 0)
             {
                 var even = slack / growable.Count;
@@ -244,17 +257,17 @@ public class PortForwardTable
 
                 foreach (var idx in growable)
                 {
-                    var c = columns[idx];
+                    var c = _columnDefinitions[idx];
                     // TODO: Bug here causing rows to not be fully highlighted.
-                    c.width += even + (leftover-- > 0 ? 1 : 0);
-                    columns[idx] = c;
+                    c.Width += even + (leftover-- > 0 ? 1 : 0);
+                    _columnDefinitions[idx] = c;
                 }
             }
         }
 
         // 4. Flag when the right-most column is cropped or near the edge.
         var last = visibleIdx[^1];
-        var cropped = columns[last].width < nat[last];
+        var cropped = _columnDefinitions[last].Width < nat[last];
         var nearMargin = slack <= KrpTerminalUi.CROP_MARGIN;
         _state.LastColumnClipped = cropped || nearMargin;
 

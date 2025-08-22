@@ -1,8 +1,10 @@
 ﻿using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Logging;
+using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Krp.Tool.TerminalUi.Tables;
@@ -11,6 +13,7 @@ public class LogsTable
 {
     private readonly KrpTerminalState _state;
     private readonly InMemoryLoggingProvider _logProvider;
+    private readonly List<ColumnDefinition<LogEntry>> _columnDefinitions;
 
     public int Count { get; private set; }
     
@@ -19,7 +22,16 @@ public class LogsTable
         _state = state;
         _logProvider = logProvider;
 
-        _state.SelectedRow.Add(KrpTable.Logs, 0); // Initialize selected row for logs table
+        // Initialize selected row for logs table.
+        _state.SelectedRow.Add(KrpTable.Logs, 0);
+
+        // Initialize column definitions.
+        _columnDefinitions =
+        [
+            new ColumnDefinition<LogEntry>("", 8, SortField.None, _ => null, true),
+            new ColumnDefinition<LogEntry>("", 3, SortField.None, _ => null, true),
+            new ColumnDefinition<LogEntry>("", 0, SortField.None, _ => null, true),
+        ];
     }
 
     public bool DetectChanges()
@@ -58,12 +70,20 @@ public class LogsTable
         var start = _state.SelectedRow[KrpTable.Logs];
         var slice = _logProvider.ReadLogs(start, rowsVis).ToList();
 
-        var tbl = new Table().NoBorder().Expand().HideHeaders();
-        tbl.AddColumn(new TableColumn("[bold]TIME[/]") { NoWrap = true, Width = 7, Padding = new Padding(1) });
-        tbl.AddColumn(new TableColumn("[bold]LVL[/]") { NoWrap = true, Width = 2, Padding = new Padding(1) });
-        tbl.AddColumn(new TableColumn("[bold]MESSAGE[/]") { NoWrap = false, Width = Console.WindowWidth - 30, Padding = new Padding(0) });
+        var tbl = new Table().NoBorder().Expand().HideHeaders().Width(Console.WindowWidth).ShowRowSeparators(); ;
 
-        // Render from the slice; the newest entry appears at the bottom of the table
+        // Print columns.
+        foreach (var col in _columnDefinitions)
+        {
+            tbl.AddColumn(new TableColumn("")
+            {
+                Width = col.Width == 0 ? Console.WindowWidth - 10 : col.Width,
+                NoWrap = false,
+                Padding = new Padding(1),
+            });
+        }
+
+        // Print rows.
         foreach (var log in slice)
         {
             var msgText = new Text(log.Message ?? string.Empty);
@@ -73,11 +93,11 @@ public class LogsTable
 
             tbl.AddRow(
                 new Text(log.Timestamp.ToString("HH:mm:ss")),
-                log.Level.GetLevelText(),
+                new Text(GetLogLevelText(log.Level), GetLogLevelColor(log.Level)),
                 msgCell);
         }
 
-        if (slice.Count == 0)
+        if (total == 0)
         {
             tbl.AddRow(Text.Empty, new Text("No logs available", Color.Grey), Text.Empty, Text.Empty);
         }
@@ -90,4 +110,26 @@ public class LogsTable
     {
         return new Panel(new Text(""));
     }
+
+    private static string GetLogLevelText(LogLevel level) => level switch
+    {
+        LogLevel.Trace => "TRA",
+        LogLevel.Debug => "DBG",
+        LogLevel.Information => "INF",
+        LogLevel.Warning => "WRN",
+        LogLevel.Error => "ERR",
+        LogLevel.Critical => "CRI",
+        _ => level.ToString().ToUpperInvariant(),
+    };
+
+    private static Color GetLogLevelColor(LogLevel level) => level switch
+    {
+        LogLevel.Trace => Color.Grey,
+        LogLevel.Debug => Color.Grey,
+        LogLevel.Information => Color.Green,
+        LogLevel.Warning => Color.Yellow,
+        LogLevel.Error => Color.Red,
+        LogLevel.Critical => Color.Red,
+        _ => Color.Grey,
+    };
 }
