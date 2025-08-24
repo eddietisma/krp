@@ -126,11 +126,8 @@ public class PortForwardTable
                 // Pad selected cells to the column width so the highlight covers the entire cell.
                 // This is done inside markup so Spectre doesn't trim the spaces.
                 var cell = isSelected
-                    ? new Text(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, Color.LightSkyBlue1))
-                    : new Text(col.ValueSelector(items[i]), Color.LightSkyBlue1)
-                    { 
-                        Overflow = Overflow.Crop
-                    };
+                    ? new Text(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, Color.LightSkyBlue1)) { Overflow = Overflow.Crop }
+                    : new Text(col.ValueSelector(items[i]), Color.LightSkyBlue1) { Overflow = Overflow.Crop };
                 cells.Add(cell);
             }
 
