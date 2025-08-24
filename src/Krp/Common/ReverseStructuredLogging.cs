@@ -1,22 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Krp.Common;
 
 public static class ReverseStructuredLogging
 {
+    private static readonly ConcurrentDictionary<string, Regex> _regexCache = new();
+
     public static bool TryParse(string template, string input, out Dictionary<string, string> values)
     {
         values = new Dictionary<string, string>();
-
-        // Build regex from template
-        var regexPattern = Regex.Escape(template)
-            .Replace(@"\{", "{")
-            .Replace(@"\}", "}")
-            .Replace("{", "(?<")
-            .Replace("}", @">.+?)");
-
-        var regex = new Regex($"^{regexPattern}$");
+        
+        var regex = GetOrAddRegex(template);
 
         var match = regex.Match(input);
         if (!match.Success)
@@ -35,5 +31,20 @@ public static class ReverseStructuredLogging
         }
 
         return true;
+    }
+
+    private static Regex GetOrAddRegex(string template)
+    {
+        return _regexCache.GetOrAdd(template, t =>
+        {
+            // Build regex from template.
+            var regexPattern = Regex.Escape(t)
+                .Replace(@"\{", "{")
+                .Replace(@"\}", "}")
+                .Replace("{", "(?<")
+                .Replace("}", @">.+?)");
+
+            return new Regex($"^{regexPattern}$");
+        });
     }
 }
