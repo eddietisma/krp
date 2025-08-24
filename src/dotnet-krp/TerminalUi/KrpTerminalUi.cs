@@ -15,7 +15,7 @@ public class KrpTerminalUi
     public const int HEADER_SIZE = 8;      // Space (chars) treated as top menu.
     public const int CROP_MARGIN = 4;      // Space (chars) treated as "near edge".
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
-    
+
     private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
     private readonly KubernetesClient _kubernetesClient;
     private readonly KrpTerminalState _state;
@@ -79,7 +79,7 @@ public class KrpTerminalUi
                             var redraw = init;
                             var redrawInfo = false;
                             var redrawContext = false;
-                            
+
                             // Keyboard handling.
                             if (Console.KeyAvailable)
                             {
@@ -102,8 +102,8 @@ public class KrpTerminalUi
                                     case ConsoleKey.End: _state.SelectedRow[_state.SelectedTable] = count - 1; redraw = true; break;
                                     case ConsoleKey.LeftArrow: _state.ColumnOffset = Math.Max(0, _state.ColumnOffset - 1); redraw = true; break;
                                     case ConsoleKey.RightArrow: _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); redraw = true; break;
-                                    case ConsoleKey.UpArrow: _state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - 1); redraw = true; break;
-                                    case ConsoleKey.DownArrow: _state.SelectedRow[_state.SelectedTable] = Math.Min(Math.Max(0, count - 1), _state.SelectedRow[_state.SelectedTable] + 1); redraw = true; break;
+                                    case ConsoleKey.UpArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - 1)); break;
+                                    case ConsoleKey.DownArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Min(count - 1, _state.SelectedRow[_state.SelectedTable] + 1)); break;
                                     case ConsoleKey.D1: _state.SelectedTable = KrpTable.PortForwards; redraw = true; redrawContext = true; break;
                                     case ConsoleKey.D2: _state.SelectedTable = KrpTable.Logs; redraw = true; redrawContext = true; break;
                                     case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
@@ -161,15 +161,15 @@ public class KrpTerminalUi
                                 {
                                     // ignored
                                 }
-                                                         
+
                                 var previousWindowSize = _state.WindowSize;
 
                                 _state.WindowGrew = _state.WindowWidth > baseW;
                                 _state.UpdateWindowSize(_state.WindowWidth);
-  
+
                                 baseH = _state.WindowHeight;
                                 baseW = _state.WindowWidth;
-                                
+
                                 if (_state.WindowSize != previousWindowSize)
                                 {
                                     return;
@@ -201,7 +201,7 @@ public class KrpTerminalUi
                                 ctx.Refresh();
                             }
 
-                            // Throttle spin delay.
+                            // Throttle spin delay
                             //   • Idle (no redraw ≥ 1s): insert a small 50 ms delay per iteration to lower CPU usage.
                             //   • Active (frequent redraws): no delay to preserve interactive responsiveness (e.g. scrolling).
                             var idle = lastRedrawMain.Elapsed >= TimeSpan.FromSeconds(1);
@@ -235,7 +235,7 @@ public class KrpTerminalUi
         root.SplitRows(
                 new Layout("header") { Size = HEADER_SIZE },
                 new Layout("main"));
-    
+
         root["header"].SplitColumns(
             new Layout("logo") { Ratio = 5 },
             new Layout("info") { Ratio = 3, IsVisible = _state.WindowSize != WindowSize.XS },
@@ -308,10 +308,10 @@ public class KrpTerminalUi
             figlet.Centered();
             padding = 0;
         }
-        
+
         return panel.NoBorder().Padding(padding, 0, 0, 0);
     }
-    
+
     private void ToggleSort(SortField field, ref bool redraw)
     {
         _state.SortAscending = _state.SortField != field || !_state.SortAscending;
