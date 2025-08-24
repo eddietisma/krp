@@ -79,11 +79,20 @@ public class KrpTerminalUi
                             var redraw = init;
                             var redrawInfo = false;
                             var redrawContext = false;
-
+                            
                             // Keyboard handling.
                             if (Console.KeyAvailable)
                             {
-                                var key = Console.ReadKey(true);
+                                ConsoleKeyInfo key;
+                                do
+                                {
+                                    // Drain the input buffer and keep only the most recent key.
+                                    //   • intercept: true => prevents the key from being echoed into the console.
+                                    //   • do/while loop => clears any queued key repeats (e.g. when user holds down an arrow key), so only the last pressed key is processed each frame.
+                                    key = Console.ReadKey(intercept: true);
+                                }
+                                while (Console.KeyAvailable);
+
                                 var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
                                 var ctrl = (key.Modifiers & ConsoleModifiers.Control) != 0;
 
@@ -187,12 +196,12 @@ public class KrpTerminalUi
                                 layout["context"].Update(BuildContextMenuPanel());
                             }
 
-                            if (redraw ||redrawInfo || redrawContext)
+                            if (redraw || redrawInfo || redrawContext)
                             {
                                 ctx.Refresh();
                             }
 
-                            // Throttle spin delay
+                            // Throttle spin delay.
                             //   • Idle (no redraw ≥ 1s): insert a small 50 ms delay per iteration to lower CPU usage.
                             //   • Active (frequent redraws): no delay to preserve interactive responsiveness (e.g. scrolling).
                             var idle = lastRedrawMain.Elapsed >= TimeSpan.FromSeconds(1);
