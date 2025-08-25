@@ -63,8 +63,8 @@ public class LogsTable
         var maxStart = Math.Max(0, total - rowsVis);
 
         // _selectedRowIndex is "start row from the top"
-        // Down (index++)  => start increases => scrolls down (newer)
-        // Up   (index--)  => start decreases => scrolls up   (older)
+        //  • Down (index++)  => start increases => scrolls down (newer)
+        //  • Up   (index--)  => start decreases => scrolls up   (older)
         _state.SelectedRow[KrpTable.Logs] = Math.Clamp(_state.SelectedRow[KrpTable.Logs], 0, maxStart);
 
         var start = _state.SelectedRow[KrpTable.Logs];
