@@ -6,7 +6,6 @@ using Spectre.Console.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Krp.Tool.TerminalUi.Tables;
@@ -15,8 +14,6 @@ public class PortForwardTable
 {
     private readonly KrpTerminalState _state;
     private readonly EndpointManager _endpointManager;
-    private readonly Regex _spectreMarkup = new(@"\[[^\]]+?]", RegexOptions.Compiled);
-    private readonly Regex _spectreEmoji = new(@":[\w+\-]+?:", RegexOptions.Compiled);
     private readonly Dictionary<string, int> _measurementLookup = new();
     private readonly List<ColumnDefinition<PortForwardEndpointHandler>> _columnDefinitions;
 
@@ -90,8 +87,7 @@ public class PortForwardTable
         }
 
         _state.ColumnOffsetMax = Math.Max(0, _columnDefinitions.Count - totalVisibleColumns + (_state.LastColumnClipped ? 1 : 0));
-
-
+        
         // Rows that fit.
         var fixedRows = 3 + KrpTerminalUi.HEADER_SIZE;
         var maxRows = Math.Max(1, _state.WindowHeight - fixedRows);
@@ -126,8 +122,8 @@ public class PortForwardTable
                 // Pad selected cells to the column width so the highlight covers the entire cell.
                 // This is done inside markup so Spectre doesn't trim the spaces.
                 var cell = isSelected
-                    ? new Text(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, Color.LightSkyBlue1)) { Overflow = Overflow.Crop }
-                    : new Text(col.ValueSelector(items[i]), Color.LightSkyBlue1) { Overflow = Overflow.Crop };
+                    ? new Markup(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
+                    : new Markup(col.ValueSelector(items[i]), new Style(foreground: new Color(135, 206, 250))) { Overflow = Overflow.Crop };
                 cells.Add(cell);
             }
 
@@ -280,12 +276,7 @@ public class PortForwardTable
         {
             return markup.Length;
         }
-
-        if (!_spectreMarkup.IsMatch(markup) && !_spectreEmoji.IsMatch(markup))
-        {
-            return markup.Length;
-        }
-
+        
         // Cache hit: Reuse measured visual width.
         if (_measurementLookup.TryGetValue(markup, out var len))
         {

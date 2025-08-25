@@ -259,7 +259,7 @@ public class KrpTerminalUi
             _ => throw new ArgumentOutOfRangeException(nameof(_state.SelectedTable), _state.SelectedTable, "Invalid selected table index."),
         };
 
-        return panel.NoBorder().BorderColor(new Color(136, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
+        return panel.NoBorder().BorderColor(new Color(135, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
     }
 
     private Panel BuildInfoPanel()
