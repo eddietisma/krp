@@ -111,8 +111,8 @@ public class KrpTerminalUi
                                     case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
                                     case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
                                     case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
-                                    case ConsoleKey.Enter when ctrl && _state.SelectedTable == KrpTable.PortForwards: _ = _portForwardTable.ForceStart(); break;
-                                    case ConsoleKey.Delete when ctrl && _state.SelectedTable == KrpTable.PortForwards: _portForwardTable.ForceStop(); break;
+                                    case ConsoleKey.Enter when _state.SelectedTable == KrpTable.PortForwards: _ = _portForwardTable.ForceStart(); break;
+                                    case ConsoleKey.D when ctrl && _state.SelectedTable == KrpTable.PortForwards: _portForwardTable.ForceStop(); break;
                                     case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
                                 }
                             }
@@ -259,7 +259,7 @@ public class KrpTerminalUi
             _ => throw new ArgumentOutOfRangeException(nameof(_state.SelectedTable), _state.SelectedTable, "Invalid selected table index."),
         };
 
-        return panel.NoBorder().BorderColor(new Color(136, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
+        return panel.NoBorder().BorderColor(new Color(135, 206, 250)).Border(BoxBorder.Square).Padding(1, 0, 0, 1).Expand();
     }
 
     private Panel BuildInfoPanel()
