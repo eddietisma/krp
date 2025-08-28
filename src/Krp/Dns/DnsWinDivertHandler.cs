@@ -3,12 +3,15 @@ using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using WinDivertSharp;
+using static Krp.Dns.WinDivertNative;
 
 namespace Krp.Dns;
 
@@ -45,7 +48,6 @@ public class DnsWinDivertHandler : IDnsHandler
     public Task UpdateAsync(List<string> hostnames)
     {
         _redirectMap.Clear();
-
         foreach (var line in hostnames)
         {
             // Host names input like: "127.0.0.1 myapp.local"
@@ -68,95 +70,87 @@ public class DnsWinDivertHandler : IDnsHandler
     private void HandleQueries()
     {
         const string filter = "outbound and ip and udp.DstPort == 53";
+        using var handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
 
-        var handle = WinDivert.WinDivertOpen(filter, WinDivertLayer.Network, 0, WinDivertOpenFlags.None);
-        var buffer = new WinDivertBuffer(4096);
-        var address = new WinDivertAddress();
+        var buffer = new byte[4096];
+        var address = new byte[WINDIVERT_ADDRESS_SIZE];
 
-        try
+        while (true)
         {
-            while (true)
+            if (!WinDivertRecv(handle, buffer, (uint)buffer.Length, out var len, address))
             {
-                uint len = 0;
-
-                if (!WinDivert.WinDivertRecv(handle, buffer, ref address, ref len))
-                {
-                    continue;
-                }
-
-                var raw = new byte[len];
-                for (var i = 0; i < len; i++)
-                {
-                    raw[i] = buffer[i];
-                }
-
-                var packet = Packet.ParsePacket(LinkLayers.Raw, raw);
-                var ip4 = packet.Extract<IPv4Packet>();
-                var udp = packet.Extract<UdpPacket>();
-                var payload = udp?.PayloadData;
-                if (ip4 is null || udp is null || payload is null || payload.Length < 12)
-                {
-                    WinDivert.WinDivertSend(handle, buffer, len, ref address);
-                    continue;
-                }
-
-                // DNS: QR=0 => query.
-                var isQuery = (payload[2] & 0x80) == 0;
-                if (!isQuery)
-                {
-                    WinDivert.WinDivertSend(handle, buffer, len, ref address);
-                    continue;
-                }
-
-                // Parse first A/AAAA question we care about.
-                if (!TryGetWantedQuestion(payload, out var qName, out var qType, out var qClass))
-                {
-                    WinDivert.WinDivertSend(handle, buffer, len, ref address);
-                    continue;
-                }
-
-                // If endpoint exists with this host name.
-                if (!_redirectMap.TryGetValue(qName, out var targetIp))
-                {
-                    WinDivert.WinDivertSend(handle, buffer, len, ref address);
-                    continue;
-                }
-
-                // Craft DNS response with spoofed IP.
-                var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qClass, targetIp, 5);
-
-                var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
-                {
-                    PayloadData = response,
-                };
-
-                var outIp = new IPv4Packet(ip4.DestinationAddress, ip4.SourceAddress)
-                {
-                    TimeToLive = 64, 
-                    PayloadPacket = outUdp,
-                };
-
-                outUdp.UpdateCalculatedValues();
-                outIp.UpdateCalculatedValues();
-
-                var outBytes = outIp.Bytes;
-                var outBuf = new WinDivertBuffer(outBytes.Length);
-
-                for (var i = 0; i < outBytes.Length; i++)
-                {
-                    outBuf[i] = outBytes[i];
-                }
-
-                var outAddr = address;
-                outAddr.Direction = WinDivertDirection.Inbound;
-
-                WinDivert.WinDivertHelperCalcChecksums(outBuf, outBuf.Length, 0);
-                WinDivert.WinDivertSend(handle, outBuf, outBuf.Length, ref outAddr);
+                continue;
             }
-        }
-        finally
-        {
-            WinDivert.WinDivertClose(handle);
+
+            var raw = new byte[len];
+            for (var i = 0; i < len; i++)
+            {
+                raw[i] = buffer[i];
+            }
+
+            var packet = Packet.ParsePacket(LinkLayers.Raw, raw);
+            var ip4 = packet.Extract<IPv4Packet>();
+            var udp = packet.Extract<UdpPacket>();
+            var payload = udp?.PayloadData;
+
+            if (ip4 is null || udp is null || payload is null || payload.Length < 12)
+            {
+                WinDivertSend(handle, buffer, len, out _, address);
+                continue;
+            }
+
+            // DNS: QR=0 => query.
+            var isQuery = (payload[2] & 0x80) == 0;
+            if (!isQuery)
+            {
+                WinDivertSend(handle, buffer, len, out _, address);
+                continue;
+            }
+
+            // Parse first A/AAAA question we care about.
+            if (!TryGetWantedQuestion(payload, out var qName, out _, out var qClass))
+            {
+                WinDivertSend(handle, buffer, len, out _, address);
+                continue;
+            }
+
+            // If endpoint exists with this host name.
+            if (!_redirectMap.TryGetValue(qName, out var targetIp))
+            {
+                WinDivertSend(handle, buffer, len, out _, address);
+                continue;
+            }
+
+            // Craft DNS response with spoofed IP.
+            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qClass, targetIp, 5);
+
+            var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
+            {
+                PayloadData = response,
+            };
+
+            var outIp = new IPv4Packet(ip4.DestinationAddress, ip4.SourceAddress)
+            {
+                TimeToLive = 64, 
+                PayloadPacket = outUdp,
+            };
+
+            outUdp.UpdateCalculatedValues();
+            outIp.UpdateCalculatedValues();
+
+            var outBytes = outIp.Bytes;
+            var outBuf = new byte[outBytes.Length];
+
+            for (var i = 0; i < outBytes.Length; i++)
+            {
+                outBuf[i] = outBytes[i];
+            }
+
+            var inboundAddr = (byte[])address.Clone();
+            inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
+
+            WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outBuf.Length, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
+            WinDivertSend(handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
         }
     }
 
@@ -165,7 +159,6 @@ public class DnsWinDivertHandler : IDnsHandler
         qName = "";
         qType = 0;
         qClass = 0;
-
         if (dns.Length < 12)
         {
             return false;
@@ -336,4 +329,178 @@ public class DnsWinDivertHandler : IDnsHandler
 
         b.Add(0);
     }
+}
+
+internal static class WinDivertNative
+{
+    static WinDivertNative()
+    {
+        // Modify PATH var to include our WinDivert DLL's so that the LoadLibrary function will
+        // find whatever WinDivert dll required for the current architecture.
+        var path = new[]
+        {
+            Environment.GetEnvironmentVariable("PATH") ?? string.Empty,
+        };
+
+        var dllSearchPaths = new[]
+        {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x86", "native"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x64", "native"),
+        };
+
+        var newPath = string.Join(Path.PathSeparator.ToString(), path.Concat(dllSearchPaths));
+
+        Environment.SetEnvironmentVariable("PATH", newPath);
+    }
+
+    // ===== Constants =====
+    public const string Dll = "WinDivert.dll";
+    public const int WINDIVERT_ADDRESS_SIZE = 64; // v2.x opaque address blob
+
+    // ===== Enums =====
+    public enum WINDIVERT_LAYER
+    {
+        Network = 0, // raw IP packets (in/out)
+        NetworkForward = 1, // forwarded packets (router scenarios)
+        Flow = 2,
+        Socket = 3,
+        Reflect = 4,
+    }
+
+    [Flags]
+    public enum WINDIVERT_OPEN_FLAGS : ulong
+    {
+        None = 0,
+        Sniff = 1UL << 0, // non-intrusive (doesn’t block/divert)
+        Drop = 1UL << 1, // all matched packets dropped
+        RecvOnly = 1UL << 2,
+        SendOnly = 1UL << 3,
+        NoInstall = 1UL << 4, // do not install service/driver
+        Fragments = 1UL << 5, // receive fragments separately
+        NoChecksum = 1UL << 6, // do not validate checksums on recv
+        // (there are more flags in the SDK; add as you need)
+    }
+
+    public enum WINDIVERT_PARAM
+    {
+        QueueLen = 0, // UINT64
+        QueueTime = 1, // UINT64 (microseconds)
+        QueueSize = 2, // UINT64 (bytes)
+        VersionMajor = 3, // UINT64
+        VersionMinor = 4, // UINT64
+        Timestamp = 5, // UINT64; 0=off, 1=on
+    }
+
+    [Flags]
+    public enum WINDIVERT_HELPER_CHECKSUM_FLAGS : ulong
+    {
+        None = 0,
+        Ip = 1UL << 0,
+        Icmp = 1UL << 1,
+        IcmpV6 = 1UL << 2,
+        Tcp = 1UL << 3,
+        Udp = 1UL << 4,
+        All = Ip | Icmp | IcmpV6 | Tcp | Udp,
+    }
+
+    // ===== Safe handle =====
+    public sealed class SafeWinDivertHandle : SafeHandle
+    {
+        private SafeWinDivertHandle() : base(IntPtr.Zero, true) { }
+        public override bool IsInvalid => handle == IntPtr.Zero;
+        protected override bool ReleaseHandle() => WinDivertClose(handle);
+    }
+
+    // ===== P/Invoke signatures (v2.x) =====
+
+    // HANDLE WinDivertOpen(const char *filter, WINDIVERT_LAYER layer, INT16 priority, UINT64 flags);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
+    public static extern SafeWinDivertHandle WinDivertOpen(
+        string filter,
+        WINDIVERT_LAYER layer,
+        short priority,
+        WINDIVERT_OPEN_FLAGS flags
+    );
+
+    // BOOL WinDivertClose(HANDLE handle);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertClose(IntPtr handle);
+
+    // BOOL WinDivertRecv(HANDLE handle, PVOID pPacket, UINT packetLen, PWINDIVERT_ADDRESS pAddr, UINT *readLen);
+    // Treat address as opaque 64-byte buffer.
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertRecv(
+        SafeWinDivertHandle handle,
+        [Out] byte[] packet,
+        uint packetLen,
+        out uint recvLen,
+        [Out] byte[] address // size = WINDIVERT_ADDRESS_SIZE
+    );
+
+    // BOOL WinDivertSend(HANDLE handle, PVOID pPacket, UINT packetLen, PWINDIVERT_ADDRESS pAddr, UINT *writeLen);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertSend(
+        SafeWinDivertHandle handle,
+        [In] byte[] packet,
+        uint packetLen,
+        out uint sendLen,
+        [In] byte[] address // same blob you got from Recv (possibly modified)
+    );
+
+    // BOOL WinDivertSetParam(HANDLE handle, WINDIVERT_PARAM param, UINT64 value);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertSetParam(
+        SafeWinDivertHandle handle,
+        WINDIVERT_PARAM param,
+        ulong value
+    );
+
+    // BOOL WinDivertGetParam(HANDLE handle, WINDIVERT_PARAM param, UINT64 *value);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertGetParam(
+        SafeWinDivertHandle handle,
+        WINDIVERT_PARAM param,
+        out ulong value
+    );
+
+    // BOOL WinDivertHelperCalcChecksums(PVOID pPacket, UINT packetLen, PWINDIVERT_ADDRESS pAddr, UINT64 flags);
+    // Pass address blob from Recv/Send if available; otherwise null. Flags can be 0 or All.
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertHelperCalcChecksums(
+        [In] [Out] byte[] packet,
+        uint packetLen,
+        [In] byte[] address, // can be null; if you want, overload below
+        WINDIVERT_HELPER_CHECKSUM_FLAGS flags
+    );
+
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, EntryPoint = "WinDivertHelperCalcChecksums", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertHelperCalcChecksums_NoAddr(
+        [In] [Out] byte[] packet,
+        uint packetLen,
+        IntPtr address, // NULL
+        WINDIVERT_HELPER_CHECKSUM_FLAGS flags
+    );
+
+    // Optional: parse helpers (if you want native parsing instead of PacketDotNet)
+    // BOOL WinDivertHelperParsePacket(PVOID pPacket, UINT packetLen, PVOID *ppIpHdr, PVOID *ppIpv6Hdr,
+    //                                 PVOID *ppIcmpHdr, PVOID *ppIcmpv6Hdr, PVOID *ppTcpHdr, PVOID *ppUdpHdr,
+    //                                 PVOID *ppData, UINT *dataLen);
+    [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool WinDivertHelperParsePacket(
+        [In] byte[] packet, uint packetLen,
+        out IntPtr ppIpHdr, out IntPtr ppIpv6Hdr,
+        out byte protocol,
+        out IntPtr ppIcmpHdr, out IntPtr ppIcmpv6Hdr,
+        out IntPtr ppTcpHdr, out IntPtr ppUdpHdr,
+        out IntPtr ppData, out uint dataLen,
+        out IntPtr ppNext, out uint nextLen
+    );
 }
