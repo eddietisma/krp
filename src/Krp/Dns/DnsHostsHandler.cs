@@ -9,11 +9,19 @@ using System.Threading.Tasks;
 
 namespace Krp.Dns;
 
-public interface IDnsHandler
-{
-    Task UpdateAsync(List<string> hostnames);
-}
-
+/// <summary>
+/// Updates the system <c>hosts</c> file with a managed block of entries.
+/// <para>
+/// The handler looks for a block delimited by
+/// <c># Added by krp</c> … <c># End of section</c>. If found, that block is
+/// replaced; otherwise a new block is appended. A timestamped backup of the
+/// original file is created before writing. No write occurs when there are
+/// no effective changes.
+/// </para>
+/// <para>
+/// Note: Writing the hosts file typically requires Administrator privileges.
+/// </para>
+/// </summary>
 public class DnsHostsHandler : IDnsHandler
 {
     private const string MARKER_START = "# Added by krp";

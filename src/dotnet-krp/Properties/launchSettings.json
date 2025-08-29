@@ -2,7 +2,7 @@
   "profiles": {
     "Krp.Tool": {
       "commandName": "Project",
-      "commandLineArgs": "--ui",
+      "commandLineArgs": "--ui --routing windivert",
       "workingDirectory": "$(ProjectDir)"
     }
   }

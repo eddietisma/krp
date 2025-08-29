@@ -11,7 +11,8 @@
     <DockerfileContext>.</DockerfileContext>
     <DockerfileRunArguments>-v krp_azure:/root/.azure -v $(USERPROFILE)/.kube:/root/.kube -v /c/Windows/System32/drivers/etc/:/windows_etc/ -e KRP_WINDOWS_HOSTS=/windows_etc/hosts</DockerfileRunArguments>
     <IsPackable>true</IsPackable>
-	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>NU5104;CS1591</NoWarn>
 
     <!--Package-->
     <Authors>Eddie Tisma</Authors>
@@ -47,7 +48,23 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="PacketDotNet" />
     <PackageReference Include="Yarp.ReverseProxy" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pack to NuGet under the correct RID/native paths -->
+    <None Include="runtimes\win-x64\native\WinDivert.dll" Pack="true" PackagePath="runtimes/win-x64/native/" />
+    <None Include="runtimes\win-x64\native\WinDivert64.sys" Pack="true" PackagePath="runtimes/win-x64/native/" />
+    <None Include="runtimes\win-x86\native\WinDivert.dll" Pack="true" PackagePath="runtimes/win-x86/native/" />
+    <None Include="runtimes\win-x86\native\WinDivert32.sys" Pack="true" PackagePath="runtimes/win-x86/native/" />
+    <None Include="runtimes\win-x86\native\WinDivert64.sys" Pack="true" PackagePath="runtimes/win-x86/native/" />
+
+    <!-- Also copy to this project's output so it runs as a standalone app -->
+    <None Update="runtimes\win-x64\native\WinDivert.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="runtimes\win-x64\native\WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="runtimes\win-x86\native\WinDivert.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="runtimes\win-x86\native\WinDivert32.sys" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="runtimes\win-x86\native\WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

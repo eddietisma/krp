@@ -128,7 +128,9 @@ public static class KubernetesBuilderExtension
                 builder.Services.AddSingleton<IDnsHandler, DnsHostsHandler>();
                 builder.Services.Configure<DnsHostsOptions>(o => o.Path = hostsPath);
                 break;
-
+            case DnsOptions.WinDivert:
+                builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");
         }
