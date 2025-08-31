@@ -15,10 +15,11 @@
 - **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
 
 ### **Dependencies**
-- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) traffic routing capabilities.
 - [DnsClient](https://github.com/MichaCo/DnsClient.NET): Facilitates DNS lookups when resolving HTTP endpoints.
 - [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes pod ports to local machine ports.
 - [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
+- [windivert](https://github.com/basil00/WinDivert): Used to intercept DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
+- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) traffic routing capabilities.
 
 ## **How `krp` works**
 
@@ -98,40 +99,24 @@ dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --
 
 ### Configuration
 
-You can configure port-forwarding and routing behavior by adding service definitions as follows:
+You can configure port-forwarding and routing behavior as follows:
 
-```csharp
-services.AddKubernetesForwarder()
-    .UseHttpEndpoint(5000, "api.domain.com", "/api")
-    .UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
-    .UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
-    .UseEndpoint(0, 80, "namespace", "myapi") // 0 for dynamic local port selection
-    .UseEndpointExplorer(options =>
-    {
-        // Filters to map specific namespaces, services, or pods
-        options.Filter = [
-           "namespace/meetings/*",
-           "namespace/*/service/person*",
-        ];
-        options.RefreshInterval = TimeSpan.FromHours(1);
-    })
-    .UseDnsLookup(options =>
-    {
-        // Used for HTTP endpoints as fallback DNS resolver if the local port is not active.
-        options.Nameserver = "8.8.8.8";
-    })
-    //.UseHttpForwarder()
-    //.UseTcpForwarder(options =>
-    // {
-    //    options.ListenAddress = IPAddress.Any;
-    //    options.ListenPort = 80;
-    // })
-    .UseTcpWithHttpForwarder(options =>
-    {
-        options.ListenAddress = IPAddress.Any;
-        options.ListenPort = 80;
-    })
-    .UseRouting(DnsOptions.WindowsHostsFile);
+```bash
+# krp --help
+Usage: krp [options]
+
+Options:
+  --no-ui                         Disable terminal UI
+  --no-discovery                  Disable automatic endpoint discovery
+  -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers
+                                  Default value is: 8.8.8.8.
+  -f|--forwarder <FORWARDER>      Connection method: tcp, http, or hybrid
+                                  Allowed values are: tcp, http, hybrid.
+                                  Default value is: hybrid.
+  -r|--routing <ROUTING>          Routing method
+                                  Allowed values are: hosts, windivert.
+                                  Default value is: hosts.
+  -?|-h|--help                    Show help information.
 ```
 
 ### Forwarders available
