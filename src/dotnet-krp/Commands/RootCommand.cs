@@ -4,6 +4,7 @@ using Krp.Forwarders.HttpForwarder;
 using Krp.Logging;
 using Krp.Tool.TerminalUi;
 using Krp.Tool.TerminalUi.DependencyInjection;
+using Krp.Tool.TerminalUi.Logging;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,13 +16,13 @@ using System.Threading.Tasks;
 
 namespace Krp.Tool.Commands;
 
-[Command(Name = "", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
-public class StartCommand
+[Command(Name = "krp", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
+public class RootCommand
 {
-    [Option("--ui", Description = "Use Terminal UI")]
-    public bool TerminalUi { get; init; } = false;
+    [Option("--no-ui", Description = "Disable terminal UI")]
+    public bool NoTerminalUi { get; init; } = false;
 
-    [Option("--no-discovery|-nd", Description = "Disable automatic endpoint discovery")]
+    [Option("--no-discovery", Description = "Disable automatic endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
 
     [Option("--nameservers|-n <NAMESERVERS>", Description = "Comma-separated list of DNS servers")]
@@ -33,14 +34,15 @@ public class StartCommand
 
     [Option("--routing|-r <ROUTING>", Description = "Routing method")]
     [AllowedValues("hosts", "windivert", IgnoreCase = true)]
-    public string Routing { get; init; } = "hosts";
+    public string Routing { get; init; } = "windivert";
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
         var webApplicationBuilder = WebApplication.CreateSlimBuilder();
 
-        if (TerminalUi)
+        if (!NoTerminalUi)
         {
+            webApplicationBuilder.Logging.AddKrpTerminalLogger();
             webApplicationBuilder.AddKrpTerminalUi();
         }
         else
@@ -96,7 +98,7 @@ public class StartCommand
         var app = webApplicationBuilder.Build();
         app.UseKubernetesForwarder();
 
-        if (TerminalUi)
+        if (!NoTerminalUi)
         {
             var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
             await Task.WhenAll(app.RunAsync(ct), terminalUi.RunUiAsync());

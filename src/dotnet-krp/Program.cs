@@ -8,6 +8,6 @@ public class Program
 {
     public async static Task Main(string[] args)
     {
-        await new HostBuilder().RunCommandLineApplicationAsync<StartCommand>(args);
+        await new HostBuilder().RunCommandLineApplicationAsync<RootCommand>(args);
     }
 }
