@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,11 +20,13 @@ public class ValidationService : IHostedService
     private readonly IOptions<DnsHostsOptions> _dnsOptions;
     private readonly EndpointManager _endpointManager;
     private readonly KubernetesClient _kubernetesClient;
+    private readonly IDnsHandler _dnsHandler;
 
-    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions)
+    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, IDnsHandler dnsHandler, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions)
     {
         _endpointManager = endpointManager;
         _kubernetesClient = kubernetesClient;
+        _dnsHandler = dnsHandler;
         _logger = logger;
         _dnsOptions = dnsOptions;
     }
@@ -31,7 +34,9 @@ public class ValidationService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var hostsPath = _dnsOptions.Value.Path;
-        
+
+        _logger.LogInformation($"✅ Platform: {RuntimeInformation.OSArchitecture}");
+
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
         {
             _logger.LogInformation("✅ Detected running inside docker container");
@@ -39,7 +44,7 @@ public class ValidationService : IHostedService
             _logger.LogInformation("    - Endpoint targets will be selected using IP:PORT");
         }
 
-        var validationSuccess = string.IsNullOrEmpty(hostsPath) || ValidateHosts(hostsPath);
+        var validationSuccess = ValidateRouting(hostsPath);
         validationSuccess = await ValidateKubernetes() && validationSuccess;
         
         if (!validationSuccess)
@@ -53,8 +58,29 @@ public class ValidationService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     
-    private  bool ValidateHosts(string hostsPath)
+    private  bool ValidateRouting(string hostsPath)
     {
+        var routing = _dnsHandler.GetType();
+
+        var routingName = routing.Name switch
+        {
+            nameof(DnsHostsHandler) => "hosts",
+            nameof(DnsWinDivertHandler) => "windivert",
+            _ => "unknown"
+        };
+
+        _logger.LogInformation($"✅ Using routing: {routingName}");
+        
+        if (routing == typeof(DnsWinDivertHandler))
+        {  
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                _logger.LogInformation("❌ WinDivert routing is only supported on Windows platforms");
+            }
+
+            return true;
+        }
+
         var fileExists = File.Exists(hostsPath);
         var hasAccess = FileHelper.HasWriteAccess(hostsPath);
 
