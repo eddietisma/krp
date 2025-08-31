@@ -34,11 +34,12 @@ namespace Krp.Dns;
 /// </list>
 /// </para>
 /// </summary>
-public class DnsWinDivertHandler : IDnsHandler
+public class DnsWinDivertHandler : IDnsHandler, IDisposable
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
     private Thread _thread;
+    private SafeWinDivertHandle _handle;
 
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
@@ -67,17 +68,22 @@ public class DnsWinDivertHandler : IDnsHandler
         return Task.CompletedTask;
     }
 
+    public void Dispose()
+    {
+        _handle.Dispose();
+    }
+
     private void HandleQueries()
     {
         const string filter = "outbound and ip and udp.DstPort == 53";
-        using var handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
+        _handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
 
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
 
         while (true)
         {
-            if (!WinDivertRecv(handle, buffer, (uint)buffer.Length, out var len, address))
+            if (!WinDivertRecv(_handle, buffer, (uint)buffer.Length, out var len, address))
             {
                 continue;
             }
@@ -95,7 +101,7 @@ public class DnsWinDivertHandler : IDnsHandler
 
             if (ip4 is null || udp is null || payload is null || payload.Length < 12)
             {
-                WinDivertSend(handle, buffer, len, out _, address);
+                WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
 
@@ -103,21 +109,21 @@ public class DnsWinDivertHandler : IDnsHandler
             var isQuery = (payload[2] & 0x80) == 0;
             if (!isQuery)
             {
-                WinDivertSend(handle, buffer, len, out _, address);
+                WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
 
             // Parse first A/AAAA question we care about.
             if (!TryGetWantedQuestion(payload, out var qName, out _, out var qClass))
             {
-                WinDivertSend(handle, buffer, len, out _, address);
+                WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
 
             // If endpoint exists with this host name.
             if (!_redirectMap.TryGetValue(qName, out var targetIp))
             {
-                WinDivertSend(handle, buffer, len, out _, address);
+                WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
 
@@ -150,7 +156,7 @@ public class DnsWinDivertHandler : IDnsHandler
             inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
 
             WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outBuf.Length, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
-            WinDivertSend(handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
+            WinDivertSend(_handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
         }
     }
 
