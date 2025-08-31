@@ -46,6 +46,12 @@
         "resolved": "1.21.2",
         "contentHash": "kN58RveGig9YjWAoYI3flDWC/jWCU0Xzzmp3f49fbnPwZLsVJu9qMt+VSrIz7I3Gn6jkeY1l7cVJopiRDOq3CQ=="
       },
+      "PacketDotNet": {
+        "type": "Direct",
+        "requested": "[1.4.9-pre47, )",
+        "resolved": "1.4.9-pre47",
+        "contentHash": "4rYzVZ1h51sAWg75Ll0xejAjseLJ7DpsGpXUmWk0HZ53pEreWnc/1ra7r/a6Zd2lS3sgdww7YOyaHbuoEBWmnA=="
+      },
       "Yarp.ReverseProxy": {
         "type": "Direct",
         "requested": "[2.3.0, )",

@@ -3,7 +3,12 @@
 public enum DnsOptions
 {
     /// <summary>
-    /// Use HOSTS file DNS routing.
+    /// Use HOSTS file for DNS routing.
     /// </summary>
     HostsFile,
+
+    /// <summary>
+    /// Use WinDivert for DNS routing.
+    /// </summary>
+    WinDivert,
 }

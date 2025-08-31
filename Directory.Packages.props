@@ -16,6 +16,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageVersion Include="MSTest" Version="3.10.2" />
+    <PackageVersion Include="PacketDotNet" Version="1.4.9-pre47" />
     <PackageVersion Include="Spectre.Console" Version="0.50.1-preview.0.26" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
