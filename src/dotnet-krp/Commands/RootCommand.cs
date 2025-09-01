@@ -7,6 +7,7 @@ using Krp.Tool.TerminalUi.DependencyInjection;
 using Krp.Tool.TerminalUi.Logging;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -22,13 +23,13 @@ public class RootCommand
     [Option("--no-ui", Description = "Disable terminal UI")]
     public bool NoTerminalUi { get; init; } = false;
 
-    [Option("--no-discovery", Description = "Disable automatic endpoint discovery")]
+    [Option("--no-discovery", Description = "Disable automatic Kubernetes endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
 
-    [Option("--nameservers|-n <NAMESERVERS>", Description = "Comma-separated list of DNS servers")]
+    [Option("--nameservers|-n <NAMESERVERS>", Description = "Comma-separated list of DNS servers, used for HTTP proxy endpoints")]
     public string Nameservers { get; init; } = "8.8.8.8";
 
-    [Option("--forwarder|-f <FORWARDER>", Description = "Connection method: tcp, http, or hybrid")]
+    [Option("--forwarder|-f <FORWARDER>", Description = "Forwarding method")]
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
     public string Forwarder { get; init; } = "hybrid";
 
@@ -39,6 +40,7 @@ public class RootCommand
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
         var webApplicationBuilder = WebApplication.CreateSlimBuilder();
+        webApplicationBuilder.Configuration.AddUserSecrets<Program>();
 
         if (!NoTerminalUi)
         {
