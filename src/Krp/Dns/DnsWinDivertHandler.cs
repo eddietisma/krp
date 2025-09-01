@@ -118,7 +118,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
             }
 
             // Parse first A/AAAA question we care about.
-            if (!TryGetWantedQuestion(payload, out var qName, out _, out var qClass))
+            if (!TryGetWantedQuestion(payload, out var qName, out var qType, out var qClass))
             {
                 WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
@@ -130,7 +130,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
                 WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
-            
+
             // Ignore if DNS lookups are made from krp.
             if (PortPidLookup.TryGetPidForPort(udp.SourcePort, out var portPid))
             {
@@ -142,8 +142,8 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
             }
 
             // Craft DNS response with spoofed IP.
-            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qClass, targetIp, 5);
-            
+            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qType, qClass, targetIp, 5);
+
             var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
             {
                 PayloadData = response,
@@ -151,7 +151,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
 
             var outIp = new IPv4Packet(ip4.DestinationAddress, ip4.SourceAddress)
             {
-                TimeToLive = 128, 
+                TimeToLive = 128,
                 PayloadPacket = outUdp,
             };
 
@@ -227,32 +227,50 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
         return false;
     }
 
-    private static byte[] BuildDnsResponseBytes(ushort transactionId, string qNameWire, ushort qClass, IPAddress ip, int ttlSeconds)
+    private static byte[] BuildDnsResponseBytes(
+        ushort transactionId,
+        string qName,    // FQDN as dot-joined string
+        ushort qType,    // ECHO original QTYPE from query
+        ushort qClass,   // ECHO original QCLASS (usually IN=1)
+        IPAddress ip,
+        int ttlSeconds)
     {
-        var isAAAA = ip.AddressFamily == AddressFamily.InterNetworkV6;
-        var rdata = ip.GetAddressBytes();
-        var type = (ushort)(isAAAA ? 28 : 1);
-        var b = new List<byte>(96);
-        W16(b, transactionId);
-        ushort flags = 0x8000 /*QR*/ | 0x0100 /*RD*/ | 0x0080 /*RA*/;
-        W16(b, flags);
-        W16(b, 1); // QD
-        W16(b, 1); // AN
-        W16(b, 0); // NS
-        W16(b, 0); // AR
+        const ushort QR = 0x8000;
+        const ushort RD = 0x0100;
+        const ushort RA = 0x0080;
 
-        // Question (echo, force type to match the IP family)
-        WName(b, qNameWire);
-        W16(b, type);
+        // Decide what answer TYPE we could provide from our target IP
+        ushort answerType = (ushort)(ip.AddressFamily == AddressFamily.InterNetworkV6 ? 28 : 1); // AAAA or A
+        bool typeMatches = (qType == answerType);
+
+        var rdata = ip.GetAddressBytes();
+        var b = new List<byte>(96);
+
+        // Header
+        W16(b, transactionId);
+        ushort flags = (ushort)(QR | RD | RA);  // RA=1
+        W16(b, flags);
+        W16(b, 1);                            // QD
+        W16(b, (ushort)(typeMatches ? 1 : 0));// AN
+        W16(b, 0);                            // NS
+        W16(b, 0);                            // AR
+
+        // Question: MUST echo what the client asked
+        WName(b, qName);
+        W16(b, qType);
         W16(b, qClass == 0 ? (ushort)1 : qClass);
 
-        // Answer
-        WName(b, qNameWire);
-        W16(b, type);
-        W16(b, 1);
-        W32(b, (uint)ttlSeconds);
-        W16(b, (ushort)rdata.Length);
-        b.AddRange(rdata);
+        if (typeMatches)
+        {
+            // Answer: use compression pointer to the Question name at offset 12 (start of DNS QNAME)
+            b.Add(0xC0); b.Add(0x0C);         // Name = pointer to QNAME
+            W16(b, answerType);               // TYPE (A/AAAA)
+            W16(b, 1);                        // CLASS = IN
+            W32(b, (uint)ttlSeconds);         // TTL
+            W16(b, (ushort)rdata.Length);     // RDLENGTH
+            b.AddRange(rdata);                // RDATA
+        }
+
         return b.ToArray();
     }
 
@@ -493,7 +511,7 @@ internal static class WinDivertNative
     [DllImport(Dll, CallingConvention = CallingConvention.Winapi, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool WinDivertHelperCalcChecksums(
-        [In] [Out] byte[] packet,
+        [In][Out] byte[] packet,
         uint packetLen,
         [In] byte[] address, // can be null; if you want, overload below
         WINDIVERT_HELPER_CHECKSUM_FLAGS flags
@@ -502,7 +520,7 @@ internal static class WinDivertNative
     [DllImport(Dll, CallingConvention = CallingConvention.Winapi, EntryPoint = "WinDivertHelperCalcChecksums", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool WinDivertHelperCalcChecksums_NoAddr(
-        [In] [Out] byte[] packet,
+        [In][Out] byte[] packet,
         uint packetLen,
         IntPtr address, // NULL
         WINDIVERT_HELPER_CHECKSUM_FLAGS flags
