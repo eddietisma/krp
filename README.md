@@ -107,15 +107,15 @@ Usage: krp [options]
 
 Options:
   --no-ui                         Disable terminal UI
-  --no-discovery                  Disable automatic endpoint discovery
-  -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers
+  --no-discovery                  Disable automatic Kubernetes endpoint discovery
+  -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers, used for HTTP proxy endpoints
                                   Default value is: 8.8.8.8.
-  -f|--forwarder <FORWARDER>      Connection method: tcp, http, or hybrid
+  -f|--forwarder <FORWARDER>      Forwarding method
                                   Allowed values are: tcp, http, hybrid.
                                   Default value is: hybrid.
   -r|--routing <ROUTING>          Routing method
                                   Allowed values are: hosts, windivert.
-                                  Default value is: hosts.
+                                  Default value is: windivert.
   -?|-h|--help                    Show help information.
 ```
 
