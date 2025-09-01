@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Krp.Common;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
@@ -16,7 +17,7 @@ using static Krp.Dns.WinDivertNative;
 namespace Krp.Dns;
 
 /// <summary>
-/// Spoofs DNS for selected hostnames using WinDivert.
+/// Spoofs DNS for selected hostnames using WFP/WinDivert.
 /// <para>
 /// Opens a WinDivert handle for outbound UDP/53 queries, inspects each query’s
 /// questions, and for any hostname matching a given endpoint returns
@@ -38,12 +39,15 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly int _pid;
+
     private Thread _thread;
     private SafeWinDivertHandle _handle;
 
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
         _logger = logger;
+        _pid = System.Diagnostics.Process.GetCurrentProcess().Id;
     }
 
     public Task UpdateAsync(List<string> hostnames)
@@ -126,10 +130,20 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
                 WinDivertSend(_handle, buffer, len, out _, address);
                 continue;
             }
+            
+            // Ignore if DNS lookups are made from krp.
+            if (PortPidLookup.TryGetPidForPort(udp.SourcePort, out var portPid))
+            {
+                if (_pid == portPid)
+                {
+                    WinDivertSend(_handle, buffer, len, out _, address);
+                    continue;
+                }
+            }
 
             // Craft DNS response with spoofed IP.
             var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qClass, targetIp, 5);
-
+            
             var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
             {
                 PayloadData = response,
@@ -137,7 +151,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
 
             var outIp = new IPv4Packet(ip4.DestinationAddress, ip4.SourceAddress)
             {
-                TimeToLive = 64, 
+                TimeToLive = 128, 
                 PayloadPacket = outUdp,
             };
 

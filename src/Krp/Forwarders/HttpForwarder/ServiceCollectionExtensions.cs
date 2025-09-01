@@ -44,17 +44,26 @@ public static class ServiceCollectionExtensions
 
                 ConnectCallback = async (ctx, ct) =>
                 {
-                    string host = ctx.DnsEndPoint.Host;
+                    var host = ctx.DnsEndPoint.Host;
 
                     if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
                         host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase))
                     {
                         var tcp = new TcpClient(AddressFamily.InterNetwork);
                         await tcp.ConnectAsync(host, ctx.DnsEndPoint.Port, ct);
-                        return tcp.GetStream();        // ⇦ still pooled by host:port
+                        return tcp.GetStream();
                     }
 
                     var ip = await dnsLookupHandler.QueryAsync(host);
+                    if (ip == null)
+                    {
+                        // When using Windows Filtering Platform (WFP)/WinDivert it may take a while for the driver to load.
+                        // Keep hostname for DNS resolution to work during this time.
+                        var tcp = new TcpClient(AddressFamily.InterNetwork);
+                        await tcp.ConnectAsync(host, ctx.DnsEndPoint.Port, ct);
+                        return tcp.GetStream();
+                    }
+
                     var sock = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                     await sock.ConnectAsync(new IPEndPoint(ip, ctx.DnsEndPoint.Port), ct);
                     return new NetworkStream(sock, ownsSocket: true);
