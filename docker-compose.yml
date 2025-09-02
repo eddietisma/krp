@@ -20,7 +20,7 @@ services:
       ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
       KRP_ENDPOINT_EXPLORER: false
-      KRP_WINDOWS_HOSTS: /windows_etc/hosts
+      KRP_HOSTS: /windows_etc/hosts
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
