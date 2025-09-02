@@ -1,4 +1,5 @@
-﻿using Krp.DependencyInjection;
+﻿using Krp.Common;
+using Krp.DependencyInjection;
 using Krp.Dns;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Logging;
@@ -18,6 +19,7 @@ using System.Threading.Tasks;
 namespace Krp.Tool.Commands;
 
 [Command(Name = "krp", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
+[VersionOptionFromMember("--version|-v", MemberName = nameof(GetVersion))]
 public class RootCommand
 {
     [Option("--no-ui", Description = "Disable terminal UI")]
@@ -111,5 +113,18 @@ public class RootCommand
         }
 
         return 0;
+    }
+
+    public static string GetVersion()
+    {
+        var infoVersion = VersionHelper.GetProductVersion();
+        
+        var parts = infoVersion.Split('+');
+        var version = parts[0];
+        var build = parts.Length > 1 ? parts[1] : null;
+
+        return build is null
+            ? $"krp version {version}"
+            : $"krp version {version}, build {build}";
     }
 }
