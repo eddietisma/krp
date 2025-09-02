@@ -121,7 +121,7 @@ public static class KubernetesBuilderExtension
         switch (routing)
         {
             case DnsOptions.HostsFile:
-                var hostsPath = Environment.GetEnvironmentVariable("KRP_WINDOWS_HOSTS") ?? (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                var hostsPath = Environment.GetEnvironmentVariable("KRP_HOSTS") ?? (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
                     : "/etc/hosts");
                 

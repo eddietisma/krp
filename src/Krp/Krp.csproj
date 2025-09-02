@@ -9,7 +9,7 @@
     <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
-    <DockerfileRunArguments>-v krp_azure:/root/.azure -v $(USERPROFILE)/.kube:/root/.kube -v /c/Windows/System32/drivers/etc/:/windows_etc/ -e KRP_WINDOWS_HOSTS=/windows_etc/hosts</DockerfileRunArguments>
+    <DockerfileRunArguments>-v krp_azure:/root/.azure -v $(USERPROFILE)/.kube:/root/.kube -v /c/Windows/System32/drivers/etc/:/krp_etc/ -e KRP_HOSTS=/windows_etc/hosts</DockerfileRunArguments>
     <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>NU5104;CS1591</NoWarn>

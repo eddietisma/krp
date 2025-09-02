@@ -8,13 +8,13 @@ services:
       dockerfile: Dockerfile
     environment:
       KRP_ENDPOINT_EXPLORER: false
-      KRP_WINDOWS_HOSTS: /windows_etc/hosts
+      KRP_HOSTS: /krp_etc/hosts
     volumes:
       - ~/.kube:/root/.kube # Mount the kubeconfig for monitoring context switching.
       - ~/.kube:/home/app/.kube
       - krp_azure:/root/.azure # Mount azure volume to preserve authentication used by Azure CLI (if using Azure AKS).
       - krp_azure:/home/app/.azure
-      - /c/Windows/System32/drivers/etc/:/windows_etc/ # Mount the hosts file to the container (required to route traffic).
+      - /c/Windows/System32/drivers/etc/:/krp_etc/ # Mount the hosts file to the container (required to route traffic).
     network_mode: host
 
 volumes:

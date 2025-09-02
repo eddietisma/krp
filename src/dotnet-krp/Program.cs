@@ -6,8 +6,15 @@ namespace Krp.Tool;
 
 public class Program
 {
-    public async static Task Main(string[] args)
+    public async static Task<int> Main(string[] args)
     {
-        await new HostBuilder().RunCommandLineApplicationAsync<RootCommand>(args);
+        return await new HostBuilder()
+            .RunCommandLineApplicationAsync<RootCommand>(args, app =>
+            {
+                app.ExtendedHelpText = @"
+Environment variables:
+  KRP_HOSTS                       Override path to hosts file
+";
+            });
     }
 }
