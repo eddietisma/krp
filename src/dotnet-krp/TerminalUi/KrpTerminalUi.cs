@@ -1,4 +1,5 @@
-﻿using Krp.Kubernetes;
+﻿using Krp.Common;
+using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ public class KrpTerminalUi
     public const int CROP_MARGIN = 4;      // Space (chars) treated as "near edge".
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
 
-    private readonly string _version = Assembly.GetExecutingAssembly().GetName().Version!.ToString();
+    private readonly string _version = VersionHelper.GetProductVersion().Split('+')[0];
     private readonly KubernetesClient _kubernetesClient;
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
@@ -269,7 +270,7 @@ public class KrpTerminalUi
             .AddColumn("")
             .AddColumn("")
             .AddRow(new Text("context:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(_kubeCurrentContext, Color.White) { Overflow = Overflow.Ellipsis })
-            .AddRow(new Text("version:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(_version, Color.White) { Overflow = Overflow.Ellipsis })
+            .AddRow(new Text("version:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Markup($"[link=https://github.com/eddietisma/krp/releases/tag/v{_version}]{_version}[/]", Color.White) { Overflow = Overflow.Ellipsis })
             .AddRow(new Text("last refresh:", Color.Orange1) { Overflow = Overflow.Ellipsis }, new Text(DateTime.Now.ToString("HH:mm:ss"), Color.White) { Overflow = Overflow.Ellipsis }));
         return panel.NoBorder().Padding(0, 0, 0, 0).HeaderAlignment(Justify.Left);
     }
