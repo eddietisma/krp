@@ -7,6 +7,7 @@ using Spectre.Console;
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Krp.Tool.TerminalUi;
@@ -40,14 +41,14 @@ public class KrpTerminalUi
         state.SortAscending = false;
     }
 
-    public async Task RunUiAsync()
+    public async Task RunAsync(CancellationToken ct)
     {
         _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
 
         var baseW = Console.WindowWidth;
         var baseH = Console.WindowHeight;
 
-        while (true)
+        while (!ct.IsCancellationRequested)
         {
             var init = true;
             try

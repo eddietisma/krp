@@ -105,7 +105,7 @@ public class RootCommand
         if (!NoTerminalUi)
         {
             var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
-            await Task.WhenAll(app.RunAsync(ct), terminalUi.RunUiAsync());
+            await Task.WhenAll(app.RunAsync(ct), terminalUi.RunAsync(ct));
         }
         else
         {

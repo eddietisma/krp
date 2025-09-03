@@ -39,13 +39,12 @@ public class DnsUpdateBackgroundService : BackgroundService
         var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorer.EndpointExplorer>() != null;
         if (!isEndpointExplorerEnabled)
         {
-            // Skip updating DNS, since the endpoint explorer will once discovery is finished.
+            // Skip updating DNS, since the endpoint explorer will, once discovery is finished.
             // Prevents unnecessary updates where the static routes are updated first and then overwritten with dynamic ones.
             await UpdateDns();
         }
     }
-
-
+    
     private async Task OnEndPointsChangedEvent()
     {
         if (!_endpointManager.GetAllHandlers().Any())
