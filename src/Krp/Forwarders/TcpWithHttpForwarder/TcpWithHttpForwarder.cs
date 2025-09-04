@@ -52,7 +52,7 @@ public class TcpWithHttpForwarder
             _listeners.Add(listener);
             _logger.LogInformation("Listening on {address}:{port}", _tcpOptions.ListenAddress, port);
 
-            // Start accept loop for each port
+            // Start accept loop for each port.
             _ = Task.Run(() => AcceptLoopAsync(listener, stoppingToken), stoppingToken);
         }
 

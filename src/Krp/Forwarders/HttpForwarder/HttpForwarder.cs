@@ -33,7 +33,7 @@ public class HttpForwarder
     {
         var requestUrl = httpContext.Request.GetEncodedUrl();
 
-        _logger.LogDebug("Received request from {requestUrl}", requestUrl);
+        _logger.LogInformation("{method} {requestUrl}", httpContext.Request.Method, requestUrl);
 
         var destinationUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
 
@@ -55,7 +55,7 @@ public class HttpForwarder
             destinationUrl = portForwardHandler.GetDestinationUrl();
         }
         
-        _logger.LogInformation("Proxying {requestUrl} to {destinationUrl}", requestUrl, destinationUrl);
+        _logger.LogInformation("{method} {requestUrl} → {destinationUrl}", httpContext.Request.Method, requestUrl, destinationUrl);
 
         var httpClient = new HttpMessageInvoker(_socketsHttpHandler);
 

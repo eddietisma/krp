@@ -20,7 +20,7 @@ public static class LoggingBuilderExtensions
         builder.AddFilter<InMemoryLoggingProvider>("Krp", LogLevel.Trace);
         builder.AddFilter<InMemoryLoggingProvider>("Microsoft.AspNetCore", LogLevel.Warning);
         builder.AddFilter<InMemoryLoggingProvider>("Yarp.ReverseProxy.Forwarder.HttpForwarder", LogLevel.Warning);
-        builder.AddFilter<InMemoryLoggingProvider>(level => level >= LogLevel.Debug);
+        builder.AddFilter<InMemoryLoggingProvider>(level => level >= LogLevel.Trace);
 
         builder.Services.Configure<ConsoleLifetimeOptions>(options =>
         {
