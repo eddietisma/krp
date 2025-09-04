@@ -23,6 +23,8 @@
 
 ## **How `krp` works**
 
+![Demo](.github/assets/demo.gif)
+
 1. **Endpoint registration**:  
    Uses static configuration or dynamic discovery for endpoints.
 
@@ -204,4 +206,4 @@ services:
 - [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
 - [ ] Cross-platform support (Linux/macOS).
 - [x] User interface.
-- [ ] Add GIF recordings of terminal use cases in README.
+- [x] Add GIF recordings of terminal use cases in README.
