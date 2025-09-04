@@ -4,32 +4,30 @@
 [![dotnet tool](https://img.shields.io/nuget/v/dotnet-krp?color=brightgreen&label=dotnet-krp&logo=dotnet&logoColor=white)](https://www.nuget.org/packages/dotnet-krp)
 [![docker](https://img.shields.io/docker/v/eddietisma/krp?color=brightgreen&label=docker&logo=docker&logoColor=white)](https://hub.docker.com/r/eddietisma/krp)
 
-
-`krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless forwarding to internal Kubernetes resources. The tool facilitates automatic port forwards and provides dynamic routing via localhost using the hosts file.
+`krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless forwarding to internal Kubernetes resources. The tool facilitates automatic port forwards and provides dynamic routing via loopback addresses.
 
 ### **Features**
-- **On-Demand Port Forwarding:** Forward internal Kubernetes resources to your local machine automatically.
+- **On-Demand Port Forwarding:** Forwards Kubernetes services to your local machine automatically.
 - **Context Aware:** Automatically adapts to changes in Kubernetes context and cluster.
 - **Automatic Cleanup:** All active port forwards are cleaned up on application exit.
 - **Dynamic Traffic Routing:** Routes traffic to localhost through the hosts file.
 - **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
 
 ### **Dependencies**
-- [DnsClient](https://github.com/MichaCo/DnsClient.NET): Facilitates DNS lookups when resolving HTTP endpoints.
-- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Used to forward Kubernetes pod ports to local machine ports.
-- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Detects Kubernetes context switching and discovers endpoints.
-- [windivert](https://github.com/basil00/WinDivert): Used to intercept DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
-- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) traffic routing capabilities.
+- [DnsClient](https://github.com/MichaCo/DnsClient.NET): DNS lookups for HTTP endpoints.
+- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Forwards pod ports to local ports.
+- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Tracks context changes and discovers endpoints.
+- [windivert](https://github.com/basil00/WinDivert): Intercepts DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
+- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) routing.
+
 
 ## **How `krp` works**
-
-![Demo](.github/assets/demo.gif)
 
 1. **Endpoint registration**:  
    Uses static configuration or dynamic discovery for endpoints.
 
 3. **Routing configuration:**  
-   Adds endpoints to local hosts files. Each endpoint will get a unique loopback address (eg. `127.0.0.x myapi.namespace`).
+   Each endpoint will get a unique loopback address (eg. `127.0.0.x myapi.namespace`).
 
 5. **Reverse proxying:**  
    Listens on the local machine and proxies requests to endpoint targets.
@@ -42,6 +40,8 @@
 
 ## Examples 
 
+![Demo](.github/assets/demo.gif)
+
 ### Use case: Kubernetes endpoint
 
 ```
@@ -49,7 +49,7 @@
 ```
 
 - Assume your cluster has a service exposed at `myapi.namespace:80`. 
-- The hosts file will be modified to resolve `myapi.namespace` to `127.0.0.x`.
+- The DNS will be modified to resolve `myapi.namespace` to `127.0.0.x` (using hosts file or WinDivert).
 - Traffic will be proxied to `krp`.
 - `krp` will find corresponding target endpoint based on loopback address and run `kubectl port-forward` to forward traffic to local port.
 - You can then make requests as if the service was hosted locally: `curl myapi.namespace`
@@ -61,7 +61,7 @@
 ```
 
 - Assume your API gateway is using `domain.com/api/service/v2`. 
-- The hosts file will be modified to resolve `domain.com` to `127.0.0.x`.
+- The DNS will be modified to resolve `domain.com` to `127.0.0.x` (using hosts file or WinDivert).
 - Traffic will be proxied to `krp`.
 - `krp` will find corresponding service based on loopback address and forwards traffic to local port 5001 if up.
 - You can then make requests to the URL which will be proxied locally: `curl domain.com/api/service/v2`
@@ -108,6 +108,7 @@ You can configure port-forwarding and routing behavior as follows:
 Usage: krp [options]
 
 Options:
+  -v|--version                    Show version information.
   --no-ui                         Disable terminal UI
   --no-discovery                  Disable automatic Kubernetes endpoint discovery
   -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers, used for HTTP proxy endpoints
@@ -119,6 +120,9 @@ Options:
                                   Allowed values are: hosts, windivert.
                                   Default value is: windivert.
   -?|-h|--help                    Show help information.
+
+Environment variables:
+  KRP_HOSTS                       Override path to hosts file
 ```
 
 ### Forwarders available
@@ -189,7 +193,7 @@ services:
     #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
       KRP_ENDPOINT_EXPLORER: false
-      KRP_WINDOWS_HOSTS: /mnt/hosts
+      KRP_HOSTS: /mnt/hosts
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
@@ -203,7 +207,7 @@ services:
 - [x] Support for low-level TCP traffic.
 - [ ] Support for low-level UDP traffic.
 - [ ] Support for translating internal Kubernetes IPs.
-- [ ] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
+- [x] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
 - [ ] Cross-platform support (Linux/macOS).
 - [x] User interface.
 - [x] Add GIF recordings of terminal use cases in README.
