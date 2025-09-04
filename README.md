@@ -108,6 +108,7 @@ You can configure port-forwarding and routing behavior as follows:
 Usage: krp [options]
 
 Options:
+  -v|--version                    Show version information.
   --no-ui                         Disable terminal UI
   --no-discovery                  Disable automatic Kubernetes endpoint discovery
   -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers, used for HTTP proxy endpoints
@@ -119,6 +120,9 @@ Options:
                                   Allowed values are: hosts, windivert.
                                   Default value is: windivert.
   -?|-h|--help                    Show help information.
+
+Environment variables:
+  KRP_HOSTS                       Override path to hosts file
 ```
 
 ### Forwarders available
@@ -189,7 +193,7 @@ services:
     #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
       KRP_ENDPOINT_EXPLORER: false
-      KRP_WINDOWS_HOSTS: /mnt/hosts
+      KRP_HOSTS: /mnt/hosts
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
