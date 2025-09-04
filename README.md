@@ -23,6 +23,8 @@
 
 ## **How `krp` works**
 
+![Demo](.github/assets/demo.gif)
+
 1. **Endpoint registration**:  
    Uses static configuration or dynamic discovery for endpoints.
 
