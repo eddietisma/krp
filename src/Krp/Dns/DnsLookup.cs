@@ -1,4 +1,5 @@
 ﻿using DnsClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
@@ -14,10 +15,12 @@ public interface IDnsLookupHandler
 
 public class DnsLookupHandler : IDnsLookupHandler
 {
+    private readonly ILogger<DnsLookupHandler> _logger;
     private readonly LookupClient _lookupClient;
 
-    public DnsLookupHandler(IOptions<DnsLookupOptions> options)
+    public DnsLookupHandler(IOptions<DnsLookupOptions> options, ILogger<DnsLookupHandler> logger)
     {
+        _logger = logger;
         _lookupClient = new LookupClient(IPAddress.Parse(options.Value.Nameserver));
     }
 
@@ -32,7 +35,7 @@ public class DnsLookupHandler : IDnsLookupHandler
         var ip = result.Answers.ARecords().FirstOrDefault()?.Address;
         if (ip == null)
         {
-            Console.WriteLine("No A record found.");
+            _logger.LogError("No A record found for {host}", host);
         }
 
         return ip;

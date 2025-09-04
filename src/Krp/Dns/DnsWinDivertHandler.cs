@@ -35,15 +35,12 @@ namespace Krp.Dns;
 /// </list>
 /// </para>
 /// </summary>
-public class DnsWinDivertHandler : IDnsHandler, IDisposable
+public class DnsWinDivertHandler : IDnsHandler
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly int _pid;
-
-    private Thread _thread;
-    private SafeWinDivertHandle _handle;
-
+    
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
         _logger = logger;
@@ -53,41 +50,37 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
     public Task UpdateAsync(List<string> hostnames)
     {
         _redirectMap.Clear();
-        foreach (var line in hostnames)
+
+        // Host names format: "127.0.0.1 myapp.local"
+        foreach (var parts in hostnames.Select(line => line.Split(' ')))
         {
-            // Host names input like: "127.0.0.1 myapp.local"
-            var parts = line.Split(' ');
             if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var ip))
             {
                 _redirectMap[parts[1]] = ip;
             }
         }
 
-        if (_thread is null || !_thread.IsAlive)
-        {
-            _thread = new Thread(HandleQueries) { IsBackground = true, Name = "DNS-Spoofer" };
-            _thread.Start();
-        }
-
+        _logger.LogInformation("Successfully updated DNS ({count} entries)", hostnames.Count);
+        
         return Task.CompletedTask;
     }
 
-    public void Dispose()
+    public Task RunAsync(CancellationToken stoppingToken)
     {
-        _handle.Dispose();
+        return Task.Run(() => HandleQueries(stoppingToken), stoppingToken);
     }
 
-    private void HandleQueries()
+    private void HandleQueries(CancellationToken ct)
     {
         const string filter = "outbound and ip and udp.DstPort == 53";
-        _handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
+        using var handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
 
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
 
-        while (true)
+        while (!ct.IsCancellationRequested)
         {
-            if (!WinDivertRecv(_handle, buffer, (uint)buffer.Length, out var len, address))
+            if (!WinDivertRecv(handle, buffer, (uint)buffer.Length, out var len, address))
             {
                 continue;
             }
@@ -105,7 +98,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
 
             if (ip4 is null || udp is null || payload is null || payload.Length < 12)
             {
-                WinDivertSend(_handle, buffer, len, out _, address);
+                WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
@@ -113,21 +106,28 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
             var isQuery = (payload[2] & 0x80) == 0;
             if (!isQuery)
             {
-                WinDivertSend(_handle, buffer, len, out _, address);
+                WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
             // Parse first A/AAAA question we care about.
             if (!TryGetWantedQuestion(payload, out var qName, out var qType, out var qClass))
             {
-                WinDivertSend(_handle, buffer, len, out _, address);
+                WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
             // If endpoint exists with this host name.
             if (!_redirectMap.TryGetValue(qName, out var targetIp))
             {
-                WinDivertSend(_handle, buffer, len, out _, address);
+                WinDivertSend(handle, buffer, len, out _, address);
+                continue;
+            }
+
+            // Ignore DNS question is for an AAAA record (IPv6).
+            if (qType == 28)
+            {
+                WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
@@ -136,13 +136,13 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
             {
                 if (_pid == portPid)
                 {
-                    WinDivertSend(_handle, buffer, len, out _, address);
+                    WinDivertSend(handle, buffer, len, out _, address);
                     continue;
                 }
             }
 
-            // Craft DNS response with spoofed IP.
-            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qType, qClass, targetIp, 5);
+            // Spoof DNS response with loopback IP.
+            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qType, qClass, targetIp, 30);
 
             var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
             {
@@ -170,7 +170,9 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
             inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
 
             WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outBuf.Length, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
-            WinDivertSend(_handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
+            WinDivertSend(handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
+
+            _logger.LogTrace("Sent DNS response {ip} for {hostname} with TTL 30s", qName, targetIp);
         }
     }
 
@@ -179,6 +181,7 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
         qName = "";
         qType = 0;
         qClass = 0;
+
         if (dns.Length < 12)
         {
             return false;
@@ -240,20 +243,20 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
         const ushort RA = 0x0080;
 
         // Decide what answer TYPE we could provide from our target IP
-        ushort answerType = (ushort)(ip.AddressFamily == AddressFamily.InterNetworkV6 ? 28 : 1); // AAAA or A
-        bool typeMatches = (qType == answerType);
+        var answerType = (ushort)(ip.AddressFamily == AddressFamily.InterNetworkV6 ? 28 : 1); // AAAA or A
+        var typeMatches = qType == answerType;
 
         var rdata = ip.GetAddressBytes();
         var b = new List<byte>(96);
 
         // Header
         W16(b, transactionId);
-        ushort flags = (ushort)(QR | RD | RA);  // RA=1
+        var flags = (ushort)(QR | RD | RA);  // RA=1
         W16(b, flags);
-        W16(b, 1);                            // QD
-        W16(b, (ushort)(typeMatches ? 1 : 0));// AN
-        W16(b, 0);                            // NS
-        W16(b, 0);                            // AR
+        W16(b, 1);                              // QD
+        W16(b, (ushort)(typeMatches ? 1 : 0));  // AN
+        W16(b, 0);                              // NS
+        W16(b, 0);                              // AR
 
         // Question: MUST echo what the client asked
         WName(b, qName);
@@ -263,12 +266,12 @@ public class DnsWinDivertHandler : IDnsHandler, IDisposable
         if (typeMatches)
         {
             // Answer: use compression pointer to the Question name at offset 12 (start of DNS QNAME)
-            b.Add(0xC0); b.Add(0x0C);         // Name = pointer to QNAME
-            W16(b, answerType);               // TYPE (A/AAAA)
-            W16(b, 1);                        // CLASS = IN
-            W32(b, (uint)ttlSeconds);         // TTL
-            W16(b, (ushort)rdata.Length);     // RDLENGTH
-            b.AddRange(rdata);                // RDATA
+            b.Add(0xC0); b.Add(0x0C);           // Name = pointer to QNAME
+            W16(b, answerType);                 // TYPE (A/AAAA)
+            W16(b, 1);                          // CLASS = IN
+            W32(b, (uint)ttlSeconds);           // TTL
+            W16(b, (ushort)rdata.Length);       // RDLENGTH
+            b.AddRange(rdata);                  // RDATA
         }
 
         return b.ToArray();
