@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 
 namespace Krp.Dns;
 
-public class DnsUpdateBackgroundService : BackgroundService
+public class DnsBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly EndpointManager _endpointManager;
-    private readonly ILogger<DnsUpdateBackgroundService> _logger;
+    private readonly ILogger<DnsBackgroundService> _logger;
     private readonly IDnsHandler _dnsHandler;
 
-    public DnsUpdateBackgroundService(IServiceProvider serviceProvider, EndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsUpdateBackgroundService> logger)
+    public DnsBackgroundService(IServiceProvider serviceProvider, EndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _endpointManager = endpointManager;
@@ -28,13 +28,7 @@ public class DnsUpdateBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!_endpointManager.GetAllHandlers().Any())
-        {
-            return;
-        }
-
-        // Configures all static endpoints set at startup using UseEndpoint.
-        _logger.LogInformation("Updating DNS entries...");
+        _ = _dnsHandler.RunAsync(stoppingToken);
 
         var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorer.EndpointExplorer>() != null;
         if (!isEndpointExplorerEnabled)
@@ -47,18 +41,18 @@ public class DnsUpdateBackgroundService : BackgroundService
     
     private async Task OnEndPointsChangedEvent()
     {
-        if (!_endpointManager.GetAllHandlers().Any())
-        {
-            return;
-        }
-
-        // Configures all endpoints set using UseEndpointExplorer.
-        _logger.LogInformation("Updating DNS entries...");
         await UpdateDns();
     }
 
     private async Task UpdateDns()
     {
+        if (!_endpointManager.GetAllHandlers().Any())
+        {
+            return;
+        }
+
+        _logger.LogInformation("Updating DNS entries...");
+
         // https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods
         var hostnames = _endpointManager
             .GetAllHandlers()

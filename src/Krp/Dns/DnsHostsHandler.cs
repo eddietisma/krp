@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Krp.Dns;
@@ -33,6 +34,11 @@ public class DnsHostsHandler : IDnsHandler
     {
         _options = options.Value;
         _logger = logger;
+    }
+
+    public async Task RunAsync(CancellationToken stoppingToken)
+    {
+        await Task.CompletedTask;
     }
 
     public async Task UpdateAsync(List<string> hostnames)
