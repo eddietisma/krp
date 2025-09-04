@@ -16,7 +16,7 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
     private readonly int _maxEntries;
     private readonly Lock _sync = new();
 
-    public InMemoryLoggingProvider(int maxEntries = 1000)
+    public InMemoryLoggingProvider(int maxEntries = 100000)
     {
         _maxEntries = maxEntries;
     }

@@ -113,12 +113,12 @@ public class LogsTable
 
     private static string GetLogLevelText(LogLevel level) => level switch
     {
-        LogLevel.Trace => "TRA",
+        LogLevel.Trace => "TRC",
         LogLevel.Debug => "DBG",
         LogLevel.Information => "INF",
         LogLevel.Warning => "WRN",
         LogLevel.Error => "ERR",
-        LogLevel.Critical => "CRI",
+        LogLevel.Critical => "CRT",
         _ => level.ToString().ToUpperInvariant(),
     };
 
