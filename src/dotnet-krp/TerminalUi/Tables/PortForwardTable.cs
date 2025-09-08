@@ -41,7 +41,7 @@ public class PortForwardTable
 
     public bool DetectChanges()
     {
-        var handlers = _endpointManager.GetAllHandlers().ToList();
+        var handlers = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList();
 
         var newHandlersCount = handlers.Count;
         if (newHandlersCount != Count)
@@ -51,7 +51,7 @@ public class PortForwardTable
             return true;
         }
 
-        var newHandlersActiveCount = handlers.OfType<PortForwardEndpointHandler>().Count(x => x.IsActive);
+        var newHandlersActiveCount = handlers.Count(x => x.IsActive);
         if (newHandlersActiveCount != _handlersActiveCount)
         {
             _handlersActiveCount = newHandlersActiveCount;
