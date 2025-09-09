@@ -44,7 +44,7 @@ public static class ReverseStructuredLogging
                 .Replace("{", "(?<")
                 .Replace("}", @">.+?)");
 
-            return new Regex($"^{regexPattern}$");
+            return new Regex($"^{regexPattern}$", RegexOptions.Compiled);
         });
     }
 }
