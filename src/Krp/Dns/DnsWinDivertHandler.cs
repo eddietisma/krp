@@ -1,6 +1,4 @@
-﻿using Krp.Common;
-using Microsoft.Extensions.Logging;
-using PacketDotNet;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -85,95 +83,214 @@ public class DnsWinDivertHandler : IDnsHandler
                 continue;
             }
 
-            var raw = new byte[len];
-            for (var i = 0; i < len; i++)
-            {
-                raw[i] = buffer[i];
-            }
-
-            var packet = Packet.ParsePacket(LinkLayers.Raw, raw);
-            var ip4 = packet.Extract<IPv4Packet>();
-            var udp = packet.Extract<UdpPacket>();
-            var payload = udp?.PayloadData;
-
-            if (ip4 is null || udp is null || payload is null || payload.Length < 12)
+            int total = (int)len;
+            if (total < 28)
             {
                 WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
-            // DNS: QR=0 => query.
-            var isQuery = (payload[2] & 0x80) == 0;
-            if (!isQuery)
+            var verIhl = buffer[0];
+            if ((verIhl >> 4) != 4)
             {
                 WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
-            // Parse first A/AAAA question we care about.
-            if (!TryGetWantedQuestion(payload, out var qName, out var qType, out var qClass))
+            var ihl = (verIhl & 0x0F) * 4;
+            if (total < ihl + 8 || buffer[9] != 17)
             {
                 WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
-            // If endpoint exists with this host name.
-            if (!_redirectMap.TryGetValue(qName, out var targetIp))
+            var udpOff = ihl;
+            var srcPort = Read16(buffer, udpOff + 0);
+            var dstPort = Read16(buffer, udpOff + 2);
+
+            var dnsOff = udpOff + 8;
+            var dnsLen = total - dnsOff;
+            if (dnsLen < 12)
             {
                 WinDivertSend(handle, buffer, len, out _, address);
                 continue;
             }
 
-            // Ignore DNS question is for an AAAA record (IPv6).
-            if (qType == 28)
-            {
-                WinDivertSend(handle, buffer, len, out _, address);
-                continue;
-            }
+            var pool = System.Buffers.ArrayPool<byte>.Shared;
+            var dns = pool.Rent(dnsLen);
 
-            // Ignore if DNS lookups are made from krp.
-            if (PortPidLookup.TryGetPidForPort(udp.SourcePort, out var portPid))
+            try
             {
-                if (_pid == portPid)
+                Buffer.BlockCopy(buffer, dnsOff, dns, 0, dnsLen);
+
+                if ((dns[2] & 0x80) != 0) // QR=1 => response
                 {
                     WinDivertSend(handle, buffer, len, out _, address);
                     continue;
                 }
+
+                // Parse first A/AAAA question we care about.
+                if (!TryGetWantedQuestion(dns, out var qName, out var qType, out var qClass))
+                {
+                    WinDivertSend(handle, buffer, len, out _, address);
+                    continue;
+                }
+
+                // If endpoint exists with this host name.
+                if (!_redirectMap.TryGetValue(qName, out var targetIp))
+                {
+                    WinDivertSend(handle, buffer, len, out _, address);
+                    continue;
+                }
+
+                // Ignore DNS question is for an AAAA record (IPv6).
+                if (qType == 28)
+                {
+                    WinDivertSend(handle, buffer, len, out _, address);
+                    continue;
+                }
+
+                var txId = (ushort)((dns[0] << 8) | dns[1]);
+
+                // Build DNS response into a pooled buffer to avoid extra allocations.
+                var nameLen = GetQNameEncodedLength(qName);
+                var respCap = 12 + nameLen + 4 + 32; // header + qname + qtype/qclass + possible answer
+                var respBuf = pool.Rent(respCap);
+
+                // Spoof DNS response with loopback IP.
+                var respLen = BuildDnsResponse(respBuf.AsSpan(0, respCap), txId, qName, qType, qClass, targetIp, 30);
+
+                var outLen = 20 + 8 + respLen;
+                var outBuf = pool.Rent(outLen);
+                try
+                {
+                    // IPv4 header
+                    outBuf[0] = 0x45; // v4, ihl=5
+                    outBuf[1] = 0;
+                    outBuf[2] = (byte)(outLen >> 8);
+                    outBuf[3] = (byte)(outLen);
+                    outBuf[4] = 0; outBuf[5] = 0;
+                    outBuf[6] = 0; outBuf[7] = 0;
+                    outBuf[8] = 128;
+                    outBuf[9] = 17; // UDP
+                    outBuf[10] = 0; outBuf[11] = 0; // checksum later
+
+                    // Src = original dst (bytes 16..19); Dst = original src (12..15)
+                    outBuf[12] = buffer[16]; outBuf[13] = buffer[17]; outBuf[14] = buffer[18]; outBuf[15] = buffer[19];
+                    outBuf[16] = buffer[12]; outBuf[17] = buffer[13]; outBuf[18] = buffer[14]; outBuf[19] = buffer[15];
+
+                    // UDP header
+                    var udpOut = 20;
+                    outBuf[udpOut + 0] = (byte)(dstPort >> 8);
+                    outBuf[udpOut + 1] = (byte)(dstPort);
+                    outBuf[udpOut + 2] = (byte)(srcPort >> 8);
+                    outBuf[udpOut + 3] = (byte)(srcPort);
+                    var udpLen = 8 + respLen;
+                    outBuf[udpOut + 4] = (byte)(udpLen >> 8);
+                    outBuf[udpOut + 5] = (byte)(udpLen);
+                    outBuf[udpOut + 6] = 0; outBuf[udpOut + 7] = 0;
+
+                    // Payload
+                    Buffer.BlockCopy(respBuf, 0, outBuf, udpOut + 8, respLen);
+
+                    var inboundAddr = (byte[])address.Clone();
+                    inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
+
+                    WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outLen, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
+                    WinDivertSend(handle, outBuf, (uint)outLen, out _, inboundAddr);
+                    
+                    _logger.LogTrace("Sent DNS response {ip} for {hostname} with TTL 30s", qName, targetIp);
+                }
+                finally
+                {
+                    pool.Return(outBuf);
+                }
             }
-
-            // Spoof DNS response with loopback IP.
-            var response = BuildDnsResponseBytes((ushort)((payload[0] << 8) | payload[1]), qName, qType, qClass, targetIp, 30);
-
-            var outUdp = new UdpPacket(udp.DestinationPort, udp.SourcePort)
+            finally
             {
-                PayloadData = response,
-            };
-
-            var outIp = new IPv4Packet(ip4.DestinationAddress, ip4.SourceAddress)
-            {
-                TimeToLive = 128,
-                PayloadPacket = outUdp,
-            };
-
-            outUdp.UpdateCalculatedValues();
-            outIp.UpdateCalculatedValues();
-
-            var outBytes = outIp.Bytes;
-            var outBuf = new byte[outBytes.Length];
-
-            for (var i = 0; i < outBytes.Length; i++)
-            {
-                outBuf[i] = outBytes[i];
+                pool.Return(dns);
             }
-
-            var inboundAddr = (byte[])address.Clone();
-            inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
-
-            WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outBuf.Length, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
-            WinDivertSend(handle, outBuf, (uint)outBuf.Length, out _, inboundAddr);
-
-            _logger.LogTrace("Sent DNS response {ip} for {hostname} with TTL 30s", qName, targetIp);
         }
+    }
+
+    private static int GetQNameEncodedLength(string fqdn)
+    {
+        if (string.IsNullOrEmpty(fqdn))
+        {
+            return 1; // just root label
+        }
+
+        var len = 1; // trailing zero
+
+        foreach (var label in fqdn.TrimEnd('.').Split('.'))
+        {
+            len += 1 + label.Length;
+        }
+
+        return len;
+    }
+
+    private static int WriteQName(Span<byte> dst, string fqdn, int offset)
+    {
+        if (string.IsNullOrEmpty(fqdn)) { dst[offset++] = 0; return offset; }
+        foreach (var label in fqdn.TrimEnd('.').Split('.'))
+        {
+            var bytes = Encoding.ASCII.GetBytes(label);
+            dst[offset++] = (byte)bytes.Length;
+            bytes.CopyTo(dst.Slice(offset));
+            offset += bytes.Length;
+        }
+        dst[offset++] = 0;
+        return offset;
+    }
+
+    private static void W16(Span<byte> b, int offset, ushort v)
+    {
+        b[offset + 0] = (byte)(v >> 8);
+        b[offset + 1] = (byte)v;
+    }
+
+    private static void W32(Span<byte> b, int offset, uint v)
+    {
+        b[offset + 0] = (byte)(v >> 24);
+        b[offset + 1] = (byte)(v >> 16);
+        b[offset + 2] = (byte)(v >> 8);
+        b[offset + 3] = (byte)v;
+    }
+
+    private static int BuildDnsResponse(Span<byte> dst, ushort transactionId, string qName, ushort qType, ushort qClass, IPAddress ip, int ttlSeconds)
+    {
+        // Decide answer type from IP
+        var answerType = (ushort)(ip.AddressFamily == AddressFamily.InterNetworkV6 ? 28 : 1);
+        var typeMatches = qType == answerType;
+
+        // Header
+        W16(dst, 0, transactionId);
+        ushort flags = 0x8000 /*QR*/ | 0x0100 /*RD*/ | 0x0080 /*RA*/;
+        W16(dst, 2, flags);
+        W16(dst, 4, 1); // QDCOUNT
+        W16(dst, 6, (ushort)(typeMatches ? 1 : 0)); // ANCOUNT
+        W16(dst, 8, 0); // NSCOUNT
+        W16(dst, 10, 0); // ARCOUNT
+
+        var pos = 12;
+        pos = WriteQName(dst, qName, pos);
+        W16(dst, pos, qType); pos += 2;
+        W16(dst, pos, qClass == 0 ? (ushort)1 : qClass); pos += 2;
+
+        if (typeMatches)
+        {
+            // Name pointer to 0x000C (start of QNAME)
+            dst[pos++] = 0xC0; dst[pos++] = 0x0C;
+            W16(dst, pos, answerType); pos += 2;
+            W16(dst, pos, 1); pos += 2; // CLASS IN
+            W32(dst, pos, (uint)ttlSeconds); pos += 4; // TTL
+            var rdata = ip.GetAddressBytes();
+            W16(dst, pos, (ushort)rdata.Length); pos += 2; // RDLENGTH
+            rdata.CopyTo(dst.Slice(pos)); pos += rdata.Length;
+        }
+
+        return pos;
     }
 
     private static bool TryGetWantedQuestion(byte[] dns, out string qName, out ushort qType, out ushort qClass)

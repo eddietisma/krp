@@ -21,16 +21,17 @@ public class DnsLookupHandler : IDnsLookupHandler
     public DnsLookupHandler(IOptions<DnsLookupOptions> options, ILogger<DnsLookupHandler> logger)
     {
         _logger = logger;
-        _lookupClient = new LookupClient(IPAddress.Parse(options.Value.Nameserver));
+        _lookupClient = new LookupClient(new LookupClientOptions(IPAddress.Parse(options.Value.Nameserver))
+        {
+            UseTcpOnly = true, // Avoid UDP/53 so our WinDivert UDP handler does not intercept our own lookups
+            UseCache = true,
+            Timeout = TimeSpan.FromSeconds(5),
+        });
     }
 
     public async Task<IPAddress> QueryAsync(string host)
     {
-        var result = await _lookupClient.QueryAsync(new DnsQuestion(host, QueryType.A), new DnsQueryAndServerOptions
-        {
-            UseCache = true,
-            Timeout = TimeSpan.FromSeconds(5),
-        });
+        var result = await _lookupClient.QueryAsync(new DnsQuestion(host, QueryType.A));
 
         var ip = result.Answers.ARecords().FirstOrDefault()?.Address;
         if (ip == null)

@@ -62,7 +62,7 @@ public class DnsHostsHandler : IDnsHandler
                 var endIndex = lines.FindIndex(startIndex, line => line.Trim() == MARKER_END);
                 if (endIndex != -1 && endIndex > startIndex)
                 {
-                    if (lines[startIndex - 1] == "")
+                    if (startIndex > 0 && lines[startIndex - 1] == "")
                     {
                         startIndex--;
                     }
