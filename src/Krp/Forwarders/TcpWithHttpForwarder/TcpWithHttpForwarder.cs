@@ -129,7 +129,7 @@ public class TcpWithHttpForwarder
                     case 80:
                         // Handle HTTP/2 over cleartext (h2c) and HTTP/1.1.
                         bytesRead = await clientStream.ReadAsync(buffer, 0, 24, stoppingToken);
-                        var isHttp2 = IsHttp2Preface(buffer, bytesRead);
+                        var isHttp2 = IsHttp2Preface(buffer.AsSpan(0, bytesRead));
 
                         // Forward to HttpForwarder for routing using HTTP headers.
                         targetPort = isHttp2 ? _httpOptions.Http2Port : _httpOptions.HttpPort;
@@ -202,7 +202,7 @@ public class TcpWithHttpForwarder
     /// Detects the HTTP/2 clear-text preface (24 bytes) in the initial client payload.
     /// This lets us route h2c vs. HTTP/1.1 traffic to different Kestrel ports.
     /// </summary>
-    private bool IsHttp2Preface(byte[] buffer, int bytesRead)
+    private static bool IsHttp2Preface(ReadOnlySpan<byte> buffer)
     {
         // Kestrel only support multiple protocols over HTTPS since the protocol selection happens during ALPN protocol negotiation.
         // We can however detect the HTTP/2 preface and use that to determine if the client is using HTTP/2 or HTTP/1.1 and route to
@@ -211,7 +211,8 @@ public class TcpWithHttpForwarder
         // https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-9.0&tabs=visual-studio#protocol-negotiation
         // https://github.com/dotnet/aspnetcore/issues/13502
 
-        return bytesRead >= 24 && buffer.Take(24).SequenceEqual(_http2Preface);
+        const int prefaceLen = 24;
+        return buffer.Length >= prefaceLen && buffer.Slice(0, prefaceLen).SequenceEqual(_http2Preface);
     }
 
     public static string ParseSniHostname(byte[] buffer, int length)
