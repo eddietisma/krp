@@ -75,6 +75,7 @@ public class DnsWinDivertHandler : IDnsHandler
 
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
+        var inboundAddr = new byte[WINDIVERT_ADDRESS_SIZE];
 
         while (!ct.IsCancellationRequested)
         {
@@ -192,8 +193,8 @@ public class DnsWinDivertHandler : IDnsHandler
 
                     // Payload
                     Buffer.BlockCopy(respBuf, 0, outBuf, udpOut + 8, respLen);
+                    Buffer.BlockCopy(address, 0, inboundAddr, 0, WINDIVERT_ADDRESS_SIZE);
 
-                    var inboundAddr = (byte[])address.Clone();
                     inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
 
                     WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outLen, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
