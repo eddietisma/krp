@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
         {
             var dnsLookupHandler = sp.GetRequiredService<IDnsLookupHandler>();
 
-            return new SocketsHttpHandler
+           return new SocketsHttpHandler
             {
                 UseProxy = false,
                 AllowAutoRedirect = false,
@@ -44,36 +44,39 @@ public static class ServiceCollectionExtensions
                     RemoteCertificateValidationCallback = (_, _, _, _) => true,
                 },
 
-
                 ConnectCallback = async (ctx, ct) =>
                 {
                     var host = ctx.DnsEndPoint.Host;
+                    var port = ctx.DnsEndPoint.Port;
 
+                    // Fast-path for local dev.
                     if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
                         host.Equals("host.docker.internal", StringComparison.OrdinalIgnoreCase))
                     {
-                        var tcp = new TcpClient(AddressFamily.InterNetwork);
-                        await tcp.ConnectAsync(host, ctx.DnsEndPoint.Port, ct);
-                        return tcp.GetStream();
+                        var tcpLocal = new TcpClient(AddressFamily.InterNetwork);
+                        tcpLocal.NoDelay = true;
+                        await tcpLocal.ConnectAsync(host, port, ct);
+                        return tcpLocal.GetStream();
                     }
 
+                    // Pass-through to actual IP addresses using DNS lookup for HTTP proxy endpoints.
                     var ip = await dnsLookupHandler.QueryAsync(host);
-                    if (ip == null)
+                    if (ip != null)
                     {
-                        // When using Windows Filtering Platform (WFP)/WinDivert it may take a while for the driver to load.
-                        // Keep hostname for DNS resolution to work during this time.
-                        var tcp = new TcpClient(AddressFamily.InterNetwork);
-                        await tcp.ConnectAsync(host, ctx.DnsEndPoint.Port, ct);
-                        return tcp.GetStream();
+                        var socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                        socket.NoDelay = true;
+                        await socket.ConnectAsync(new IPEndPoint(ip, port), ct);
+                        return new NetworkStream(socket, ownsSocket: true);
                     }
 
-                    var sock = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                    await sock.ConnectAsync(new IPEndPoint(ip, ctx.DnsEndPoint.Port), ct);
-                    return new NetworkStream(sock, ownsSocket: true);
-                }
+                    // Fallback: Let OS DNS resolve the hostname.
+                    var tcp = new TcpClient(AddressFamily.InterNetwork) { NoDelay = true };
+                    tcp.NoDelay = true;
+                    await tcp.ConnectAsync(host, port, ct);
+                    return tcp.GetStream();
+                },
             };
         });
-
     }
 
     public static void UseKubernetesForwarder(this IApplicationBuilder app)
