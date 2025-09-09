@@ -18,10 +18,12 @@ public static class ServiceCollectionExtensions
 {
     public static void AddHttpForwarder(this IServiceCollection services, Action<HttpForwarderOptions> optionsAction)
     {
-        services.AddSingleton<IConfigureOptions<KestrelServerOptions>, HttpForwarderKestrelConfigurator>();
+        services.AddHttpForwarder(); // Register YARP ReverseProxy.
+
         services.Configure(optionsAction);
-        services.AddHttpForwarder();
+        services.AddSingleton<IConfigureOptions<KestrelServerOptions>, HttpForwarderKestrelConfigurator>();
         services.AddSingleton<HttpForwarder>();
+        services.AddSingleton(sp => new HttpMessageInvoker(sp.GetRequiredService<SocketsHttpHandler>()));
         services.AddSingleton(sp =>
         {
             var dnsLookupHandler = sp.GetRequiredService<IDnsLookupHandler>();
@@ -41,6 +43,7 @@ public static class ServiceCollectionExtensions
                 {
                     RemoteCertificateValidationCallback = (_, _, _, _) => true,
                 },
+
 
                 ConnectCallback = async (ctx, ct) =>
                 {
@@ -70,6 +73,7 @@ public static class ServiceCollectionExtensions
                 }
             };
         });
+
     }
 
     public static void UseKubernetesForwarder(this IApplicationBuilder app)
