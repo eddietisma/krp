@@ -18,14 +18,14 @@ public class HttpForwarder
 {
     private readonly EndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
-    private readonly SocketsHttpHandler _socketsHttpHandler;
+    private readonly HttpMessageInvoker _httpMessageInvoker;
     private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, SocketsHttpHandler socketsHttpHandler, ILogger<HttpForwarder> logger)
+    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, HttpMessageInvoker httpMessageInvoker, ILogger<HttpForwarder> logger)
     {
         _endpointManager = endpointManager;
         _forwarder = forwarder;
-        _socketsHttpHandler = socketsHttpHandler;
+        _httpMessageInvoker = httpMessageInvoker;
         _logger = logger;
     }
 
@@ -57,15 +57,13 @@ public class HttpForwarder
         
         _logger.LogInformation("{method} {requestUrl} → {destinationUrl}", httpContext.Request.Method, requestUrl, destinationUrl);
 
-        var httpClient = new HttpMessageInvoker(_socketsHttpHandler);
-
         var requestConfig = new ForwarderRequestConfig
         {
             Version = GetVersionFromRequest(httpContext.Request),
             VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
         };
 
-        var response = await _forwarder.SendAsync(httpContext, destinationUrl, httpClient, requestConfig);
+        var response = await _forwarder.SendAsync(httpContext, destinationUrl, _httpMessageInvoker, requestConfig);
         if (response != ForwarderError.None)
         {
             var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
@@ -87,4 +85,3 @@ public class HttpForwarder
         };
     }
 }
-
