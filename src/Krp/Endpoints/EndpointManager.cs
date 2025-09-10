@@ -158,6 +158,7 @@ public class EndpointManager
             _handlers.TryRemove(handler);
         }
     }
+
     public void TriggerEndPointsChangedEvent()
     {
         EndPointsChangedEvent?.Invoke();
