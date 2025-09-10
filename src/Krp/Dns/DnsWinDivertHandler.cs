@@ -37,12 +37,10 @@ public class DnsWinDivertHandler : IDnsHandler
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
-    private readonly int _pid;
     
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
         _logger = logger;
-        _pid = System.Diagnostics.Process.GetCurrentProcess().Id;
     }
 
     public Task UpdateAsync(List<string> hostnames)
@@ -346,53 +344,6 @@ public class DnsWinDivertHandler : IDnsHandler
         }
 
         return false;
-    }
-
-    private static byte[] BuildDnsResponseBytes(
-        ushort transactionId,
-        string qName,    // FQDN as dot-joined string
-        ushort qType,    // ECHO original QTYPE from query
-        ushort qClass,   // ECHO original QCLASS (usually IN=1)
-        IPAddress ip,
-        int ttlSeconds)
-    {
-        const ushort QR = 0x8000;
-        const ushort RD = 0x0100;
-        const ushort RA = 0x0080;
-
-        // Decide what answer TYPE we could provide from our target IP
-        var answerType = (ushort)(ip.AddressFamily == AddressFamily.InterNetworkV6 ? 28 : 1); // AAAA or A
-        var typeMatches = qType == answerType;
-
-        var rdata = ip.GetAddressBytes();
-        var b = new List<byte>(96);
-
-        // Header
-        W16(b, transactionId);
-        var flags = (ushort)(QR | RD | RA);  // RA=1
-        W16(b, flags);
-        W16(b, 1);                              // QD
-        W16(b, (ushort)(typeMatches ? 1 : 0));  // AN
-        W16(b, 0);                              // NS
-        W16(b, 0);                              // AR
-
-        // Question: MUST echo what the client asked
-        WName(b, qName);
-        W16(b, qType);
-        W16(b, qClass == 0 ? (ushort)1 : qClass);
-
-        if (typeMatches)
-        {
-            // Answer: use compression pointer to the Question name at offset 12 (start of DNS QNAME)
-            b.Add(0xC0); b.Add(0x0C);           // Name = pointer to QNAME
-            W16(b, answerType);                 // TYPE (A/AAAA)
-            W16(b, 1);                          // CLASS = IN
-            W32(b, (uint)ttlSeconds);           // TTL
-            W16(b, (ushort)rdata.Length);       // RDLENGTH
-            b.AddRange(rdata);                  // RDATA
-        }
-
-        return b.ToArray();
     }
 
     private static bool TryReadQName(byte[] data, int dnsBase, ref int ptr, out string name)
