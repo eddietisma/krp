@@ -83,7 +83,7 @@ public class EndpointManager
 
         if (_handlers.ContainsKey(handler.Url))
         {
-            _logger.LogWarning("Skipped already existing endpoint for {url}", handler.Url);
+            _logger.LogInformation("Skipped already existing endpoint for {url}", handler.Url);
             return;
         }
 
