@@ -87,7 +87,7 @@ public class PortForwardTable
         }
 
         _state.ColumnOffsetMax = Math.Max(0, _columnDefinitions.Count - totalVisibleColumns + (_state.LastColumnClipped ? 1 : 0));
-        
+
         // Rows that fit.
         var fixedRows = 3 + KrpTerminalUi.HEADER_SIZE;
         var maxRows = Math.Max(1, _state.WindowHeight - fixedRows);
@@ -106,7 +106,6 @@ public class PortForwardTable
                 Padding = new Padding(0),
             };
 
-
             tbl.AddColumn(column);
         }
 
@@ -119,8 +118,8 @@ public class PortForwardTable
 
             foreach (var col in shownCols)
             {
-                // Pad selected cells to the column width so the highlight covers the entire cell.
-                // This is done inside markup so Spectre doesn't trim the spaces.
+                // Pad selected cells with NBSP so Spectre preserves trailing fill and the
+                // background highlight covers the entire cell width.
                 var cell = isSelected
                     ? new Markup(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
                     : new Markup(col.ValueSelector(items[i]), new Style(foreground: new Color(135, 206, 250))) { Overflow = Overflow.Crop };
@@ -155,7 +154,7 @@ public class PortForwardTable
     {
         var handlers = _endpointManager.GetAllHandlers().OfType<PortForwardEndpointHandler>().ToList().Sort(_state.SortField, _state.SortAscending);
         var selected = _state.SelectedRow[KrpTable.PortForwards];
-        
+
         if (selected < 0 || selected >= handlers.Count)
         {
             return; // Invalid index
@@ -250,10 +249,8 @@ public class PortForwardTable
 
                 foreach (var idx in growable)
                 {
-                    var c = _columnDefinitions[idx];
                     // TODO: Bug here causing rows to not be fully highlighted.
-                    c.Width += even + (leftover-- > 0 ? 1 : 0);
-                    _columnDefinitions[idx] = c;
+                    _columnDefinitions[idx].Width += even + (leftover-- > 0 ? 1 : 0);
                 }
             }
         }
@@ -276,7 +273,7 @@ public class PortForwardTable
         {
             return markup.Length;
         }
-        
+
         // Cache hit: Reuse measured visual width.
         if (_measurementLookup.TryGetValue(markup, out var len))
         {
@@ -292,7 +289,7 @@ public class PortForwardTable
         _measurementLookup.TryAdd(markup, result); // Memoize for next time.
         return result;
     }
-
+    
     private string RightPad(string s, int w)
     {
         var len = VisibleLen(s);
@@ -301,13 +298,8 @@ public class PortForwardTable
         if (s.Length > len)
         {
             padLength = w + s.Length - len;
-            //padLength = w - len;
-            //padLength = w;
         }
-        //else
-        //{
-        //    padLength -= 1;
-        //}
+
 
         var result = s.PadRight(padLength);
         return result;
