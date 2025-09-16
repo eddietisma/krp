@@ -120,9 +120,10 @@ public class PortForwardTable
             {
                 // Pad selected cells with NBSP so Spectre preserves trailing fill and the
                 // background highlight covers the entire cell width.
+                var text = col.ValueSelector(items[i]);
                 var cell = isSelected
-                    ? new Markup(RightPad(col.ValueSelector(items[i]), col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
-                    : new Markup(col.ValueSelector(items[i]), new Style(foreground: new Color(135, 206, 250))) { Overflow = Overflow.Crop };
+                    ? new Markup(text.PadRight(col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
+                    : new Markup(text, new Style(foreground: new Color(135, 206, 250))) { Overflow = Overflow.Crop };
                 cells.Add(cell);
             }
 
@@ -213,7 +214,7 @@ public class PortForwardTable
 
         // 2. Build the slice that fits. Track remaining width.
         var visibleIdx = new List<int>();
-        var remain = _state.WindowWidth;
+        var remain = _state.WindowWidth - KrpTerminalUi.TBL_SPACING;
 
         for (var i = _state.ColumnOffset; i < n && remain > 0; i++)
         {
@@ -249,7 +250,6 @@ public class PortForwardTable
 
                 foreach (var idx in growable)
                 {
-                    // TODO: Bug here causing rows to not be fully highlighted.
                     _columnDefinitions[idx].Width += even + (leftover-- > 0 ? 1 : 0);
                 }
             }
@@ -287,21 +287,6 @@ public class PortForwardTable
             .Max;
 
         _measurementLookup.TryAdd(markup, result); // Memoize for next time.
-        return result;
-    }
-    
-    private string RightPad(string s, int w)
-    {
-        var len = VisibleLen(s);
-        var padLength = w;
-
-        if (s.Length > len)
-        {
-            padLength = w + s.Length - len;
-        }
-
-
-        var result = s.PadRight(padLength);
         return result;
     }
 }

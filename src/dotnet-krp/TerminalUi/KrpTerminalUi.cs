@@ -16,6 +16,7 @@ public class KrpTerminalUi
 {
     public const int HEADER_SIZE = 8;      // Space (chars) treated as top menu.
     public const int CROP_MARGIN = 4;      // Space (chars) treated as "near edge".
+    public const int TBL_SPACING = 3;      // Space (chars) for default spacing between columns.
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
 
     private readonly string _version = VersionHelper.GetProductVersion().Split('+')[0];
