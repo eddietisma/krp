@@ -205,16 +205,16 @@ public class KrpTerminalUi
                             }
 
                             // Throttle spin delay
-                            //   • Idle (no redraw ≥ 1s): insert a small delay per iteration to lower CPU usage.
+                            //   • Idle: insert a small delay per iteration to lower CPU usage.
                             //   • Active (frequent redraws): no delay to preserve interactive responsiveness (e.g. scrolling).
-                            var idle = lastRedrawMain.Elapsed >= TimeSpan.FromSeconds(1);
+                            var idle = lastRedrawMain.Elapsed >= TimeSpan.FromSeconds(5);
                             if (idle)
                             {
                                 await Task.Delay(50);
                             }
                             else
                             {
-                                await Task.Yield();
+                                await Task.Delay(1);
                             }
                         }
                         catch (Exception ex)
