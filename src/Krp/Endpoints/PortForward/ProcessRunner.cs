@@ -64,7 +64,7 @@ public class ProcessRunner
 
             await readyTcs.Task;
 
-            return readyTcs.Task.Result == false ? null : new ProcessWrapper(process, _logs);
+            return !readyTcs.Task.Result ? null : new ProcessWrapper(process, _logs);
         }
         catch (Exception ex)
         {
@@ -92,7 +92,7 @@ public class ProcessRunner
         };
     }
 
-    private DataReceivedEventHandler OnErrorDataReceived( TaskCompletionSource<bool> readyTcs)
+    private DataReceivedEventHandler OnErrorDataReceived(TaskCompletionSource<bool> readyTcs)
     {
         return (_, e) =>
         {
