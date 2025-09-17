@@ -122,7 +122,7 @@ public class PortForwardTable
                 // background highlight covers the entire cell width.
                 var text = col.ValueSelector(items[i]);
                 var cell = isSelected
-                    ? new Markup(text.PadRight(col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
+                    ? new Markup(RightPad(text, col.Width), new Style(Color.Black, new Color(135, 206, 250))) { Overflow = Overflow.Crop }
                     : new Markup(text, new Style(foreground: new Color(135, 206, 250))) { Overflow = Overflow.Crop };
                 cells.Add(cell);
             }
@@ -287,6 +287,21 @@ public class PortForwardTable
             .Max;
 
         _measurementLookup.TryAdd(markup, result); // Memoize for next time.
+        return result;
+    }
+    
+    private string RightPad(string s, int w)
+    {
+        // Need to account for markup for actual length.
+        var len = VisibleLen(s);
+        var padLength = w;
+
+        if (s.Length > len)
+        {
+            padLength = w + s.Length - len;
+        }
+
+        var result = s.PadRight(padLength);
         return result;
     }
 }
