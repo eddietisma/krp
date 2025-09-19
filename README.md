@@ -45,7 +45,7 @@
 ### Use case: Kubernetes endpoint
 
 ```
-.UseEndpoint(0, 80, "namespace", "myapi") // 0 for dynamic local port selection
+.UseEndpoint(0, 80, "namespace", "service/myapi") // 0 for dynamic local port selection
 ```
 
 - Assume your cluster has a service exposed at `myapi.namespace:80`. 
@@ -57,7 +57,7 @@
 ### Use case: HTTP proxy endpoint
 
 ```
-.UseHttpEndpoint(5001, "domain.com", "api/service/v2")
+.UseHttpEndpoint(5001, "http", "domain.com", "api/service/v2")
 ```
 
 - Assume your API gateway is using `domain.com/api/service/v2`. 

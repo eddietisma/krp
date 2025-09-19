@@ -19,10 +19,10 @@ public class Program
 
         // Register the forwarder and its extensions
         builder.Services.AddKubernetesForwarder(builder.Configuration)
-            //.UseHttpEndpoint(5000, "api.domain.com", "/api")
-            //.UseHttpEndpoint(5001, "api.domain.com", "/api/v2")
-            //.UseEndpoint(9032, 80, "namespace", "myapi") // Specific local port mappings
-            //.UseEndpoint(0, 80, "namespace", "myapi") // Dynamic local port selection
+            //.UseHttpEndpoint(5000, "http", "api.domain.com", "/api")
+            //.UseHttpEndpoint(5001, "http", "api.domain.com", "/api/v2")
+            //.UseEndpoint(9032, 80, "namespace", "service/myapi") // Specific local port mappings
+            //.UseEndpoint(0, 80, "namespace", "service/myapi") // Dynamic local port selection
             .UseEndpointExplorer(options =>
             {
                 //options.Filter = [
