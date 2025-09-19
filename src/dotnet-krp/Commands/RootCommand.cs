@@ -28,8 +28,8 @@ public class RootCommand
     [Option("--no-discovery", Description = "Disable automatic Kubernetes endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
 
-    [Option("--nameservers|-n <NAMESERVERS>", Description = "Comma-separated list of DNS servers, used for HTTP proxy endpoints")]
-    public string Nameservers { get; init; } = "8.8.8.8";
+    [Option("--nameserver|-n <NAMESERVERS>", Description = "DNS server, used for HTTP proxy endpoints")]
+    public string Nameserver { get; init; } = "8.8.8.8";
 
     [Option("--forwarder|-f <FORWARDER>", Description = "Forwarding method")]
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
@@ -57,7 +57,7 @@ public class RootCommand
         var builder = webApplicationBuilder.Services.AddKubernetesForwarder(webApplicationBuilder.Configuration)
                 .UseDnsLookup(options =>
                 {
-                    options.Nameserver = Nameservers;
+                    options.Nameserver = Nameserver;
                 });
 
         switch (Routing)
