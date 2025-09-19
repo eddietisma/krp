@@ -112,7 +112,7 @@ Options:
   -v|--version                    Show version information.
   --no-ui                         Disable terminal UI
   --no-discovery                  Disable automatic Kubernetes endpoint discovery
-  -n|--nameservers <NAMESERVERS>  Comma-separated list of DNS servers, used for HTTP proxy endpoints
+  -n|--nameserver <NAMESERVERS>   DNS server, used for HTTP proxy endpoints
                                   Default value is: 8.8.8.8.
   -f|--forwarder <FORWARDER>      Forwarding method
                                   Allowed values are: tcp, http, hybrid.
