@@ -71,6 +71,15 @@ public class DnsWinDivertHandler : IDnsHandler
         const string filter = "outbound and ip and udp.DstPort == 53";
         using var handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
 
+        if (handle.IsInvalid)
+        {
+            var error = Marshal.GetLastWin32Error();
+            _logger.LogError("WinDivert open failed with error: {Error}", error);
+            return;
+        }
+
+        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 1_000_000); // Reduce shutdown latency by lowering queue time to 100ms.
+
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
         var inboundAddr = new byte[WINDIVERT_ADDRESS_SIZE];

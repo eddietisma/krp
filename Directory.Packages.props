@@ -19,6 +19,7 @@
     <PackageVersion Include="MSTest" Version="3.10.4" />
     <PackageVersion Include="PacketDotNet" Version="1.4.9-pre47" />
     <PackageVersion Include="Spectre.Console" Version="0.51.1" />
+    <PackageVersion Include="System.ServiceProcess.ServiceController" Version="9.0.9" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 </Project>

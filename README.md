@@ -20,7 +20,6 @@
 - [windivert](https://github.com/basil00/WinDivert): Intercepts DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
 - [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) routing.
 
-
 ## **How `krp` works**
 
 1. **Endpoint registration**:  
@@ -71,6 +70,7 @@
 ### Prerequisites
 - `kubectl` must be installed and authenticated against your Kubernetes cluster.
 - `hosts` file modifications requires administrator privileges.
+- `windivert` for Windows Packet Filter driver requires administrator privileges.
 
 ### Installation
 
@@ -124,6 +124,33 @@ Options:
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
 ```
+
+### Routing methods
+
+#### `hosts`
+1. Modifies system hosts file (eg. `C:\Windows\System32\drivers\etc\hosts` on Windows).
+1. Each endpoint gets a unique loopback IPs (e.g., `127.0.0.x`).
+1. Network traffic destined for these loopback IPs is intercepted and redirected to `krp`.
+
+**Requirements**
+- Requires administrator privileges to modify the hosts file.
+- Requires administrator privileges when running in docker.
+- Requires a mounted path and env variable `KRP_HOSTS` when running in docker.
+
+#### `windivert` (**default**)
+
+[WinDivert](https://github.com/basil00/WinDivert) is a Windows packet capture and manipulation tool used by `krp` to implement a transparent UDP proxy for the DNS protocol. It redirect DNS traffic for endpoint hostnames. When enabled, WinDivert allows `krp` to dynamically reroute traffic to loopback addresses.
+
+1. Captures outgoing DNS requests (UDP/53) matching endpoints hostnames.
+1. Crafts DNS responses to resolve these hostnames to unique loopback IPs (e.g., `127.0.0.x`).
+1. Network traffic destined for these loopback IPs is intercepted and redirected to `krp`.
+
+**Requirements**
+- Only supported on Windows.
+- Running WinDivert requires administrator privileges to capture and inject network packets.
+
+> [!NOTE]
+> WinDiverts installs as a windows service at runtime. Use `sc delete windivert` to remove.
 
 ### Forwarders available
 
