@@ -2,12 +2,6 @@
   "version": 2,
   "dependencies": {
     "net9.0": {
-      "CliWrap": {
-        "type": "Direct",
-        "requested": "[3.9.0, )",
-        "resolved": "3.9.0",
-        "contentHash": "3IpuZUbTsWhgD3jhd5mKK7VVyVu/LhfsHXUlYrAOV8mZkJCTasum8Klgv7wyMIl5tttwUralTuTQzCNDLicMRw=="
-      },
       "DnsClient": {
         "type": "Direct",
         "requested": "[1.8.0, )",
