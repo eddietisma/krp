@@ -1,6 +1,4 @@
-﻿using Krp.Common;
-using Krp.Dns;
-using Krp.Endpoints;
+﻿using Krp.Endpoints;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Microsoft.Extensions.Logging;
@@ -182,7 +180,7 @@ public class TcpWithHttpForwarder
         }
     }
 
-    public byte[] GetErrorMessageBytes(IPAddress ip, int? port = 0)
+    private static byte[] GetErrorMessageBytes(IPAddress ip, int? port = 0)
     {
         var errorResponse = 
             $"""

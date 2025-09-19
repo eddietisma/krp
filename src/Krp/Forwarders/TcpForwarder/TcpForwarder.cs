@@ -2,8 +2,10 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +19,7 @@ public class TcpForwarder
     private readonly EndpointManager _endpointManager;
     private readonly ILogger<TcpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _options;
-    private TcpListener _listener;
+    private readonly List<TcpListener> _listeners = new();
 
     public TcpForwarder(EndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
     {
@@ -30,22 +32,47 @@ public class TcpForwarder
     {
         foreach (var port in _options.ListenPorts)
         {
-            _listener = new TcpListener(_options.ListenAddress, port);
-            _listener.Start();
+            var listener = new TcpListener(_options.ListenAddress, port);
+            listener.Start();
+            _listeners.Add(listener);
             _logger.LogInformation("Listening on {address}:{port}", _options.ListenAddress, port);
 
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                var client = await _listener.AcceptTcpClientAsync(stoppingToken);
-                _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
-            }
+            // Start accept loop for each port.
+            _ = Task.Run(() => AcceptLoopAsync(listener, stoppingToken), stoppingToken);
         }
+
+        await Task.CompletedTask;
     }
+
 
     public void Stop()
     {
         _logger.LogInformation("Stopping TCP forwarder");
-        _listener.Stop();
+
+        foreach (var listener in _listeners)
+        {
+            listener.Stop();
+        }
+    }
+
+    private async Task AcceptLoopAsync(TcpListener listener, CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var client = await listener.AcceptTcpClientAsync(stoppingToken);
+                _ = Task.Run(() => HandleConnectionAsync(client, stoppingToken), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting connection");
+            }
+        }
     }
 
     private async Task HandleConnectionAsync(TcpClient client, CancellationToken stoppingToken)
@@ -59,7 +86,7 @@ public class TcpForwarder
             var localIp = localEndPoint?.Address;
             var localPort = localEndPoint?.Port;
 
-            _logger.LogDebug("Received request from {ip}:{port}", localIp, localPort);
+            _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 
             var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
             if (portForwardHandler == null)
@@ -86,15 +113,16 @@ public class TcpForwarder
         }
     }
 
-    private byte[] GetErrorMessageBytes(IPAddress ip, int? port = 0)
+    private static byte[] GetErrorMessageBytes(IPAddress ip, int? port = 0)
     {
-        var errorResponse = $"""
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-Connection: close
+        var errorResponse =
+            $"""
+             HTTP/1.1 400 Bad Request
+             Content-Type: application/json
+             Connection: close
 
-"Invalid TCP proxy request. No matching routing for '{ip}:{port}'."
-""";
-        return System.Text.Encoding.UTF8.GetBytes(errorResponse);
+             "Invalid TCP proxy request. No matching routing for '{ip}:{port}'."
+             """;
+        return Encoding.UTF8.GetBytes(errorResponse);
     }
 }
