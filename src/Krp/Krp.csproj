@@ -39,7 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CliWrap" />
     <PackageReference Include="DnsClient" />
     <PackageReference Include="KubernetesClient" />
     <PackageReference Include="Meziantou.Framework.Win32.Jobs" />
