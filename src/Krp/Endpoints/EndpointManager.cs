@@ -73,6 +73,12 @@ public class EndpointManager
     /// <param name="endpoint"></param>
     public void AddEndpoint(KubernetesEndpoint endpoint)
     {
+        if (!endpoint.Resource.StartsWith("service/"))
+        {
+            _logger.LogWarning("Skipped registering endpoint for resource '{resource}'. Must start with '/service' (only service types are currently supported)", endpoint.Resource);
+            return;
+        }
+
         var handler = _serviceProvider.GetService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
         handler.LocalIp = IPAddress.Parse($"127.0.{_handlers.Count / 255}.{(_handlers.Count % 255) + 1}");
@@ -80,7 +86,7 @@ public class EndpointManager
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;
         handler.Resource = endpoint.Resource;
-
+        
         if (_handlers.ContainsKey(handler.Url))
         {
             _logger.LogInformation("Skipped already existing endpoint for {url}", handler.Url);
