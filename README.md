@@ -7,18 +7,19 @@
 `krp` is a lightweight Kubernetes reverse proxy designed to provide on-demand port forwarding and seamless forwarding to internal Kubernetes resources. The tool facilitates automatic port forwards and provides dynamic routing via loopback addresses.
 
 ### **Features**
-- **On-Demand Port Forwarding:** Forwards Kubernetes services to your local machine automatically.
-- **Context Aware:** Automatically adapts to changes in Kubernetes context and cluster.
-- **Automatic Cleanup:** All active port forwards are cleaned up on application exit.
-- **Dynamic Traffic Routing:** Routes traffic to localhost through the hosts file.
-- **Zero Configuration:** Once running, the tool requires no further setup or user intervention.
+- **On-Demand Port Forwarding** – Automatically runs `kubectl port-forward` when you need it.
+- **Context Aware** – Adapts to changes in your current cluster context.
+- **Automatic Cleanup** – All active port forwards is cleaned up on application exit.
+- **Dynamic Traffic Routing** – Routes through `localhost` using hosts file or [WinDivert](https://github.com/basil00/WinDivert)
+- **Zero Configuration** – Once running, the tool requires no further setup or user intervention.
 
 ### **Dependencies**
-- [DnsClient](https://github.com/MichaCo/DnsClient.NET): DNS lookups for HTTP endpoints.
-- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/): Forwards pod ports to local ports.
-- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp): Tracks context changes and discovers endpoints.
-- [windivert](https://github.com/basil00/WinDivert): Intercepts DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
-- [YARP](https://github.com/dotnet/yarp/): Provides dynamic HTTP(S) routing.
+- [DnsClient](https://github.com/MichaCo/DnsClient.NET) – DNS lookups for HTTP endpoints.
+- [kubectl port-forward](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_port-forward/) – Forwards pod ports to local ports.
+- [kubernetes-client/csharp](https://github.com/kubernetes-client/csharp) – Tracks context changes and discovers endpoints.
+- [Spectre.Console](https://github.com/spectreconsole/spectre.console/) – Enables an interactive and visually rich terminal user interface.
+- [windivert](https://github.com/basil00/WinDivert) – Intercepts DNS requests for Kubernetes hostnames and redirects traffic to `krp`.
+- [YARP](https://github.com/dotnet/yarp/) – Provides dynamic HTTP(S) routing.
 
 ## **How `krp` works**
 
