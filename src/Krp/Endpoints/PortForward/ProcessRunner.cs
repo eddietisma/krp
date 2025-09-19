@@ -46,6 +46,8 @@ public class ProcessRunner
                 return new ProcessWrapper(null, _logs);
             }
 
+            process.EnableRaisingEvents = true;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
 #pragma warning disable CA1416
@@ -59,12 +61,15 @@ public class ProcessRunner
 
             process.OutputDataReceived += OnOutputDataReceived(readyTcs);
             process.ErrorDataReceived += OnErrorDataReceived(readyTcs);
+            process.Exited += OnExited(readyTcs);
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
             await readyTcs.Task;
 
-            return readyTcs.Task.Result == false ? null : new ProcessWrapper(process, _logs);
+            return !readyTcs.Task.Result
+                ? new ProcessWrapper(null, _logs)
+                : new ProcessWrapper(process, _logs);
         }
         catch (Exception ex)
         {
@@ -72,7 +77,7 @@ public class ProcessRunner
             throw;
         }
     }
-
+    
     private DataReceivedEventHandler OnOutputDataReceived(TaskCompletionSource<bool> readyTcs)
     {
         return (_, e) =>
@@ -92,7 +97,7 @@ public class ProcessRunner
         };
     }
 
-    private DataReceivedEventHandler OnErrorDataReceived( TaskCompletionSource<bool> readyTcs)
+    private DataReceivedEventHandler OnErrorDataReceived(TaskCompletionSource<bool> readyTcs)
     {
         return (_, e) =>
         {
@@ -108,6 +113,15 @@ public class ProcessRunner
             {
                 readyTcs.TrySetResult(false);
             }
+        };
+    }
+
+    private EventHandler OnExited(TaskCompletionSource<bool> readyTcs)
+    {
+        return (_, _) =>
+        {
+            _logger.LogError("Process exited before signaling readiness");
+            readyTcs.TrySetResult(false);
         };
     }
 }
