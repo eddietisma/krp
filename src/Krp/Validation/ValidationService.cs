@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,8 +57,11 @@ public class ValidationService : IHostedService
         _endpointManager.Initialize();
     }
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-    
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     private  bool ValidateRouting(string hostsPath)
     {
         var routing = _dnsHandler.GetType();
@@ -76,6 +80,10 @@ public class ValidationService : IHostedService
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 _logger.LogInformation("❌ WinDivert routing is only supported on Windows platforms");
+            }
+            else if (ValidateIsWinDivertInstalled())
+            {
+                _logger.LogInformation("✅ Found windows service: WinDivert");
             }
 
             return true;
@@ -116,5 +124,24 @@ public class ValidationService : IHostedService
         }
 
         return fileExists && hasAccess;
+    }
+
+    private static bool ValidateIsWinDivertInstalled()
+    {
+#pragma warning disable CA1416
+        try
+        {
+            return new ServiceController("windivert").Status is 
+                ServiceControllerStatus.Running or 
+                ServiceControllerStatus.Stopped or
+                ServiceControllerStatus.Paused or
+                ServiceControllerStatus.StartPending or
+                ServiceControllerStatus.StopPending;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+#pragma warning restore CA1416
     }
 }

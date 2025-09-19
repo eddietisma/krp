@@ -71,6 +71,15 @@ public class DnsWinDivertHandler : IDnsHandler
         const string filter = "outbound and ip and udp.DstPort == 53";
         using var handle = WinDivertOpen(filter, WINDIVERT_LAYER.Network, 0, WINDIVERT_OPEN_FLAGS.None);
 
+        if (handle.IsInvalid)
+        {
+            var error = Marshal.GetLastWin32Error();
+            _logger.LogError("WinDivert open failed with error: {Error}", error);
+            return;
+        }
+
+        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 1_000_000); // Reduce shutdown latency by lowering queue time to 100ms.
+
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
         var inboundAddr = new byte[WINDIVERT_ADDRESS_SIZE];
@@ -156,53 +165,60 @@ public class DnsWinDivertHandler : IDnsHandler
                 var respCap = 12 + nameLen + 4 + 32; // header + qname + qtype/qclass + possible answer
                 var respBuf = pool.Rent(respCap);
 
-                // Spoof DNS response with loopback IP.
-                var respLen = BuildDnsResponse(respBuf.AsSpan(0, respCap), txId, qName, qType, qClass, targetIp, 30);
-
-                var outLen = 20 + 8 + respLen;
-                var outBuf = pool.Rent(outLen);
                 try
                 {
-                    // IPv4 header
-                    outBuf[0] = 0x45; // v4, ihl=5
-                    outBuf[1] = 0;
-                    outBuf[2] = (byte)(outLen >> 8);
-                    outBuf[3] = (byte)(outLen);
-                    outBuf[4] = 0; outBuf[5] = 0;
-                    outBuf[6] = 0; outBuf[7] = 0;
-                    outBuf[8] = 128;
-                    outBuf[9] = 17; // UDP
-                    outBuf[10] = 0; outBuf[11] = 0; // checksum later
+                    // Spoof DNS response with loopback IP.
+                    var respLen = BuildDnsResponse(respBuf.AsSpan(0, respCap), txId, qName, qType, qClass, targetIp, 30);
 
-                    // Src = original dst (bytes 16..19); Dst = original src (12..15)
-                    outBuf[12] = buffer[16]; outBuf[13] = buffer[17]; outBuf[14] = buffer[18]; outBuf[15] = buffer[19];
-                    outBuf[16] = buffer[12]; outBuf[17] = buffer[13]; outBuf[18] = buffer[14]; outBuf[19] = buffer[15];
+                    var outLen = 20 + 8 + respLen;
+                    var outBuf = pool.Rent(outLen);
+                    try
+                    {
+                        // IPv4 header
+                        outBuf[0] = 0x45; // v4, ihl=5
+                        outBuf[1] = 0;
+                        outBuf[2] = (byte)(outLen >> 8);
+                        outBuf[3] = (byte)(outLen);
+                        outBuf[4] = 0; outBuf[5] = 0;
+                        outBuf[6] = 0; outBuf[7] = 0;
+                        outBuf[8] = 128;
+                        outBuf[9] = 17; // UDP
+                        outBuf[10] = 0; outBuf[11] = 0; // checksum later
 
-                    // UDP header
-                    var udpOut = 20;
-                    outBuf[udpOut + 0] = (byte)(dstPort >> 8);
-                    outBuf[udpOut + 1] = (byte)(dstPort);
-                    outBuf[udpOut + 2] = (byte)(srcPort >> 8);
-                    outBuf[udpOut + 3] = (byte)(srcPort);
-                    var udpLen = 8 + respLen;
-                    outBuf[udpOut + 4] = (byte)(udpLen >> 8);
-                    outBuf[udpOut + 5] = (byte)(udpLen);
-                    outBuf[udpOut + 6] = 0; outBuf[udpOut + 7] = 0;
+                        // Src = original dst (bytes 16..19); Dst = original src (12..15)
+                        outBuf[12] = buffer[16]; outBuf[13] = buffer[17]; outBuf[14] = buffer[18]; outBuf[15] = buffer[19];
+                        outBuf[16] = buffer[12]; outBuf[17] = buffer[13]; outBuf[18] = buffer[14]; outBuf[19] = buffer[15];
 
-                    // Payload
-                    Buffer.BlockCopy(respBuf, 0, outBuf, udpOut + 8, respLen);
-                    Buffer.BlockCopy(address, 0, inboundAddr, 0, WINDIVERT_ADDRESS_SIZE);
+                        // UDP header
+                        var udpOut = 20;
+                        outBuf[udpOut + 0] = (byte)(dstPort >> 8);
+                        outBuf[udpOut + 1] = (byte)(dstPort);
+                        outBuf[udpOut + 2] = (byte)(srcPort >> 8);
+                        outBuf[udpOut + 3] = (byte)(srcPort);
+                        var udpLen = 8 + respLen;
+                        outBuf[udpOut + 4] = (byte)(udpLen >> 8);
+                        outBuf[udpOut + 5] = (byte)(udpLen);
+                        outBuf[udpOut + 6] = 0; outBuf[udpOut + 7] = 0;
 
-                    inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
+                        // Payload
+                        Buffer.BlockCopy(respBuf, 0, outBuf, udpOut + 8, respLen);
+                        Buffer.BlockCopy(address, 0, inboundAddr, 0, WINDIVERT_ADDRESS_SIZE);
 
-                    WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outLen, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
-                    WinDivertSend(handle, outBuf, (uint)outLen, out _, inboundAddr);
-                    
-                    _logger.LogTrace("Sent DNS response {ip} for {hostname} with TTL 30s", qName, targetIp);
+                        inboundAddr[0] = (byte)(inboundAddr[0] & ~0x01);
+
+                        WinDivertHelperCalcChecksums_NoAddr(outBuf, (uint)outLen, IntPtr.Zero, WINDIVERT_HELPER_CHECKSUM_FLAGS.All);
+                        WinDivertSend(handle, outBuf, (uint)outLen, out _, inboundAddr);
+
+                        _logger.LogTrace("Sent DNS response {ip} for {hostname} with TTL 30s", targetIp, qName);
+                    }
+                    finally
+                    {
+                        pool.Return(outBuf);
+                    }
                 }
                 finally
                 {
-                    pool.Return(outBuf);
+                    pool.Return(respBuf);
                 }
             }
             finally
@@ -401,43 +417,6 @@ public class DnsWinDivertHandler : IDnsHandler
     private static ushort Read16(byte[] b, int off)
     {
         return (ushort)((b[off] << 8) | b[off + 1]);
-    }
-
-    private static void W16(List<byte> b, ushort v)
-    {
-        b.Add((byte)(v >> 8));
-        b.Add((byte)v);
-    }
-
-    private static void W32(List<byte> b, uint v)
-    {
-        b.Add((byte)(v >> 24));
-        b.Add((byte)(v >> 16));
-        b.Add((byte)(v >> 8));
-        b.Add((byte)v);
-    }
-
-    private static void WName(List<byte> b, string fqdn)
-    {
-        if (string.IsNullOrEmpty(fqdn))
-        {
-            b.Add(0);
-            return;
-        }
-
-        foreach (var label in fqdn.TrimEnd('.').Split('.'))
-        {
-            var bs = Encoding.ASCII.GetBytes(label);
-            if (bs.Length > 63)
-            {
-                throw new ArgumentException("label too long");
-            }
-
-            b.Add((byte)bs.Length);
-            b.AddRange(bs);
-        }
-
-        b.Add(0);
     }
 }
 
