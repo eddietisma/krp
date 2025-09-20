@@ -15,7 +15,6 @@ public class ProcessRunner
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ProcessRunner> _logger;
-    private readonly ConcurrentStack<string> _logs = new();
 
     public ProcessRunner(IServiceProvider serviceProvider, ILogger<ProcessRunner> logger)
     {
@@ -25,11 +24,12 @@ public class ProcessRunner
 
     public async Task<ProcessWrapper> RunCommandAsync(string filename, string command)
     {
-        _logs.Clear();
         _logger.LogInformation("Running command: '{filename} {command}'", filename, command);
 
         try
         {
+            var logs = new ConcurrentStack<string>();
+
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = filename,
@@ -43,7 +43,7 @@ public class ProcessRunner
             var process = Process.Start(processStartInfo);
             if (process == null)
             {
-                return new ProcessWrapper(null, _logs);
+                return new ProcessWrapper(null, logs);
             }
 
             process.EnableRaisingEvents = true;
@@ -59,8 +59,8 @@ public class ProcessRunner
 
             var readyTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            process.OutputDataReceived += OnOutputDataReceived(readyTcs);
-            process.ErrorDataReceived += OnErrorDataReceived(readyTcs);
+            process.OutputDataReceived += OnOutputDataReceived(readyTcs, logs);
+            process.ErrorDataReceived += OnErrorDataReceived(readyTcs, logs);
             process.Exited += OnExited(readyTcs);
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
@@ -68,8 +68,8 @@ public class ProcessRunner
             await readyTcs.Task;
 
             return !readyTcs.Task.Result
-                ? new ProcessWrapper(null, _logs)
-                : new ProcessWrapper(process, _logs);
+                ? new ProcessWrapper(null, logs)
+                : new ProcessWrapper(process, logs);
         }
         catch (Exception ex)
         {
@@ -78,7 +78,7 @@ public class ProcessRunner
         }
     }
     
-    private DataReceivedEventHandler OnOutputDataReceived(TaskCompletionSource<bool> readyTcs)
+    private DataReceivedEventHandler OnOutputDataReceived(TaskCompletionSource<bool> readyTcs, ConcurrentStack<string> logs)
     {
         return (_, e) =>
         {
@@ -88,7 +88,7 @@ public class ProcessRunner
             }
 
             _logger.LogDebug(e.Data);
-            _logs.Push(e.Data);
+            logs.Push(e.Data);
 
             if (e.Data.StartsWith("Forwarding from"))
             {
@@ -97,7 +97,7 @@ public class ProcessRunner
         };
     }
 
-    private DataReceivedEventHandler OnErrorDataReceived(TaskCompletionSource<bool> readyTcs)
+    private DataReceivedEventHandler OnErrorDataReceived(TaskCompletionSource<bool> readyTcs, ConcurrentStack<string> logs)
     {
         return (_, e) =>
         {
@@ -107,7 +107,7 @@ public class ProcessRunner
             }
 
             _logger.LogError(e.Data);
-            _logs.Push(e.Data);
+            logs.Push(e.Data);
 
             if (e.Data.Contains("Only one usage of each socket address"))
             {
