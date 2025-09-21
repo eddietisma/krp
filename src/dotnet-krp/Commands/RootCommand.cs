@@ -22,15 +22,18 @@ namespace Krp.Tool.Commands;
 [VersionOptionFromMember("--version|-v", MemberName = nameof(GetVersion))]
 public class RootCommand
 {
-    [Option("--no-ui", Description = "Disable terminal UI")]
-    public bool NoTerminalUi { get; init; } = false;
+    [Option("--nameserver|-n <NAMESERVERS>", Description = "DNS server, used for HTTP proxy endpoints")]
+    public string Nameserver { get; init; } = "8.8.8.8";
+
+    [Option("--no-certificate-validation", Description = "Disable certificate validation")]
+    public bool NoCertificateValidation { get; init; } = true;
 
     [Option("--no-discovery", Description = "Disable automatic Kubernetes endpoint discovery")]
     public bool NoDiscovery { get; init; } = false;
 
-    [Option("--nameserver|-n <NAMESERVERS>", Description = "DNS server, used for HTTP proxy endpoints")]
-    public string Nameserver { get; init; } = "8.8.8.8";
-
+    [Option("--no-ui", Description = "Disable terminal UI")]
+    public bool NoTerminalUi { get; init; } = false;
+    
     [Option("--forwarder|-f <FORWARDER>", Description = "Forwarding method")]
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
     public string Forwarder { get; init; } = "hybrid";
@@ -88,6 +91,12 @@ public class RootCommand
                     options.ListenAddress = IPAddress.Any;
                     options.ListenPorts = [80, 443];
                 });
+
+                builder.Services.PostConfigure<HttpForwarderOptions>(options =>
+                {
+                    options.SkipCertificateValidation = NoCertificateValidation;
+                });
+
                 break;
         }
 

@@ -27,8 +27,17 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             var dnsLookupHandler = sp.GetRequiredService<IDnsLookupHandler>();
+            var options = sp.GetRequiredService<IOptions<HttpForwarderOptions>>().Value;
 
-           return new SocketsHttpHandler
+            var sslOptions = new SslClientAuthenticationOptions();
+
+            if (options.SkipCertificateValidation)
+            {
+                // Ignore all SSL certificate errors.
+                sslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+            }
+
+            return new SocketsHttpHandler
             {
                 UseProxy = false,
                 AllowAutoRedirect = false,
@@ -37,13 +46,7 @@ public static class ServiceCollectionExtensions
                 EnableMultipleHttp2Connections = true,
                 ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
                 ConnectTimeout = TimeSpan.FromSeconds(15),
-
-                // Ignore all SSL certificate errors.
-                SslOptions = new SslClientAuthenticationOptions
-                {
-                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
-                },
-
+                SslOptions = sslOptions,
                 ConnectCallback = async (ctx, ct) =>
                 {
                     var host = ctx.DnsEndPoint.Host;

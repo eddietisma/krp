@@ -5,4 +5,5 @@ public class HttpForwarderOptions
     public int Http2Port { get; set; } = 81;
     public int HttpPort { get; set; } = 80;
     public int HttpsPort { get; set; } = 443;
+    public bool SkipCertificateValidation { get; set; } = true;
 }

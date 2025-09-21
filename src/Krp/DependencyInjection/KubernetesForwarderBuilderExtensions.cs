@@ -102,6 +102,7 @@ public static class KubernetesBuilderExtension
             options.Http2Port = 81;
             options.HttpPort = 80;
             options.HttpsPort = 443;
+            options.SkipCertificateValidation = true;
         };
 
         builder.Services.AddHttpForwarder(optionsAction);

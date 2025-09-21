@@ -109,18 +109,19 @@ You can configure port-forwarding and routing behavior as follows:
 Usage: krp [options]
 
 Options:
-  -v|--version                    Show version information.
-  --no-ui                         Disable terminal UI
-  --no-discovery                  Disable automatic Kubernetes endpoint discovery
-  -n|--nameserver <NAMESERVERS>   DNS server, used for HTTP proxy endpoints
-                                  Default value is: 8.8.8.8.
-  -f|--forwarder <FORWARDER>      Forwarding method
-                                  Allowed values are: tcp, http, hybrid.
-                                  Default value is: hybrid.
-  -r|--routing <ROUTING>          Routing method
-                                  Allowed values are: hosts, windivert.
-                                  Default value is: windivert.
-  -?|-h|--help                    Show help information.
+  -v|--version                   Show version information.
+  -n|--nameserver <NAMESERVERS>  DNS server, used for HTTP proxy endpoints
+                                 Default value is: 8.8.8.8.
+  --no-certificate-validation    Disable certificate validation
+  --no-discovery                 Disable automatic Kubernetes endpoint discovery
+  --no-ui                        Disable terminal UI
+  -f|--forwarder <FORWARDER>     Forwarding method
+                                 Allowed values are: tcp, http, hybrid.
+                                 Default value is: hybrid.
+  -r|--routing <ROUTING>         Routing method
+                                 Allowed values are: hosts, windivert.
+                                 Default value is: windivert.
+  -?|-h|--help                   Show help information.
 
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
