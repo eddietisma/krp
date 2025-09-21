@@ -48,14 +48,16 @@ public class EndpointManager
     /// <param name="endpoint"></param>
     public void AddEndpoint(HttpEndpoint endpoint)
     {
+        var endpointPath = string.IsNullOrEmpty(endpoint.Path) ? "" : endpoint.Path.TrimStart('/').TrimEnd('/');
+
         var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = true;
         handler.LocalIp = _handlers.FirstOrDefault(x => x.Value.Host == endpoint.Host).Value?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
         handler.LocalPort = endpoint.LocalPort;
         handler.LocalScheme = endpoint.LocalScheme;
-        handler.Url = $"{endpoint.Host}{endpoint.Path}";
+        handler.Url = $"{endpoint.Host}/{endpointPath}";
         handler.Host = endpoint.Host;
-        handler.Path = endpoint.Path;
+        handler.Path = $"/{endpointPath}";
         
         if (_handlers.ContainsKey(handler.Url))
         {
@@ -64,6 +66,7 @@ public class EndpointManager
         }
 
         _handlers.TryAdd(handler.Url, handler);
+
         _logger.LogInformation("Registered HTTP endpoint for {host}{path}", endpoint.Host, endpoint.Path);
     }
 
@@ -114,7 +117,10 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
     {
-        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler) && x.Value.Host == host && path.StartsWith($"{x.Value.Path}/")).Value;
+        return _handlers
+            .Where(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler))
+            .Where(x => x.Value.Host == host)
+            .FirstOrDefault(x => path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path)).Value;
     }
 
     /// <summary>
@@ -124,7 +130,9 @@ public class EndpointManager
     /// <returns></returns>
     public IEnumerable<IEndpointHandler> GetHandlerByHost(string host)
     {
-        return _handlers.Where(x => x.Value.Host == host).Select(x => x.Value);
+        return _handlers
+            .Where(x => x.Value.Host == host)
+            .Select(x => x.Value);
     }
 
     /// <summary>
@@ -134,7 +142,9 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetPortForwardHandlerByHost(string host)
     {
-        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.Value.Host, host)).Value;
+        return _handlers
+            .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler)) 
+            .FirstOrDefault(x => Equals(x.Value.Host, host)).Value;
     }
 
     /// <summary>
@@ -144,7 +154,9 @@ public class EndpointManager
     /// <returns></returns>
     public IEndpointHandler GetHandlerByIpPort(IPAddress ip)
     {
-        return _handlers.FirstOrDefault(x => x.Value.GetType() == typeof(PortForwardEndpointHandler) && Equals(x.Value.LocalIp, ip)).Value;
+        return _handlers
+            .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
+            .FirstOrDefault(x => Equals(x.Value.LocalIp, ip)).Value;
     }
 
     public IEnumerable<IEndpointHandler> GetAllHandlers()
