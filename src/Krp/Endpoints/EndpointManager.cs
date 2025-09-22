@@ -49,10 +49,11 @@ public class EndpointManager
     public void AddEndpoint(HttpEndpoint endpoint)
     {
         var endpointPath = string.IsNullOrEmpty(endpoint.Path) ? "" : endpoint.Path.TrimStart('/').TrimEnd('/');
-
+        var localIp = _handlers.FirstOrDefault(x => x.Value.Host == endpoint.Host).Value?.LocalIp ?? IPAddress.Parse($"127.0.{_handlers.Count / 255}.{(_handlers.Count % 255) + 1}"); // Re-use IP if already exists.
+        
         var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = true;
-        handler.LocalIp = _handlers.FirstOrDefault(x => x.Value.Host == endpoint.Host).Value?.LocalIp ?? IPAddress.Parse($"127.0.0.{_handlers.Count + 1}"); // Re-use IP if already exists
+        handler.LocalIp = localIp;
         handler.LocalPort = endpoint.LocalPort;
         handler.LocalScheme = endpoint.LocalScheme;
         handler.Url = $"{endpoint.Host}/{endpointPath}";
