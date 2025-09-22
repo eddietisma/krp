@@ -178,8 +178,31 @@ public class EndpointManager
         }
     }
 
-    public void TriggerEndPointsChangedEvent()
+    public Task TriggerEndPointsChangedEventAsync()
     {
-        EndPointsChangedEvent?.Invoke();
+        if (EndPointsChangedEvent is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var handlerTasks = EndPointsChangedEvent
+            .GetInvocationList()
+            .Cast<Func<Task>>()
+            .Select(handler =>
+            {
+                try
+                {
+                    return handler();
+                }
+                catch (Exception ex)
+                {
+                    return Task.FromException(ex);
+                }
+            })
+            .ToArray();
+
+        return handlerTasks.Length == 0 
+            ? Task.CompletedTask
+            : Task.WhenAll(handlerTasks);
     }
 }

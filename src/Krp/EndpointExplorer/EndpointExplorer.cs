@@ -43,7 +43,7 @@ public class EndpointExplorer
 
             var endpoints = await _kubernetesClient.FetchServices(_compiledFilters, ct);
             _endpointManager.AddEndpoints(endpoints.ToList());
-            _endpointManager.TriggerEndPointsChangedEvent();
+            await _endpointManager.TriggerEndPointsChangedEventAsync();
         }
         finally
         {
