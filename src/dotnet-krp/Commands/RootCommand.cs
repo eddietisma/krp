@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,7 +41,12 @@ public class RootCommand
 
     [Option("--routing|-r <ROUTING>", Description = "Routing method")]
     [AllowedValues("hosts", "windivert", IgnoreCase = true)]
-    public string Routing { get; init; } = "windivert";
+    public string Routing { get; init; }
+
+    public RootCommand()
+    {
+        Routing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "windivert" : "hosts"; // Set default value based on OS.
+    }
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
     {
