@@ -39,7 +39,7 @@ public class KubernetesClient
     public async Task<List<KubernetesEndpoint>> FetchServices(List<Regex> filters, CancellationToken ct)
     {
         var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-        var client = new k8s.Kubernetes(config);
+        using var client = new k8s.Kubernetes(config);
 
         var namespaces = await client.ListNamespaceAsync(cancellationToken: ct);
         var endpoints = new ConcurrentBag<KubernetesEndpoint>();
