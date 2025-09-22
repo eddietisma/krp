@@ -7,7 +7,7 @@ public class EndpointExplorerOptions
     /// <summary>
     /// Interval to refresh and discover new endpoints.
     /// </summary>
-    public TimeSpan RefreshInterval { get; set; }
+    public TimeSpan RefreshInterval { get; set; } = TimeSpan.FromHours(1);
 
     /// <summary>
     /// Filtering options for the discovered endpoints.
