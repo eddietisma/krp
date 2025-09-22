@@ -46,11 +46,6 @@ public class DnsBackgroundService : BackgroundService
 
     private async Task UpdateDns()
     {
-        if (!_endpointManager.GetAllHandlers().Any())
-        {
-            return;
-        }
-
         _logger.LogInformation("Updating DNS entries...");
 
         // https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods
@@ -62,6 +57,7 @@ public class DnsBackgroundService : BackgroundService
             .Distinct()
             .ToList();
 
+        // Always refresh DNS entries, even when no endpoints are found (e.g. when switching to an empty cluster).
         await _dnsHandler.UpdateAsync(hostnames);
     }
 }
