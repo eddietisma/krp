@@ -61,7 +61,7 @@ public class ProcessRunner
 
             process.OutputDataReceived += OnOutputDataReceived(readyTcs, logs);
             process.ErrorDataReceived += OnErrorDataReceived(readyTcs, logs);
-            process.Exited += OnExited(readyTcs);
+            process.Exited += OnExited(readyTcs, command);
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -116,11 +116,11 @@ public class ProcessRunner
         };
     }
 
-    private EventHandler OnExited(TaskCompletionSource<bool> readyTcs)
+    private EventHandler OnExited(TaskCompletionSource<bool> readyTcs, string command)
     {
         return (_, _) =>
         {
-            _logger.LogError("Process exited before signaling readiness");
+            _logger.LogError("Process exited: '{command}'", command);
             readyTcs.TrySetResult(false);
         };
     }
