@@ -152,7 +152,7 @@ Environment variables:
 - Running WinDivert requires administrator privileges to capture and inject network packets.
 
 > [!NOTE]
-> WinDiverts installs as a windows service at runtime. Use `sc delete windivert` to remove.
+> WinDiverts installs as an ephemeral windows driver service at runtime. Once stopped, it's automatically removed.
 
 ### Forwarders available
 
