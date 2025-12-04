@@ -6,10 +6,10 @@
     <PackageVersion Include="AutoFixture" Version="4.18.1" />
     <PackageVersion Include="AutoFixture.AutoMoq" Version="4.18.1" />
     <PackageVersion Include="DnsClient" Version="1.8.0" />
-    <PackageVersion Include="KubernetesClient" Version="17.0.14" />
+    <PackageVersion Include="KubernetesClient" Version="18.0.13" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="McMaster.Extensions.Hosting.CommandLine" Version="4.1.1" />
-    <PackageVersion Include="Meziantou.Framework.Win32.Jobs" Version="3.4.5" />
+    <PackageVersion Include="Meziantou.Framework.Win32.Jobs" Version="3.5.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
@@ -20,7 +20,7 @@
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="MSTest" Version="4.0.2" />
     <PackageVersion Include="Spectre.Console" Version="0.54.0" />
-    <PackageVersion Include="System.ServiceProcess.ServiceController" Version="9.0.9" />
+    <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 </Project>

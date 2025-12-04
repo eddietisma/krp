@@ -10,9 +10,9 @@
       },
       "KubernetesClient": {
         "type": "Direct",
-        "requested": "[17.0.14, )",
-        "resolved": "17.0.14",
-        "contentHash": "FMGWjGtN8WEUKAAQxs96PK2tYvPrvwhoJzay/6HiByVTvHoJ0i9u7ykvYb7E3vLTSlfv26Q2Ktxr41zYCppu8A==",
+        "requested": "[18.0.13, )",
+        "resolved": "18.0.13",
+        "contentHash": "X5IuxmydftB148XeULtc7rD5/RvqLuW5SzkIjFovPgJpvV4RAoRqNPruVB7GEFu1Xg+zHVIk88WqdV8JjbgHbA==",
         "dependencies": {
           "Fractions": "7.3.0",
           "YamlDotNet": "16.3.0"
@@ -20,9 +20,9 @@
       },
       "Meziantou.Framework.Win32.Jobs": {
         "type": "Direct",
-        "requested": "[3.4.5, )",
-        "resolved": "3.4.5",
-        "contentHash": "R/d2VSdbRQHDWfPf5sjvMOWrWvxh/CswdMDKODppHTjsDLIkLQbQrnjmtAaVqu0qgUf8KFlVzEfxy3GIVoCK9g=="
+        "requested": "[3.5.0, )",
+        "resolved": "3.5.0",
+        "contentHash": "sJhdBB1yBgxsWOfrp3T9W77EzQr86Mh3VTlzYVzPct2T65AOfI/PRN/X7yZZEXvN/bw520ffxX7/lfRu+kgXOQ=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
@@ -42,11 +42,11 @@
       },
       "System.ServiceProcess.ServiceController": {
         "type": "Direct",
-        "requested": "[9.0.9, )",
-        "resolved": "9.0.9",
-        "contentHash": "G+7s4ED3AQRCnIdMRo4KceochK1RxyP+LGS49DbHJ0M2uVPG+Loo5lXOyG6mxabV7kthE6A88OKZ4vdFLz/rfg==",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "PaFmFQXX/qL1vl0CfdJUMPMYT8TOEHlcdEiOZtd4LV2rcaS/WDQM4bpECcbRM4BrD+DWkWd/jtb6iPOqAX9TWA==",
         "dependencies": {
-          "System.Diagnostics.EventLog": "9.0.9"
+          "System.Diagnostics.EventLog": "10.0.0"
         }
       },
       "Yarp.ReverseProxy": {
@@ -75,8 +75,8 @@
       },
       "System.Diagnostics.EventLog": {
         "type": "Transitive",
-        "resolved": "9.0.9",
-        "contentHash": "wpsUfnyv8E5K4WQaok6weewvAbQhcLwXFcHBm5U0gdEaBs85N//ssuYvRPFWwz2rO/9/DFP3A1sGMzUFBj8y3w=="
+        "resolved": "10.0.0",
+        "contentHash": "uaFRda9NjtbJRkdx311eXlAA3n2em7223c1A8d1VWyl+4FL9vkG7y2lpPfBU9HYdj/9KgdRNdn1vFK8ZYCYT/A=="
       },
       "System.IO.Hashing": {
         "type": "Transitive",
