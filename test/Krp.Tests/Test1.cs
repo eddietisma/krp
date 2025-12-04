@@ -6,7 +6,7 @@
         [TestMethod]
         public void TestMethod1()
         {
-            Assert.IsTrue(false, "This test should always pass.");
+            Assert.IsTrue(true, "This test should always pass.");
         }
     }
 }

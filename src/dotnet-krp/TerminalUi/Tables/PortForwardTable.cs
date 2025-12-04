@@ -12,21 +12,23 @@ namespace Krp.Tool.TerminalUi.Tables;
 
 public class PortForwardTable
 {
+    public const int HEADER_SIZE = 3;
+    public int Count { get; private set; }
+
     private readonly KrpTerminalState _state;
     private readonly EndpointManager _endpointManager;
     private readonly Dictionary<string, int> _measurementLookup = new();
     private readonly List<ColumnDefinition<PortForwardEndpointHandler>> _columnDefinitions;
-
     private int _handlersActiveCount;
-    public int Count { get; private set; }
 
     public PortForwardTable(KrpTerminalState state, EndpointManager endpointManager)
     {
         _state = state;
         _endpointManager = endpointManager;
 
-        // Initialize selected row for port forwards.
+        // Initialize rows for port-forwards table.
         _state.SelectedRow.Add(KrpTable.PortForwards, 0);
+        _state.AnchorRowIndex.TryAdd(KrpTable.PortForwards, 0);
 
         // Initialize column definitions.
         _columnDefinitions =
@@ -89,8 +91,12 @@ public class PortForwardTable
         _state.ColumnOffsetMax = Math.Max(0, _columnDefinitions.Count - totalVisibleColumns + (_state.LastColumnClipped ? 1 : 0));
 
         // Rows that fit.
-        var fixedRows = 3 + KrpTerminalUi.HEADER_SIZE;
+        var fixedRows = HEADER_SIZE + KrpTerminalUi.HEADER_SIZE;
         var maxRows = Math.Max(1, _state.WindowHeight - fixedRows);
+        var maxFirst = Math.Max(0, items.Count - maxRows);
+        var first = _state.AnchorRowIndex.TryGetValue(_state.SelectedTable, out var storedFirst) ? storedFirst : 0;
+        first = Math.Clamp(first, 0, maxFirst);
+        _state.AnchorRowIndex[_state.SelectedTable] = first;
 
         var tbl = new Table().NoBorder();
 
@@ -110,7 +116,6 @@ public class PortForwardTable
         }
 
         // Print rows
-        var first = Math.Clamp(_state.SelectedRow[_state.SelectedTable] - maxRows + 1, 0, Math.Max(0, items.Count - maxRows));
         for (var i = first; i < Math.Min(items.Count, first + maxRows); i++)
         {
             var isSelected = i == _state.SelectedRow[_state.SelectedTable];
