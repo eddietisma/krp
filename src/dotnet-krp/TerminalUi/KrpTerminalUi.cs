@@ -98,22 +98,24 @@ public class KrpTerminalUi
 
                                 var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
                                 var ctrl = (key.Modifiers & ConsoleModifiers.Control) != 0;
-
+                                
                                 switch (key.Key)
                                 {
-                                    case ConsoleKey.Home: _state.SelectedRow[_state.SelectedTable] = 0; redraw = true; break;
-                                    case ConsoleKey.End: _state.SelectedRow[_state.SelectedTable] = count - 1; redraw = true; break;
-                                    case ConsoleKey.LeftArrow: _state.ColumnOffset = Math.Max(0, _state.ColumnOffset - 1); redraw = true; break;
-                                    case ConsoleKey.RightArrow: _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); redraw = true; break;
+                                    case ConsoleKey.Home: redraw = true; _state.SelectedRow[_state.SelectedTable] = 0; break;
+                                    case ConsoleKey.End: redraw = true; _state.SelectedRow[_state.SelectedTable] = Math.Max(0, count - 1); break;
+                                    case ConsoleKey.PageUp:  redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - GetPageSize(_state.SelectedTable))); break;
+                                    case ConsoleKey.PageDown: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Min(Math.Max(0, count - 1), _state.SelectedRow[_state.SelectedTable] + GetPageSize(_state.SelectedTable))); break;
+                                    case ConsoleKey.LeftArrow: redraw = true; _state.ColumnOffset = Math.Max(0, _state.ColumnOffset - 1); break;
+                                    case ConsoleKey.RightArrow: redraw = true; _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); break;
                                     case ConsoleKey.UpArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - 1)); break;
                                     case ConsoleKey.DownArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Min(count - 1, _state.SelectedRow[_state.SelectedTable] + 1)); break;
-                                    case ConsoleKey.D1: _state.SelectedTable = KrpTable.PortForwards; redraw = true; redrawContext = true; break;
-                                    case ConsoleKey.D2: _state.SelectedTable = KrpTable.Logs; redraw = true; redrawContext = true; break;
-                                    case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
-                                    case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
-                                    case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
-                                    case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
-                                    case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
+                                    case ConsoleKey.D1: redraw = true; redrawContext = true; _state.SelectedTable = KrpTable.PortForwards; break;
+                                    case ConsoleKey.D2: redraw = true; redrawContext = true; _state.SelectedTable = KrpTable.Logs; break;
+                                    case ConsoleKey.I when shift: redraw = true; ToggleSort(SortField.Ip); break;
+                                    case ConsoleKey.N when shift: redraw = true; ToggleSort(SortField.Namespace); break;
+                                    case ConsoleKey.P when shift: redraw = true; ToggleSort(SortField.PortForward); break;
+                                    case ConsoleKey.R when shift: redraw = true; ToggleSort(SortField.Resource); break;
+                                    case ConsoleKey.U when shift: redraw = true; ToggleSort(SortField.Url); break;
                                     case ConsoleKey.Enter when _state.SelectedTable == KrpTable.PortForwards: _ = _portForwardTable.ForceStart(); break;
                                     case ConsoleKey.D when ctrl && _state.SelectedTable == KrpTable.PortForwards: _portForwardTable.ForceStop(); break;
                                     case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
@@ -179,6 +181,12 @@ public class KrpTerminalUi
                                 }
 
                                 redraw = true;
+                            }
+
+                            // Keep viewport anchor in sync with selection for scrolling tables.
+                            if (_state.SelectedTable == KrpTable.PortForwards)
+                            {
+                                UpdateFirstRowAnchor(_state.SelectedTable, count);
                             }
 
                             // Redraw panels.
@@ -315,11 +323,41 @@ public class KrpTerminalUi
         return panel.NoBorder().Padding(padding, 0, 0, 0);
     }
 
-    private void ToggleSort(SortField field, ref bool redraw)
+    private int GetPageSize(KrpTable table)
+    {
+        return table switch
+        {
+            KrpTable.PortForwards => Math.Max(1, _state.WindowHeight - (PortForwardTable.HEADER_SIZE + HEADER_SIZE)),
+            KrpTable.Logs => Math.Max(1, _state.WindowHeight - (LogsTable.HEADER_SIZE + HEADER_SIZE)),
+            _ => 1,
+        };
+    }
+    
+    private void UpdateFirstRowAnchor(KrpTable table, int count)
+    {
+        var maxRows = Math.Max(1, _state.WindowHeight - (PortForwardTable.HEADER_SIZE + HEADER_SIZE));
+        var maxFirst = Math.Max(0, count - maxRows);
+
+        var selected = Math.Clamp(_state.SelectedRow[table], 0, Math.Max(0, count - 1));
+        var first = _state.AnchorRowIndex[_state.SelectedTable];
+
+        // Keep the selection visible; adjust just enough without paging jumps.
+        if (selected < first)
+        {
+            first = selected;
+        }
+        else if (selected >= first + maxRows)
+        {
+            first = selected - maxRows + 1;
+        }
+
+        _state.AnchorRowIndex[table] = Math.Clamp(first, 0, maxFirst);
+    }
+    
+    private void ToggleSort(SortField field)
     {
         _state.SortAscending = _state.SortField != field || !_state.SortAscending;
         _state.SortField = field;
         _state.SelectedRow[_state.SelectedTable] = 0; // Reset cursor to top.
-        redraw = true;
     }
 }
