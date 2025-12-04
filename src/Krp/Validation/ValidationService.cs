@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,7 +63,7 @@ public class ValidationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private  bool ValidateRouting(string hostsPath)
+    private bool ValidateRouting(string hostsPath)
     {
         var routing = _dnsHandler.GetType();
 
@@ -84,6 +85,11 @@ public class ValidationService : IHostedService
             else if (ValidateIsWinDivertInstalled())
             {
                 _logger.LogInformation("✅ Found windows service: WinDivert");
+            }
+            else if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                _logger.LogInformation("❌ WinDivert routing requires administrator for installing");
+                return false;
             }
 
             return true;

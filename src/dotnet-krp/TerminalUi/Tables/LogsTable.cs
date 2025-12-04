@@ -11,19 +11,21 @@ namespace Krp.Tool.TerminalUi.Tables;
 
 public class LogsTable 
 {
+    public const int HEADER_SIZE = 2;
+    public int Count { get; private set; }
+
     private readonly KrpTerminalState _state;
     private readonly InMemoryLoggingProvider _logProvider;
     private readonly List<ColumnDefinition<LogEntry>> _columnDefinitions;
-
-    public int Count { get; private set; }
     
     public LogsTable(KrpTerminalState state, InMemoryLoggingProvider logProvider)
     {
         _state = state;
         _logProvider = logProvider;
 
-        // Initialize selected row for logs table.
+        // Initialize rows for logs table.
         _state.SelectedRow.Add(KrpTable.Logs, 0);
+        _state.AnchorRowIndex.Add(KrpTable.Logs, 0);
 
         // Initialize column definitions.
         _columnDefinitions =
@@ -56,11 +58,12 @@ public class LogsTable
 
     public Panel BuildMainPanel()
     {
-        var fixedRows = 2 + KrpTerminalUi.HEADER_SIZE;
-        var rowsVis = Math.Max(1, _state.WindowHeight - fixedRows);
+        // Rows that fit.
+        var fixedRows = HEADER_SIZE + KrpTerminalUi.HEADER_SIZE;
+        var maxRows = Math.Max(1, _state.WindowHeight - fixedRows);
 
         var total = _logProvider.CountLogs();
-        var maxStart = Math.Max(0, total - rowsVis);
+        var maxStart = Math.Max(0, total - maxRows);
 
         // _selectedRowIndex is "start row from the top"
         //  • Down (index++)  => start increases => scrolls down (newer)
@@ -68,7 +71,7 @@ public class LogsTable
         _state.SelectedRow[KrpTable.Logs] = Math.Clamp(_state.SelectedRow[KrpTable.Logs], 0, maxStart);
 
         var start = _state.SelectedRow[KrpTable.Logs];
-        var slice = _logProvider.ReadLogs(start, rowsVis).ToList();
+        var slice = _logProvider.ReadLogs(start, maxRows).ToList();
 
         var tbl = new Table().NoBorder().Expand().HideHeaders().Width(Console.WindowWidth).ShowRowSeparators(); ;
 
