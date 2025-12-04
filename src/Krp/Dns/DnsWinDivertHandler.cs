@@ -78,7 +78,7 @@ public class DnsWinDivertHandler : IDnsHandler
             return;
         }
 
-        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 1_000_000); // Reduce shutdown latency by lowering queue time to 100ms.
+        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 100_000); // Reduce shutdown latency by lowering queue time to 100ms.
 
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
