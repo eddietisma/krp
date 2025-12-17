@@ -203,7 +203,7 @@ public class TcpWithHttpForwarder
         // We can however detect the HTTP/2 preface and use that to determine if the client is using HTTP/2 or HTTP/1.1 and route to
         // a specific backend by hosting HTTP/2 and HTTP/1 on different Kestrel ports.
         // https://httpwg.org/specs/rfc7540.html#ConnectionHeader
-        // https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-9.0&tabs=visual-studio#protocol-negotiation
+        // https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-10.0&tabs=visual-studio#protocol-negotiation
         // https://github.com/dotnet/aspnetcore/issues/13502
 
         const int prefaceLen = 24;
