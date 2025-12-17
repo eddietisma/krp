@@ -151,7 +151,7 @@ public class ProcessRunnerTests
             directory = directory.Parent;
         }
 
-        Assert.Fail("Could not locate test/ProcessRunnerProbe/ProcessRunnerProbe.csproj from test base directory.");
+        Assert.Fail("Could not locate test/Krp.ProcessRunnerProbe/Krp.ProcessRunnerProbe.csproj from test base directory.");
         return string.Empty;
     }
 }

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.16.0
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS sdk
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS sdk
 
 ###################################
 # CAKE
