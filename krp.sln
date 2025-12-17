@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11312.151 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krp", "src\Krp\Krp.csproj", "{6718844C-4659-E27D-F7BB-00B32D33C517}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet-krp", "src\dotnet-krp\dotnet-krp.csproj", "{E79A77F6-FD1F-4CFE-BAD1-B78351DFD969}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krp.Tests", "test\Krp.Tests\Krp.Tests.csproj", "{1117C544-761B-479B-9426-75EA059767B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krp.ProcessRunnerProbe", "test\Krp.ProcessRunnerProbe\Krp.ProcessRunnerProbe.csproj", "{B9BFDD79-B3C7-42C6-3289-74F963EE317F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{1117C544-761B-479B-9426-75EA059767B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1117C544-761B-479B-9426-75EA059767B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1117C544-761B-479B-9426-75EA059767B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9BFDD79-B3C7-42C6-3289-74F963EE317F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9BFDD79-B3C7-42C6-3289-74F963EE317F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9BFDD79-B3C7-42C6-3289-74F963EE317F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9BFDD79-B3C7-42C6-3289-74F963EE317F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

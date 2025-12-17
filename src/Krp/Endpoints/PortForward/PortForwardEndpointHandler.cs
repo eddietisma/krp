@@ -82,7 +82,7 @@ public class PortForwardEndpointHandler : IEndpointHandler
                 return;
             }
 
-            var (process, logs) = await _processRunner.RunCommandAsync("kubectl", $"port-forward {Resource} {LocalPort}:{RemotePort} -n {Namespace}");
+            var (process, logs) = await _processRunner.RunCommandAsync("kubectl", "port-forward", Resource, $"{LocalPort}:{RemotePort}", "-n", Namespace);
 
             _process = process;
 
