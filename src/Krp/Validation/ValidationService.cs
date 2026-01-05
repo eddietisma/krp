@@ -71,7 +71,7 @@ public class ValidationService : IHostedService
         {
             nameof(DnsHostsHandler) => "hosts",
             nameof(DnsWinDivertHandler) => "windivert",
-            _ => "unknown"
+            _ => "unknown",
         };
 
         _logger.LogInformation($"✅ Using routing: {routingName}");
@@ -80,7 +80,7 @@ public class ValidationService : IHostedService
         {  
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                _logger.LogInformation("❌ WinDivert routing is only supported on Windows platforms");
+                _logger.LogError("❌ WinDivert routing is only supported on Windows platforms");
             }
             else if (ValidateIsWinDivertInstalled())
             {
@@ -88,29 +88,57 @@ public class ValidationService : IHostedService
             }
             else if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             {
-                _logger.LogInformation("❌ WinDivert routing requires administrator for installing");
+                _logger.LogError("❌ WinDivert routing requires administrator for installing");
                 return false;
             }
 
             return true;
         }
 
-        var fileExists = File.Exists(hostsPath);
-        var hasAccess = FileHelper.HasWriteAccess(hostsPath);
+        if (routing == typeof(DnsHostsHandler))
+        {
+            var fileExists = File.Exists(hostsPath);
+            if (fileExists)
+            {
+                _logger.LogInformation("✅ Found hosts file: '{HostsPath}'", hostsPath);
+            }
+            else
+            {
+                _logger.LogError("❌ Hosts file not found: '{HostsPath}'", hostsPath);
+                return false;
+            }
 
-        _logger.LogInformation(fileExists ? "✅ Found hosts file: '{HostsPath}'" : "❌ Hosts file not found: '{HostsPath}'", hostsPath);
-        _logger.LogInformation(hasAccess ? "✅ Permission to hosts file" : "❌ Write-access to hosts file is denied");
+            var hasAccess = FileHelper.HasWriteAccess(hostsPath);
+            if (hasAccess)
+            {
+                _logger.LogInformation("✅ Permission to hosts file");
+            }
+            else
+            {
+                _logger.LogError("❌ Write-access to hosts file is denied");
+                return false;
+            }
+        }
 
-        return fileExists && hasAccess;
+        return true;
     }
 
     private async Task<bool> ValidateKubernetes()
     {
         var fileExists = File.Exists(KubernetesClientConfiguration.KubeConfigDefaultLocation);
+        if (fileExists)
+        {
+            _logger.LogInformation("✅ Found kubeconfig: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
+        }
+        else
+        {
+            _logger.LogError("❌ Kubeconfig not found: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
+            return false;
+        }
 
-        _logger.LogInformation(fileExists ? "✅ Found kubeconfig: '{ConfigPath}'" : "❌ Kubeconfig not found: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
 
-        var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2));
+        var timeoutSeconds = 10;
+        var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(timeoutSeconds), TimeSpan.FromSeconds(2));
         if (hasAccess)
         {
             var context = await _kubernetesClient.FetchCurrentContext();
@@ -118,18 +146,13 @@ public class ValidationService : IHostedService
         }
         else
         {
-            _logger.LogInformation(
-                "\u001b[31m❌ Unable to reach Kubernetes (30s timeout).\n" +
-                "   • Kube-config: {ConfigPath}\n" +
-                "   • Authenticate or refresh credentials using your cloud CLI:\n" +
-                "     ▸ Azure :  az login …\n" +
-                "     ▸ AWS   :  aws login …\n" +
-                "     ▸ GCP   :  gcloud auth login …\n" +
-                "   • Or set KUBECONFIG to a valid file and retry.\u001b[0m",
-                KubernetesClientConfiguration.KubeConfigDefaultLocation);
+            _logger.LogError("❌ Unable to reach Kubernetes ({timeout}s timeout).", timeoutSeconds);
+            _logger.LogError("    - Authenticate or refresh credentials");
+            _logger.LogError("    - Set KUBECONFIG to a valid file and retry");
+            return false;
         }
 
-        return fileExists && hasAccess;
+        return true;
     }
 
     private static bool ValidateIsWinDivertInstalled()
