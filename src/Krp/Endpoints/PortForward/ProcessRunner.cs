@@ -12,8 +12,17 @@ namespace Krp.Endpoints.PortForward;
 
 public record ProcessWrapper(Process Process, ConcurrentStack<string> Logs);
 
+/// <summary>
+/// Spawns external commands (kubectl port-forward) and wires up cleanup so child processes are reaped on exit.
+/// - Windows: assigns the process to a Job Objects API.
+/// - Linux/macOS: wraps the child with a reaper script that starts a new session and kills the process group when the parent/krp PID/start-token changes.
+/// </summary>
 public class ProcessRunner
 {
+    // Shell wrapper that:
+    // - Starts the child in a new session when possible (so we can target a process group).
+    // - Watches the parent PID + start-token to avoid PID reuse false-positives.
+    // - On parent exit/restart (or wrapper termination), sends TERM then KILL to the child group.
     private const string PROCESS_REAPER_SCRIPT = """
         #!/bin/sh
         parent="$1"
@@ -142,6 +151,7 @@ public class ProcessRunner
             {
                 try
                 {
+                    // Feed the reaper script over stdin to avoid temp files and keep argv unparsed.
                     await process.StandardInput.WriteAsync(PROCESS_REAPER_SCRIPT.Replace("\r\n", "\n").Replace("\r", "\n"));
                     process.StandardInput.Close();
                 }
