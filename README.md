@@ -10,7 +10,7 @@
 - **On-Demand Port Forwarding** – Automatically runs `kubectl port-forward` when you need it.
 - **Context Aware** – Adapts to changes in your current cluster context.
 - **Automatic Cleanup** – All active port forwards is cleaned up on application exit.
-- **Dynamic Traffic Routing** – Routes through `localhost` using hosts file or [WinDivert](https://github.com/basil00/WinDivert)
+- **Dynamic Traffic Routing** – Routes through `localhost` using hosts file or [WinDivert](https://github.com/basil00/WinDivert).
 - **Zero Configuration** – Once running, the tool requires no further setup or user intervention.
 
 ### **Dependencies**
@@ -159,7 +159,7 @@ Environment variables:
 #### `HttpForwarder`
 - Supports HTTP requests (only).
 - Supports domain based routing (using HTTP headers).
-- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation) .
+- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation).
    - https://github.com/dotnet/aspnetcore/issues/13502.
 - Uses SSL termination.
   - For HTTPS either disable certificate validation on client or setup certificate for each domain.
@@ -240,3 +240,5 @@ services:
 - [ ] Cross-platform support (Linux/macOS).
 - [x] User interface.
 - [x] Add GIF recordings of terminal use cases in README.
+
+
