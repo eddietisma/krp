@@ -94,6 +94,18 @@ public static class ServiceCollectionExtensions
     public static void UseKubernetesForwarder(this IApplicationBuilder app)
     {
         app.UseRouting();
+        app.Use(async (context, next) =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress;
+            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsync("Loopback connections only.");
+                return;
+            }
+
+            await next();
+        });
         app.UseEndpoints(endpoints =>
         {
             endpoints.Map("/{**catch-all}", async (HttpForwarder handler, HttpContext httpContext) =>
