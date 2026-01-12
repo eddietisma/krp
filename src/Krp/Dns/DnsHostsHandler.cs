@@ -89,13 +89,12 @@ public class DnsHostsHandler : IDnsHandler
             File.Copy(_options.Path, backupPath, overwrite: true);
             _logger.LogInformation("Backup created '{path}'", backupPath);
 
-            await File.WriteAllLinesAsync(_options.Path, lines, Encoding.UTF8);
+            await File.WriteAllLinesAsync(_options.Path, lines, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             _logger.LogInformation("Successfully updated hosts file ({count} entries)", hostnames.Count);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error when updating DNS");
-            throw;
         }
     }
 }
