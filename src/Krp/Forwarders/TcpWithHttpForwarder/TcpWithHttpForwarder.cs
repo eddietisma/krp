@@ -91,6 +91,14 @@ public class TcpWithHttpForwarder
             using var tcpClient = client;
             using var target = new TcpClient();
 
+            var remoteEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
+            var remoteIp = remoteEndPoint?.Address;
+            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            {
+                _logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
+                return;
+            }
+
             var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
             var localIp = localEndPoint!.Address;
             var localPort = localEndPoint!.Port;
