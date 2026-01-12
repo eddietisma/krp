@@ -117,7 +117,15 @@ public class PortForwardEndpointHandler : IEndpointHandler
             _logger.LogInformation("Killing port-forwarding for {url}", Url);
         }
 
-        _process?.Kill();
+        try
+        {
+            _process?.Kill();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to kill port-forwarding process for {url}", Url);
+        }
+
         _process?.Dispose();
         _process = null;
     }
