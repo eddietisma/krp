@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Krp.Endpoints;
@@ -17,9 +18,10 @@ namespace Krp.Endpoints;
 public class EndpointManager
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ConcurrentDictionary<string, IEndpointHandler> _handlers = new();
+    private readonly ConcurrentDictionary<string, IEndpointHandler> _handlers = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<EndpointManager> _logger;
     private readonly KubernetesForwarderOptions _options;
+    private int _ipCounter;
 
     public event Func<Task> EndPointsChangedEvent;
 
@@ -29,7 +31,7 @@ public class EndpointManager
         _logger = logger;
         _options = options.Value;
     }
-    
+
     public void Initialize()
     {
         foreach (var endpoint in _options.HttpEndpoints)
@@ -42,6 +44,7 @@ public class EndpointManager
             AddEndpoint(endpoint);
         }
     }
+
     /// <summary>
     /// Create and add a new HTTP proxy handler.
     /// </summary>
@@ -49,8 +52,9 @@ public class EndpointManager
     public void AddEndpoint(HttpEndpoint endpoint)
     {
         var endpointPath = string.IsNullOrEmpty(endpoint.Path) ? "" : endpoint.Path.TrimStart('/').TrimEnd('/');
-        var localIp = _handlers.FirstOrDefault(x => x.Value.Host == endpoint.Host).Value?.LocalIp ?? IPAddress.Parse($"127.0.{_handlers.Count / 255}.{(_handlers.Count % 255) + 1}"); // Re-use IP if already exists.
-        
+        var localIp = _handlers.FirstOrDefault(x => string.Equals(x.Value.Host, endpoint.Host, StringComparison.OrdinalIgnoreCase)).Value?.LocalIp
+                      ?? GetNextLoopbackIp();
+
         var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = true;
         handler.LocalIp = localIp;
@@ -59,7 +63,7 @@ public class EndpointManager
         handler.Url = $"{endpoint.Host}/{endpointPath}";
         handler.Host = endpoint.Host;
         handler.Path = $"/{endpointPath}";
-        
+
         if (_handlers.ContainsKey(handler.Url))
         {
             _logger.LogWarning("Skipped already existing HTTP endpoint for {url}", handler.Url);
@@ -85,12 +89,12 @@ public class EndpointManager
 
         var handler = _serviceProvider.GetService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
-        handler.LocalIp = IPAddress.Parse($"127.0.{_handlers.Count / 255}.{(_handlers.Count % 255) + 1}");
+        handler.LocalIp = GetNextLoopbackIp();
         handler.LocalPort = endpoint.LocalPort;
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;
         handler.Resource = endpoint.Resource;
-        
+
         if (_handlers.ContainsKey(handler.Url))
         {
             _logger.LogInformation("Skipped already existing endpoint for {url}", handler.Url);
@@ -120,7 +124,7 @@ public class EndpointManager
     {
         return _handlers
             .Where(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler))
-            .Where(x => x.Value.Host == host)
+            .Where(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault(x => path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path)).Value;
     }
 
@@ -132,7 +136,7 @@ public class EndpointManager
     public IEnumerable<IEndpointHandler> GetHandlerByHost(string host)
     {
         return _handlers
-            .Where(x => x.Value.Host == host)
+            .Where(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
             .Select(x => x.Value);
     }
 
@@ -144,8 +148,8 @@ public class EndpointManager
     public IEndpointHandler GetPortForwardHandlerByHost(string host)
     {
         return _handlers
-            .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler)) 
-            .FirstOrDefault(x => Equals(x.Value.Host, host)).Value;
+            .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
+            .FirstOrDefault(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase)).Value;
     }
 
     /// <summary>
@@ -164,12 +168,12 @@ public class EndpointManager
     {
         return _handlers.Select(x => x.Value);
     }
-    
+
     public void RemoveAllHandlers()
     {
         foreach (var handler in _handlers)
         {
-            handler.Value.Dispose();  
+            handler.Value.Dispose();
         }
 
         foreach (var handler in _handlers.Where(x => !x.Value.IsStatic))
@@ -201,8 +205,14 @@ public class EndpointManager
             })
             .ToArray();
 
-        return handlerTasks.Length == 0 
+        return handlerTasks.Length == 0
             ? Task.CompletedTask
             : Task.WhenAll(handlerTasks);
+    }
+
+    private IPAddress GetNextLoopbackIp()
+    {
+        var index = Interlocked.Increment(ref _ipCounter);
+        return IPAddress.Parse($"127.0.{index / 255}.{(index % 255) + 1}");
     }
 }
