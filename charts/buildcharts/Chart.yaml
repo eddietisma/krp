@@ -25,3 +25,7 @@ dependencies:
     version: 0.0.1
     repository: oci://registry-1.docker.io/buildcharts
 
+  - name: dotnet-publish
+    alias: publish
+    version: 0.0.1
+    repository: oci://registry-1.docker.io/buildcharts

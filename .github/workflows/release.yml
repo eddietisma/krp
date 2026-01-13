@@ -32,3 +32,20 @@ jobs:
       version: ${{ needs.determine_version.outputs.version }}
       commit: ${{ github.sha }}
     secrets: inherit
+
+  publish-release-assets:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download publish zips
+        uses: actions/download-artifact@v4
+        with:
+          name: publish
+          path: publish
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/*.zip
