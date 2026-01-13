@@ -58,7 +58,9 @@
     <None Include="runtimes\win-x86\native\WinDivert.dll" Pack="true" PackagePath="runtimes/win-x86/native/" />
     <None Include="runtimes\win-x86\native\WinDivert32.sys" Pack="true" PackagePath="runtimes/win-x86/native/" />
     <None Include="runtimes\win-x86\native\WinDivert64.sys" Pack="true" PackagePath="runtimes/win-x86/native/" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == ''">
     <!-- Also copy to this project's output so it runs as a standalone app -->
     <None Update="runtimes\win-x64\native\WinDivert.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Update="runtimes\win-x64\native\WinDivert64.sys" CopyToOutputDirectory="PreserveNewest" />

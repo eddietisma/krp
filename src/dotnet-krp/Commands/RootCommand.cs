@@ -45,7 +45,9 @@ public class RootCommand
 
     public RootCommand()
     {
-        Routing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "windivert" : "hosts"; // Set default value based on OS.
+        Routing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&  (RuntimeInformation.ProcessArchitecture == Architecture.X64 || RuntimeInformation.ProcessArchitecture == Architecture.X86)
+            ? "windivert" // Default to WinDivert only on Windows x64/x86.
+            : "hosts";
     }
 
     public async Task<int> OnExecuteAsync(CommandLineApplication _, CancellationToken ct)
