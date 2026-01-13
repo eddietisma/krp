@@ -47,8 +47,13 @@ public class ValidationService : IHostedService
         }
 
         var validationSuccess = ValidateRouting(hostsPath);
+        if (!validationSuccess)
+        {
+            _logger.LogError("Validation failed. Terminating...");
+            Environment.Exit(1);
+        }
+
         validationSuccess = await ValidateKubernetes() && validationSuccess;
-        
         if (!validationSuccess)
         {
             _logger.LogError("Validation failed. Terminating...");
@@ -136,8 +141,7 @@ public class ValidationService : IHostedService
             return false;
         }
 
-
-        var timeoutSeconds = 10;
+        var timeoutSeconds = 60;
         var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(timeoutSeconds), TimeSpan.FromSeconds(2));
         if (hasAccess)
         {
