@@ -99,9 +99,14 @@ public static class ServiceCollectionExtensions
             var remoteIp = context.Connection.RemoteIpAddress;
             if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
             {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsync("Loopback connections only.");
-                return;
+                // Let docker handle network isolation when running in a container,
+                // since we may receive non-loopback connections due to docker NAT.
+                if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsync("Loopback connections only.");
+                    return;
+                }
             }
 
             await next();

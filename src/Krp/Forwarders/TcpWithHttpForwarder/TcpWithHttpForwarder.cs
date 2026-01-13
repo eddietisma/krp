@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -95,8 +94,13 @@ public class TcpWithHttpForwarder
             var remoteIp = remoteEndPoint?.Address;
             if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
             {
-                _logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
-                return;
+                // Let docker handle network isolation when running in a container,
+                // since we may receive non-loopback connections due to docker NAT.
+                if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+                {
+                    _logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
+                    return;
+                }
             }
 
             var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
