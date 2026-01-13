@@ -44,6 +44,7 @@ public class ValidationService : IHostedService
             _logger.LogInformation("✅ Detected running inside docker container");
             _logger.LogInformation("    - All traffic will be forwarded to host.docker.internal");
             _logger.LogInformation("    - Endpoint targets will be selected using IP:PORT");
+            _logger.LogInformation("    - Loopback client restriction is off");
         }
 
         var validationSuccess = ValidateRouting(hostsPath);

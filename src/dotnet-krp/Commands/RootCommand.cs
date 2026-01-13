@@ -90,7 +90,6 @@ public class RootCommand
                 {
                     options.ListenAddress = IPAddress.Any;
                     options.ListenPorts = [80, 443];
-
                 });
                 break;
             case "hybrid":
