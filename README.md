@@ -209,8 +209,6 @@ To run `krp` in a Docker container, follow these steps:
 ```yaml
 services:
   krp:
-    build:
-      context: .
     image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
@@ -218,10 +216,10 @@ services:
       - "80:80"
     #  - "443:443"
     environment:
+    ##  Setup HTTPS using: dotnet dev-certs https -ep "$env:USERPROFILE\.krp\krp.pfx" -p "your-cert-password"
     #  ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
     #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
-      KRP_ENDPOINT_EXPLORER: false
       KRP_HOSTS: /mnt/hosts
     volumes:
       - ~/.kube:/root/.kube
