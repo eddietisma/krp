@@ -1,8 +1,8 @@
 version: v1beta
 
 variables:
-  VERSION: "1.0.0-local"
-  COMMIT: "0000000000000000000000000000000000000000"
+  - VERSION: "1.0.0"
+  - COMMIT: "local"
 
 targets:
   krp.sln:
@@ -19,10 +19,10 @@ targets:
       with:
         base: mcr.microsoft.com/dotnet/aspnet:10.0
         tags: ["docker.io/eddietisma/krp:${VERSION}-${COMMIT}"]
+        dockerfile: ./Dockerfile.aks
 
   test/Krp.Tests/Krp.Tests.csproj:
     type: test
 
   test/Krp.Tests1/Krp.Tests1.csproj:
     type: test
-

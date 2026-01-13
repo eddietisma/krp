@@ -1,15 +1,9 @@
 services:
 
   krp:
-    build: 
-      # Used when building using docker compose:
-      # docker compose up --pull always --build --force-recreate -d
-      context: .
-      target: final
-      args:
-        VERSION: 1.0.0
-        COMMIT: abcdefg
-    image: eddietisma/krp:latest
+    # Run build first using:
+    #   docker buildx bake -f .buildcharts\docker-bake.hcl docker
+    image: eddietisma/krp:1.0.0-local
     container_name: krp
     restart: unless-stopped
     ports:
@@ -19,10 +13,8 @@ services:
       ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
       ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
-      KRP_ENDPOINT_EXPLORER: false
       KRP_HOSTS: /windows_etc/hosts
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
       - /c/Windows/System32/drivers/etc/:/windows_etc/ 
-    

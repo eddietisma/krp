@@ -7,7 +7,6 @@ services:
       context: ../src/Krp
       dockerfile: Dockerfile
     environment:
-      KRP_ENDPOINT_EXPLORER: false
       KRP_HOSTS: /krp_etc/hosts
     volumes:
       - ~/.kube:/root/.kube # Mount the kubeconfig for monitoring context switching.
