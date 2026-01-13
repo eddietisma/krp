@@ -63,6 +63,12 @@ jobs:
           name: test
           path: .buildcharts/output/test
 
+      - name: Upload published artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish
+          path: .buildcharts/output/publish
+
       - name: Upload docker
         uses: actions/upload-artifact@v4
         with:

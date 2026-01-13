@@ -11,7 +11,8 @@ targets:
       base: mcr.microsoft.com/dotnet/sdk:10.0
 
   src/dotnet-krp/dotnet-krp.csproj:
-    type: nuget
+    - type: nuget
+    - type: publish
 
   src/Krp/Krp.csproj:
     - type: nuget
@@ -26,3 +27,8 @@ targets:
 
   test/Krp.Tests1/Krp.Tests1.csproj:
     type: test
+
+types:
+  publish:
+    matrix:
+      runtime: ["win-x64", "win-arm64"]
