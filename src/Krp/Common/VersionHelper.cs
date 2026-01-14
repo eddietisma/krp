@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace Krp.Common;
 
@@ -6,10 +7,27 @@ public static class VersionHelper
 {
     public static string GetProductVersion()
     {
-        var filePath = typeof(Program).Assembly.Location;
-        var fvi = FileVersionInfo.GetVersionInfo(filePath);
-        var infoVersion = fvi.ProductVersion; // e.g. "1.0.0+abc123"
+        var assembly = typeof(Program).Assembly;
+        var infoVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
-        return infoVersion;
+        if (!string.IsNullOrWhiteSpace(infoVersion))
+        {
+            return infoVersion;
+        }
+
+        // Assembly location might be empty in some contexts (e.g., single-file publish).
+        var assemblyLocation = assembly.Location;
+        if (string.IsNullOrWhiteSpace(assemblyLocation))
+        {
+            return assembly.GetName().Version?.ToString() ?? "unknown";
+        }
+
+        var fvi = FileVersionInfo.GetVersionInfo(assemblyLocation);
+        if (!string.IsNullOrWhiteSpace(fvi.ProductVersion))
+        {
+            return fvi.ProductVersion;
+        }
+
+        return assembly.GetName().Version?.ToString() ?? "unknown";
     }
 }
