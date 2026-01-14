@@ -7,6 +7,10 @@ on:
       commit:
         required: true
         type: string
+      push_latest:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   publish-docker:
@@ -26,6 +30,12 @@ jobs:
       - name: Docker push
         run: |
           docker load -i krp-${{ inputs.version }}-${{ inputs.commit }}.tar
-          docker tag eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }} eddietisma/krp:latest
           docker push eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }}
-          docker push eddietisma/krp:latest
+
+      - name: Docker tag latest
+        if: ${{ inputs.push_latest }}
+        run: docker tag eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }} eddietisma/krp:latest
+
+      - name: Docker push latest
+        if: ${{ inputs.push_latest }}
+        run: docker push eddietisma/krp:latest
