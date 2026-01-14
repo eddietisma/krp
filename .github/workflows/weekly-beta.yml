@@ -56,4 +56,5 @@ jobs:
     with:
       version: ${{ needs.prebuild.outputs.version }}
       commit: ${{ needs.prebuild.outputs.commit }}
+      push_latest: false
     secrets: inherit
