@@ -20,18 +20,18 @@
       },
       "Meziantou.Framework.Win32.Jobs": {
         "type": "Direct",
-        "requested": "[3.5.0, )",
-        "resolved": "3.5.0",
-        "contentHash": "sJhdBB1yBgxsWOfrp3T9W77EzQr86Mh3VTlzYVzPct2T65AOfI/PRN/X7yZZEXvN/bw520ffxX7/lfRu+kgXOQ=="
+        "requested": "[3.5.2, )",
+        "resolved": "3.5.2",
+        "contentHash": "x6fYhlPliNnbF9DSWliRPEPWmVYMonHNot6JE4oMX14ltErYECNvWkII8I1qSMRDuMcVFFb9zjOtnYrOHAjc1w=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
-        "requested": "[8.0.0, )",
-        "resolved": "8.0.0",
-        "contentHash": "G5q7OqtwIyGTkeIOAc3u2ZuV/kicQaec5EaRnc0pIeSnh9LUjj+PYQrJYBURvDt7twGl2PKA7nSN0kz1Zw5bnQ==",
+        "requested": "[10.0.102, )",
+        "resolved": "10.0.102",
+        "contentHash": "Oxq3RCIJSdtpIU4hLqO7XaDe/Ra3HS9Wi8rJl838SAg6Zu1iQjerA0+xXWBgUFYbgknUGCLOU0T+lzMLkvY9Qg==",
         "dependencies": {
-          "Microsoft.Build.Tasks.Git": "8.0.0",
-          "Microsoft.SourceLink.Common": "8.0.0"
+          "Microsoft.Build.Tasks.Git": "10.0.102",
+          "Microsoft.SourceLink.Common": "10.0.102"
         }
       },
       "Microsoft.VisualStudio.Azure.Containers.Tools.Targets": {
@@ -42,12 +42,9 @@
       },
       "System.ServiceProcess.ServiceController": {
         "type": "Direct",
-        "requested": "[10.0.0, )",
-        "resolved": "10.0.0",
-        "contentHash": "PaFmFQXX/qL1vl0CfdJUMPMYT8TOEHlcdEiOZtd4LV2rcaS/WDQM4bpECcbRM4BrD+DWkWd/jtb6iPOqAX9TWA==",
-        "dependencies": {
-          "System.Diagnostics.EventLog": "10.0.0"
-        }
+        "requested": "[10.0.2, )",
+        "resolved": "10.0.2",
+        "contentHash": "DQgLDzErB8KZjORot7bUkcq3xhJ2MqpgJUy+jHCsrval0SmRrIkfmu4C0O97KKvPfejSfnV7Ne2LI3qnebxh8w=="
       },
       "Yarp.ReverseProxy": {
         "type": "Direct",
@@ -65,18 +62,13 @@
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "bZKfSIKJRXLTuSzLudMFte/8CempWjVamNUR5eHJizsy+iuOuO/k2gnh7W0dHJmYY0tBf+gUErfluCv5mySAOQ=="
+        "resolved": "10.0.102",
+        "contentHash": "0i81LYX31U6UiXz4NOLbvc++u+/mVDmOt+PskrM/MygpDxkv9THKQyRUmavBpLK6iBV0abNWnn+CQgSRz//Pwg=="
       },
       "Microsoft.SourceLink.Common": {
         "type": "Transitive",
-        "resolved": "8.0.0",
-        "contentHash": "dk9JPxTCIevS75HyEQ0E4OVAFhB2N+V9ShCXf8Q6FkUQZDkgLI12y679Nym1YqsiSysuQskT7Z+6nUf3yab6Vw=="
-      },
-      "System.Diagnostics.EventLog": {
-        "type": "Transitive",
-        "resolved": "10.0.0",
-        "contentHash": "uaFRda9NjtbJRkdx311eXlAA3n2em7223c1A8d1VWyl+4FL9vkG7y2lpPfBU9HYdj/9KgdRNdn1vFK8ZYCYT/A=="
+        "resolved": "10.0.102",
+        "contentHash": "Mk1IMb9q5tahC2NltxYXFkLBtuBvfBoCQ3pIxYQWfzbCE9o1OB9SsHe0hnNGo7lWgTA/ePbFAJLWu6nLL9K17A=="
       },
       "System.IO.Hashing": {
         "type": "Transitive",
