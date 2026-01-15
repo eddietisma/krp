@@ -45,7 +45,7 @@ public class RootCommand
 
     public RootCommand()
     {
-        Routing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&  (RuntimeInformation.ProcessArchitecture == Architecture.X64 || RuntimeInformation.ProcessArchitecture == Architecture.X86)
+        Routing = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (RuntimeInformation.ProcessArchitecture == Architecture.X64 || RuntimeInformation.ProcessArchitecture == Architecture.X86)
             ? "windivert" // Default to WinDivert only on Windows x64/x86.
             : "hosts";
     }
@@ -118,14 +118,16 @@ public class RootCommand
         var app = webApplicationBuilder.Build();
         app.UseKubernetesForwarder();
 
+        using var shutdownCts = CancellationTokenSource.CreateLinkedTokenSource(ct, app.Lifetime.ApplicationStopping);
+
         if (!NoTerminalUi)
         {
             var terminalUi = app.Services.GetRequiredService<KrpTerminalUi>();
-            await Task.WhenAll(app.RunAsync(ct), terminalUi.RunAsync(ct));
+            await Task.WhenAll(app.RunAsync(shutdownCts.Token), terminalUi.RunAsync(shutdownCts.Token));
         }
         else
         {
-            await app.RunAsync(ct);
+            await app.RunAsync(shutdownCts.Token);
         }
 
         return 0;

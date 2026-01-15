@@ -41,6 +41,45 @@ public class DnsHostsHandler : IDnsHandler
         await Task.CompletedTask;
     }
 
+    public async Task StopAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            if (!File.Exists(_options.Path))
+            {
+                return;
+            }
+
+            var originalLines = await File.ReadAllLinesAsync(_options.Path, stoppingToken);
+            var lines = originalLines.ToList();
+
+            var startIndex = lines.FindIndex(line => line.Trim() == MARKER_START);
+            if (startIndex != -1)
+            {
+                var endIndex = lines.FindIndex(startIndex, line => line.Trim() == MARKER_END);
+                if (endIndex != -1 && endIndex > startIndex)
+                {
+                    if (startIndex > 0 && lines[startIndex - 1] == "")
+                    {
+                        startIndex--;
+                    }
+
+                    lines.RemoveRange(startIndex, endIndex - startIndex + 1);
+                }
+            }
+
+            if (!lines.SequenceEqual(originalLines))
+            {
+                await File.WriteAllLinesAsync(_options.Path, lines, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), stoppingToken);
+                _logger.LogInformation("Removed DNS entries from hosts file");
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error when cleaning hosts file");
+        }
+    }
+
     public async Task UpdateAsync(List<string> hostnames)
     {
         try

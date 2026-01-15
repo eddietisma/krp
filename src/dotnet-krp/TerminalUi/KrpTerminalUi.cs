@@ -69,6 +69,11 @@ public class KrpTerminalUi
                     {
                         try
                         {
+                            if (ct.IsCancellationRequested)
+                            {
+                                return;
+                            }
+
                             _state.WindowHeight = Console.WindowHeight;
                             _state.WindowWidth = Console.WindowWidth;
 
