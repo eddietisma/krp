@@ -8,4 +8,5 @@ public interface IDnsHandler
 {
     Task RunAsync(CancellationToken stoppingToken);
     Task UpdateAsync(List<string> hostnames);
+    Task StopAsync(CancellationToken stoppingToken);
 }

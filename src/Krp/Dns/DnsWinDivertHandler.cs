@@ -7,6 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,10 +39,12 @@ public class DnsWinDivertHandler : IDnsHandler
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
-    
+    private readonly bool _serviceExistedAtStart;
+
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
         _logger = logger;
+        _serviceExistedAtStart = OperatingSystem.IsWindows() && IsWinDivertServiceInstalled();
     }
 
     public Task UpdateAsync(List<string> hostnames)
@@ -64,6 +68,30 @@ public class DnsWinDivertHandler : IDnsHandler
     public Task RunAsync(CancellationToken stoppingToken)
     {
         return Task.Run(() => HandleQueries(stoppingToken), stoppingToken);
+    }
+
+    public Task StopAsync(CancellationToken stoppingToken)
+    {
+        // Safeguard if other apps are using windivert service.
+        // Assume safe to remove windivert service if not running at start. 
+        if (OperatingSystem.IsWindows() && !_serviceExistedAtStart)
+        {
+            try
+            {
+                using var service = new ServiceController("windivert");
+
+                if (service.Status == ServiceControllerStatus.Running)
+                {
+                    service.Stop();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to stop WinDivert service");
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     private void HandleQueries(CancellationToken ct)
@@ -417,6 +445,21 @@ public class DnsWinDivertHandler : IDnsHandler
     private static ushort Read16(byte[] b, int off)
     {
         return (ushort)((b[off] << 8) | b[off + 1]);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool IsWinDivertServiceInstalled()
+    {
+        try
+        {
+            using var service = new ServiceController("windivert");
+            _ = service.Status;
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 }
 

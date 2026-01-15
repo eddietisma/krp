@@ -118,6 +118,7 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, DnsOptions routing)
     {
         builder.Services.AddHostedService<DnsBackgroundService>();
+        builder.Services.AddHostedService<DnsCleanupHostedService>();
         
         switch (routing)
         {
