@@ -1,4 +1,4 @@
-﻿using k8s;
+using k8s;
 using Krp.Common;
 using Krp.Dns;
 using Krp.Endpoints;
@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.ServiceProcess;
@@ -81,14 +82,22 @@ public class ValidationService : IHostedService
         };
 
         _logger.LogInformation($"✅ Using routing: {routingName}");
-        
+
         if (routing == typeof(DnsWinDivertHandler))
-        {  
+        {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 _logger.LogError("❌ WinDivert routing is only supported on Windows platforms");
+                return false;
             }
-            else if (ValidateIsWinDivertInstalled())
+
+            if (!ValidateWinDivertDllPresent())
+            {
+                _logger.LogError("❌ WinDivert DLL not found");
+                return false;
+            }
+
+            if (ValidateIsWinDivertInstalled())
             {
                 _logger.LogInformation("✅ Found windows service: WinDivert");
             }
@@ -165,8 +174,8 @@ public class ValidationService : IHostedService
 #pragma warning disable CA1416
         try
         {
-            return new ServiceController("windivert").Status is 
-                ServiceControllerStatus.Running or 
+            return new ServiceController("windivert").Status is
+                ServiceControllerStatus.Running or
                 ServiceControllerStatus.Stopped or
                 ServiceControllerStatus.Paused or
                 ServiceControllerStatus.StartPending or
@@ -177,5 +186,17 @@ public class ValidationService : IHostedService
             return false;
         }
 #pragma warning restore CA1416
+    }
+
+    private static bool ValidateWinDivertDllPresent()
+    {
+        var baseDir = ExecutablePathHelper.GetExecutableBaseDirectory();
+        var dllPaths = new[]
+        {
+            Path.Combine(baseDir, "runtimes", "win-x86", "native", "WinDivert.dll"),
+            Path.Combine(baseDir, "runtimes", "win-x64", "native", "WinDivert.dll"),
+        };
+
+        return dllPaths.Any(File.Exists);
     }
 }

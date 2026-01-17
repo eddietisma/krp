@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Krp.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -474,10 +475,11 @@ internal static class WinDivertNative
             Environment.GetEnvironmentVariable("PATH") ?? string.Empty,
         };
 
+        var baseDir = ExecutablePathHelper.GetExecutableBaseDirectory();
         var dllSearchPaths = new[]
         {
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x86", "native"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x64", "native"),
+            Path.Combine(baseDir, "runtimes", "win-x86", "native"),
+            Path.Combine(baseDir, "runtimes", "win-x64", "native"),
         };
 
         var newPath = string.Join(Path.PathSeparator.ToString(), path.Concat(dllSearchPaths));
