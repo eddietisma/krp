@@ -20,28 +20,29 @@ using System.Threading.Tasks;
 namespace Krp.Tool.Commands;
 
 [Command(Name = "krp", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
+[Subcommand(typeof(HttpsCommand))]
 [VersionOptionFromMember("--version|-v", MemberName = nameof(GetVersion))]
 public class RootCommand
 {
     [Option("--nameserver|-n <NAMESERVERS>", Description = "DNS server, used for HTTP proxy endpoints")]
-    public string Nameserver { get; init; } = "8.8.8.8";
+    public string Nameserver { get; set; } = "8.8.8.8";
 
     [Option("--no-certificate-validation", Description = "Disable certificate validation")]
-    public bool NoCertificateValidation { get; init; } = true;
+    public bool NoCertificateValidation { get; set; } = true;
 
     [Option("--no-discovery", Description = "Disable automatic Kubernetes endpoint discovery")]
-    public bool NoDiscovery { get; init; } = false;
+    public bool NoDiscovery { get; set; } = false;
 
     [Option("--no-ui", Description = "Disable terminal UI")]
-    public bool NoTerminalUi { get; init; } = false;
+    public bool NoTerminalUi { get; set; } = false;
     
     [Option("--forwarder|-f <FORWARDER>", Description = "Forwarding method")]
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
-    public string Forwarder { get; init; } = "hybrid";
+    public string Forwarder { get; set; } = "hybrid";
 
     [Option("--routing|-r <ROUTING>", Description = "Routing method")]
     [AllowedValues("hosts", "windivert", IgnoreCase = true)]
-    public string Routing { get; init; }
+    public string Routing { get; set; }
 
     public RootCommand()
     {
@@ -99,6 +100,7 @@ public class RootCommand
                     options.ListenPorts = [80, 443];
                 });
 
+                // TODO: Should apply NoCertificateValidation for UseTcpForwarder switch case also
                 builder.Services.PostConfigure<HttpForwarderOptions>(options =>
                 {
                     options.SkipCertificateValidation = NoCertificateValidation;

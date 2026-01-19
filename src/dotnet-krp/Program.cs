@@ -1,3 +1,4 @@
+using Krp.Https;
 using Krp.Tool.Commands;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +13,10 @@ public class Program
         try
         {
             return await new HostBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddHttpsCertificateManagement();
+                })
                 .RunCommandLineApplicationAsync<RootCommand>(args, app =>
                 {
                     app.ExtendedHelpText = @"

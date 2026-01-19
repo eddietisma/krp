@@ -47,26 +47,6 @@ public sealed class EndpointManagerTests : TestBase
     }
 
     [TestMethod]
-    public void GetHttpEndpointByUrl_ReturnsNullWhenHostDoesNotMatch()
-    {
-        // Arrange
-        var endpoint = Fixture.Build<HttpEndpoint>()
-            .With(e => e.Host, "api.local")
-            .With(e => e.Path, "/service")
-            .With(e => e.LocalPort, 5000)
-            .With(e => e.LocalScheme, "http")
-            .Create();
-
-        Sut.AddEndpoint(endpoint);
-
-        // Act
-        var handler = Sut.GetHttpEndpointByUrl("other.local", "/api");
-
-        // Assert
-        Assert.IsNull(handler);
-    }
-
-    [TestMethod]
     public void GetHttpEndpointByUrl_ReturnsNullForUnmatchedPath()
     {
         // Arrange
@@ -81,6 +61,26 @@ public sealed class EndpointManagerTests : TestBase
 
         // Act
         var handler = Sut.GetHttpEndpointByUrl("service.local", "/different");
+
+        // Assert
+        Assert.IsNull(handler);
+    }
+
+    [TestMethod]
+    public void GetHttpEndpointByUrl_ReturnsNullWhenHostDoesNotMatch()
+    {
+        // Arrange
+        var endpoint = Fixture.Build<HttpEndpoint>()
+            .With(e => e.Host, "api.local")
+            .With(e => e.Path, "/service")
+            .With(e => e.LocalPort, 5000)
+            .With(e => e.LocalScheme, "http")
+            .Create();
+
+        Sut.AddEndpoint(endpoint);
+
+        // Act
+        var handler = Sut.GetHttpEndpointByUrl("other.local", "/api");
 
         // Assert
         Assert.IsNull(handler);
