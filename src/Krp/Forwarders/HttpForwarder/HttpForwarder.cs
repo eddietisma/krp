@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -55,15 +56,18 @@ public class HttpForwarder
             destinationUrl = portForwardHandler.GetDestinationUrl();
         }
         
-        _logger.LogInformation("{method} {requestUrl} → {destinationUrl}", httpContext.Request.Method, requestUrl, destinationUrl);
-
         var requestConfig = new ForwarderRequestConfig
         {
             Version = GetVersionFromRequest(httpContext.Request),
             VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
         };
 
+        var stopwatch = Stopwatch.StartNew();
         var response = await _forwarder.SendAsync(httpContext, destinationUrl, _httpMessageInvoker, requestConfig);
+        stopwatch.Stop();
+
+        _logger.LogInformation("{method} {requestUrl} → {destinationUrl} [{statusCode}] {elapsedMs}ms", httpContext.Request.Method, requestUrl, destinationUrl, httpContext.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+
         if (response != ForwarderError.None)
         {
             var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
