@@ -2,6 +2,7 @@ using k8s;
 using Krp.Common;
 using Krp.Dns;
 using Krp.Endpoints;
+using Krp.Https;
 using Krp.Kubernetes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,11 +25,19 @@ public class ValidationService : IHostedService
     private readonly EndpointManager _endpointManager;
     private readonly KubernetesClient _kubernetesClient;
     private readonly IDnsHandler _dnsHandler;
+    private readonly ICertificateManager _certificateManager;
 
-    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, IDnsHandler dnsHandler, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions)
+    public ValidationService(
+        EndpointManager endpointManager,
+        KubernetesClient kubernetesClient,
+        ICertificateManager certificateManager,
+        IDnsHandler dnsHandler,
+        ILogger<ValidationService> logger,
+        IOptions<DnsHostsOptions> dnsOptions)
     {
         _endpointManager = endpointManager;
         _kubernetesClient = kubernetesClient;
+        _certificateManager = certificateManager;
         _dnsHandler = dnsHandler;
         _logger = logger;
         _dnsOptions = dnsOptions;
@@ -61,6 +70,8 @@ public class ValidationService : IHostedService
             _logger.LogError("Validation failed. Terminating...");
             Environment.Exit(1);
         }
+
+        ValidateHttpsCertificateAuthority();
 
         _endpointManager.Initialize();
     }
@@ -198,5 +209,22 @@ public class ValidationService : IHostedService
         };
 
         return dllPaths.Any(File.Exists);
+    }
+
+    private void ValidateHttpsCertificateAuthority()
+    {
+        if (_certificateManager.TryCheckTrustedCertificateAuthority(out _))
+        {
+            _logger.LogInformation("✅ HTTPS certificate: OK");
+            return;
+        }
+
+        if (_certificateManager.TryCheckCertificateAuthority(out _))
+        {
+            _logger.LogWarning("⚠️ HTTPS certificate: Untrusted - run `krp https --trust` to enable HTTPS");
+            return;
+        }
+
+        _logger.LogWarning("⚠️ HTTPS certificate: Disabled - run `krp https --trust` to enable HTTPS");
     }
 }

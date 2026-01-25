@@ -3,6 +3,7 @@ using Krp.Endpoints;
 using Krp.Endpoints.HttpProxy;
 using Krp.Endpoints.Models;
 using Krp.Endpoints.PortForward;
+using Krp.Https;
 using Krp.Kubernetes;
 using Krp.Validation;
 using Meziantou.Framework.Win32;
@@ -32,11 +33,12 @@ public static class ServiceCollectionExtensions
         var builder = new KubernetesForwarderBuilder(services);
         RegisterEndpoints(configuration, builder);
 
+        services.AddHttpsCertificateManagement();
         services.AddHostedService<ValidationService>();
         services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointManager>();
-        services.AddSingleton<ProcessRunner>();
         services.AddSingleton<KubernetesClient>();
+        services.AddSingleton<ProcessRunner>();
         services.AddTransient<PortForwardEndpointHandler>();
         services.AddTransient<HttpProxyEndpointHandler>();
         return builder;
