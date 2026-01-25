@@ -1,4 +1,5 @@
-﻿using Krp.Tool.Commands;
+using Krp.Tool.Commands;
+using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
 
@@ -8,13 +9,20 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
-        return await new HostBuilder()
-            .RunCommandLineApplicationAsync<RootCommand>(args, app =>
-            {
-                app.ExtendedHelpText = @"
+        try
+        {
+            return await new HostBuilder()
+                .RunCommandLineApplicationAsync<RootCommand>(args, app =>
+                {
+                    app.ExtendedHelpText = @"
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
 ";
-            });
+                });
+        }
+        catch (UnrecognizedCommandParsingException)
+        {
+            return 1;
+        }
     }
 }
