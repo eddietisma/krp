@@ -10,27 +10,64 @@ public static class ExecutablePathHelper
     {
         try
         {
-            var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-            if (!string.IsNullOrWhiteSpace(exePath))
+            var candidates = new[]
             {
-                var exeInfo = new FileInfo(exePath);
-                var exeTarget = exeInfo.ResolveLinkTarget(true) as FileInfo;
-                return exeTarget?.DirectoryName ?? exeInfo.DirectoryName ?? AppContext.BaseDirectory;
+                TryResolveDirectory(AppContext.BaseDirectory),
+                TryResolveFileTargetDirectory(Process.GetCurrentProcess().MainModule?.FileName),
+                TryResolveDirectory(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName)),
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(candidate))
+                {
+                    continue;
+                }
+
+                if (Directory.Exists(Path.Combine(candidate, "runtimes")))
+                {
+                    return candidate;
+                }
             }
 
-            var assemblyLocation = System.Reflection.Assembly.GetEntryAssembly()?.Location;
-            if (string.IsNullOrWhiteSpace(assemblyLocation))
+            foreach (var candidate in candidates)
             {
-                return AppContext.BaseDirectory;
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    return candidate;
+                }
             }
 
-            var fileInfo = new FileInfo(assemblyLocation);
-            var target = fileInfo.ResolveLinkTarget(true) as FileInfo;
-            return target?.DirectoryName ?? fileInfo.DirectoryName ?? AppContext.BaseDirectory;
+            return AppContext.BaseDirectory;
         }
         catch
         {
             return AppContext.BaseDirectory;
         }
+    }
+
+    private static string TryResolveDirectory(string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        var directoryInfo = new DirectoryInfo(directory);
+        var resolved = directoryInfo.ResolveLinkTarget(true) as DirectoryInfo;
+        return resolved?.FullName ?? directoryInfo.FullName;
+    }
+
+    private static string TryResolveFileTargetDirectory(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return null;
+        }
+
+        var fileInfo = new FileInfo(filePath);
+        var resolved = fileInfo.ResolveLinkTarget(true) as FileInfo;
+        var targetPath = resolved?.FullName ?? fileInfo.FullName;
+        return TryResolveDirectory(Path.GetDirectoryName(targetPath));
     }
 }
