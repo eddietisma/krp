@@ -1,4 +1,5 @@
 using Krp.Https;
+using Krp.Tool.Help;
 using Krp.Tool.Commands;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Hosting;
@@ -19,10 +20,9 @@ public class Program
                 })
                 .RunCommandLineApplicationAsync<RootCommand>(args, app =>
                 {
-                    app.ExtendedHelpText = @"
-Environment variables:
-  KRP_HOSTS                       Override path to hosts file
-";
+                    app.HelpTextGenerator = new KrpHelpTextGenerator();
+                    app.ExtendedHelpText = @"Environment variables:
+  KRP_HOSTS                       Override path to hosts file";
                 });
         }
         catch (UnrecognizedCommandParsingException)
