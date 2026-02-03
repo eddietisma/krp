@@ -47,7 +47,7 @@ public class ValidationService : IHostedService
     {
         var hostsPath = _dnsOptions.Value.Path;
 
-        _logger.LogInformation($"✅ Platform: {RuntimeInformation.OSArchitecture}");
+        _logger.LogInformation($"✅ Platform: {RuntimeInformation.OSArchitecture}/{RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()}");
 
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
         {
