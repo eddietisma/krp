@@ -119,12 +119,13 @@ Options:
                                  Allowed values are: tcp, http, hybrid.
                                  Default value is: hybrid.
   -r|--routing <ROUTING>         Routing method
-                                 Allowed values are: hosts, windivert.
+                                 Allowed values are: hosts, windivert, dnsmasq.
                                  Default value is: windivert.
   -?|-h|--help                   Show help information.
 
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
+  KRP_DNSMASQ_OVERRIDE            Override path to dnsmasq override configuration
 ```
 
 ### Routing methods
@@ -153,6 +154,16 @@ Environment variables:
 
 > [!NOTE]
 > WinDiverts installs as an ephemeral windows driver service at runtime. Once stopped, it's automatically removed.
+
+#### `dnsmasq`
+
+1. Writes endpoint mappings to a dnsmasq configuration override (default: `/run/dnsmasq/krp.override.conf`).
+2. Each endpoint hostname is written as an `address` directive pointing to its assigned loopback IP (e.g., `address=/myapp.local/127.0.0.2`).
+3. The override file is ephemeral; remove `krp` or its file to discard the entries.
+
+**Requirements**
+- dnsmasq must already be installed and configured to read override files (e.g., `--conf-dir=/run/dnsmasq`)
+- Write access to the configured override directory.
 
 ### Forwarders available
 

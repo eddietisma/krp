@@ -19,22 +19,25 @@ public class ValidationService : IHostedService
 {
     private readonly ILogger<ValidationService> _logger;
     private readonly IOptions<DnsHostsOptions> _dnsOptions;
+    private readonly IOptions<DnsMasqOptions> _dnsMasqOptions;
     private readonly EndpointManager _endpointManager;
     private readonly KubernetesClient _kubernetesClient;
     private readonly IDnsHandler _dnsHandler;
 
-    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, IDnsHandler dnsHandler, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions)
+    public ValidationService(EndpointManager endpointManager, KubernetesClient kubernetesClient, IDnsHandler dnsHandler, ILogger<ValidationService> logger, IOptions<DnsHostsOptions> dnsOptions, IOptions<DnsMasqOptions> dnsMasqOptions)
     {
         _endpointManager = endpointManager;
         _kubernetesClient = kubernetesClient;
         _dnsHandler = dnsHandler;
         _logger = logger;
         _dnsOptions = dnsOptions;
+        _dnsMasqOptions = dnsMasqOptions;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var hostsPath = _dnsOptions.Value.Path;
+        var dnsMasqOverridePath = _dnsMasqOptions.Value.OverridePath;
 
         _logger.LogInformation($"✅ Platform: {RuntimeInformation.OSArchitecture}");
 
@@ -45,7 +48,7 @@ public class ValidationService : IHostedService
             _logger.LogInformation("    - Endpoint targets will be selected using IP:PORT");
         }
 
-        var validationSuccess = ValidateRouting(hostsPath);
+        var validationSuccess = ValidateRouting(hostsPath, dnsMasqOverridePath);
         validationSuccess = await ValidateKubernetes() && validationSuccess;
         
         if (!validationSuccess)
@@ -62,7 +65,7 @@ public class ValidationService : IHostedService
         return Task.CompletedTask;
     }
 
-    private  bool ValidateRouting(string hostsPath)
+    private bool ValidateRouting(string hostsPath, string dnsMasqOverridePath)
     {
         var routing = _dnsHandler.GetType();
 
@@ -70,13 +73,14 @@ public class ValidationService : IHostedService
         {
             nameof(DnsHostsHandler) => "hosts",
             nameof(DnsWinDivertHandler) => "windivert",
+            nameof(DnsMasqHandler) => "dnsmasq",
             _ => "unknown"
         };
 
         _logger.LogInformation($"✅ Using routing: {routingName}");
-        
+
         if (routing == typeof(DnsWinDivertHandler))
-        {  
+        {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 _logger.LogInformation("❌ WinDivert routing is only supported on Windows platforms");
@@ -87,6 +91,18 @@ public class ValidationService : IHostedService
             }
 
             return true;
+        }
+
+        if (routing == typeof(DnsMasqHandler))
+        {
+            var directory = Path.GetDirectoryName(dnsMasqOverridePath);
+            var directoryExists = !string.IsNullOrEmpty(directory) && Directory.Exists(directory);
+            var hasAccess = directoryExists && FileHelper.HasWriteAccess(directory);
+
+            _logger.LogInformation(directoryExists ? "✅ Found dnsmasq directory: '{DirectoryPath}'" : "❌ dnsmasq directory not found: '{DirectoryPath}'", directory ?? "");
+            _logger.LogInformation(hasAccess ? "✅ Permission to dnsmasq directory" : "❌ Write-access to dnsmasq directory is denied");
+
+            return directoryExists && hasAccess;
         }
 
         var fileExists = File.Exists(hostsPath);

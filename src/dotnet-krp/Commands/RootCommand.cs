@@ -34,13 +34,13 @@ public class RootCommand
 
     [Option("--no-ui", Description = "Disable terminal UI")]
     public bool NoTerminalUi { get; init; } = false;
-    
+
     [Option("--forwarder|-f <FORWARDER>", Description = "Forwarding method")]
     [AllowedValues("tcp", "http", "hybrid", IgnoreCase = true)]
     public string Forwarder { get; init; } = "hybrid";
 
     [Option("--routing|-r <ROUTING>", Description = "Routing method")]
-    [AllowedValues("hosts", "windivert", IgnoreCase = true)]
+    [AllowedValues("hosts", "windivert", "dnsmasq", IgnoreCase = true)]
     public string Routing { get; init; }
 
     public RootCommand()
@@ -76,6 +76,9 @@ public class RootCommand
                 break;
             case "windivert":
                 builder.UseRouting(DnsOptions.WinDivert);
+                break;
+            case "dnsmasq":
+                builder.UseRouting(DnsOptions.DnsMasq);
                 break;
         }
         switch (Forwarder)

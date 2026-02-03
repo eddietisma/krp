@@ -125,12 +125,18 @@ public static class KubernetesBuilderExtension
                 var hostsPath = Environment.GetEnvironmentVariable("KRP_HOSTS") ?? (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
                     : "/etc/hosts");
-                
+
                 builder.Services.AddSingleton<IDnsHandler, DnsHostsHandler>();
                 builder.Services.Configure<DnsHostsOptions>(o => o.Path = hostsPath);
                 break;
             case DnsOptions.WinDivert:
                 builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
+                break;
+            case DnsOptions.DnsMasq:
+                var dnsMasqOverridePath = Environment.GetEnvironmentVariable("KRP_DNSMASQ_OVERRIDE") ?? "/run/dnsmasq/krp.override.conf";
+
+                builder.Services.AddSingleton<IDnsHandler, DnsMasqHandler>();
+                builder.Services.Configure<DnsMasqOptions>(o => o.OverridePath = dnsMasqOverridePath);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");
