@@ -1,5 +1,6 @@
 ﻿using Krp.Endpoints;
 using Krp.Kubernetes;
+using Krp.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,18 +16,27 @@ public class ContextSwitchingWatcher : BackgroundService
     private readonly EndpointManager _endpointManager;
     private readonly KubernetesClient _kbKubernetesClient;
     private readonly ILogger<ContextSwitchingWatcher> _logger;
+    private readonly ValidationState _validationState;
     private string _currentContext = string.Empty;
 
-    public ContextSwitchingWatcher(IServiceProvider serviceProvider, EndpointManager endpointManager, KubernetesClient kbKubernetesClient, ILogger<ContextSwitchingWatcher> logger)
+    public ContextSwitchingWatcher(IServiceProvider serviceProvider, EndpointManager endpointManager, KubernetesClient kbKubernetesClient, ILogger<ContextSwitchingWatcher> logger, ValidationState validationState)
     {
         _serviceProvider = serviceProvider;
         _endpointManager = endpointManager;
         _kbKubernetesClient = kbKubernetesClient;
         _logger = logger;
+        _validationState = validationState;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
+        var validationSucceeded = await _validationState.WaitForCompletionAsync(ct);
+        if (!validationSucceeded)
+        {
+            _logger.LogWarning("Skipping context switch monitoring because validation failed.");
+            return;
+        }
+
         while (!ct.IsCancellationRequested)
         {
             try

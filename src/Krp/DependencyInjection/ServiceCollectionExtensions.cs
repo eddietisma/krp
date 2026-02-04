@@ -33,7 +33,9 @@ public static class ServiceCollectionExtensions
         var builder = new KubernetesForwarderBuilder(services);
         RegisterEndpoints(configuration, builder);
 
+        services.AddOptions<ValidationOptions>();
         services.AddHttpsCertificateManagement();
+        services.AddSingleton<ValidationState>();
         services.AddHostedService<ValidationService>();
         services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointManager>();

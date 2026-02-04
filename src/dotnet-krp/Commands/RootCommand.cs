@@ -6,6 +6,7 @@ using Krp.Logging;
 using Krp.Tool.TerminalUi;
 using Krp.Tool.TerminalUi.DependencyInjection;
 using Krp.Tool.TerminalUi.Logging;
+using Krp.Validation;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -108,6 +109,11 @@ public class RootCommand
 
                 break;
         }
+
+        webApplicationBuilder.Services.Configure<ValidationOptions>(options =>
+        {
+            options.ExitOnFailure = NoTerminalUi;
+        });
 
         if (!NoDiscovery)
         {

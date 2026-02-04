@@ -26,6 +26,8 @@ public class ValidationService : IHostedService
     private readonly KubernetesClient _kubernetesClient;
     private readonly IDnsHandler _dnsHandler;
     private readonly ICertificateManager _certificateManager;
+    private readonly ValidationState _validationState;
+    private readonly ValidationOptions _options;
 
     public ValidationService(
         EndpointManager endpointManager,
@@ -33,7 +35,9 @@ public class ValidationService : IHostedService
         ICertificateManager certificateManager,
         IDnsHandler dnsHandler,
         ILogger<ValidationService> logger,
-        IOptions<DnsHostsOptions> dnsOptions)
+        IOptions<DnsHostsOptions> dnsOptions,
+        ValidationState validationState,
+        IOptions<ValidationOptions> options)
     {
         _endpointManager = endpointManager;
         _kubernetesClient = kubernetesClient;
@@ -41,6 +45,8 @@ public class ValidationService : IHostedService
         _dnsHandler = dnsHandler;
         _logger = logger;
         _dnsOptions = dnsOptions;
+        _validationState = validationState;
+        _options = options.Value;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -60,20 +66,21 @@ public class ValidationService : IHostedService
         var validationSuccess = ValidateRouting(hostsPath);
         if (!validationSuccess)
         {
-            _logger.LogError("Validation failed. Terminating...");
-            Environment.Exit(1);
+            HandleValidationFailure();
+            return;
         }
 
         validationSuccess = await ValidateKubernetes() && validationSuccess;
         if (!validationSuccess)
         {
-            _logger.LogError("Validation failed. Terminating...");
-            Environment.Exit(1);
+            HandleValidationFailure();
+            return;
         }
 
         ValidateHttpsCertificateAuthority();
 
         _endpointManager.Initialize();
+        _validationState.MarkCompleted(true);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -226,5 +233,17 @@ public class ValidationService : IHostedService
         }
 
         _logger.LogWarning("⚠️ HTTPS certificate: Disabled - run `krp https --trust` to enable HTTPS");
+    }
+
+    private void HandleValidationFailure()
+    {
+        _logger.LogError("Validation failed.");
+        _validationState.MarkCompleted(false);
+
+        if (_options.ExitOnFailure)
+        {
+            _logger.LogError("Terminating...");
+            Environment.Exit(1);
+        }
     }
 }
