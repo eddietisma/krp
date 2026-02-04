@@ -5,6 +5,7 @@ using Krp.Endpoints.HttpProxy;
 using Krp.Endpoints.PortForward;
 using Krp.Kubernetes;
 using Krp.Validation;
+using Krp.Tests.Assertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,14 +41,7 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         await Sut.RunAsync(CancellationToken.None);
 
         // Assert
-        logger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Skipping context switch monitoring", StringComparison.Ordinal)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        Assert.ShouldLog(logger, "Skipping context switch monitoring");
     }
 
     private static IServiceProvider CreateServiceProvider()

@@ -4,6 +4,7 @@ using Krp.Endpoints;
 using Krp.Endpoints.HttpProxy;
 using Krp.Endpoints.PortForward;
 using Krp.Kubernetes;
+using Krp.Tests.Assertions;
 using Krp.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,14 +43,7 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         await Sut.RunAsync(CancellationToken.None);
 
         // Assert
-        logger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Skipping endpoint discovery", StringComparison.Ordinal)),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        Assert.ShouldLog(logger, "Skipping endpoint discovery");
     }
 
     private static EndpointExplorer.EndpointExplorer CreateEndpointExplorer()
