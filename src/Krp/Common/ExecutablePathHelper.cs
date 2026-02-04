@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Krp.Common;
 
@@ -15,30 +16,13 @@ public static class ExecutablePathHelper
                 TryResolveDirectory(AppContext.BaseDirectory),
                 TryResolveFileTargetDirectory(Process.GetCurrentProcess().MainModule?.FileName),
                 TryResolveDirectory(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName)),
-            };
-
-            foreach (var candidate in candidates)
-            {
-                if (string.IsNullOrWhiteSpace(candidate))
-                {
-                    continue;
-                }
-
-                if (Directory.Exists(Path.Combine(candidate, "runtimes")))
-                {
-                    return candidate;
-                }
             }
+            .Where(candidate => !string.IsNullOrWhiteSpace(candidate))
+            .Select(candidate => candidate!)
+            .ToArray();
 
-            foreach (var candidate in candidates)
-            {
-                if (!string.IsNullOrWhiteSpace(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            return AppContext.BaseDirectory;
+            var runtimeCandidate = candidates.FirstOrDefault(candidate => Directory.Exists(Path.Combine(candidate, "runtimes")));
+            return runtimeCandidate ?? candidates.FirstOrDefault() ?? AppContext.BaseDirectory;
         }
         catch
         {

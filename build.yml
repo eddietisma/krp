@@ -20,7 +20,7 @@ targets:
       with:
         base: mcr.microsoft.com/dotnet/aspnet:10.0
         tags: ["docker.io/eddietisma/krp:${VERSION}-${COMMIT}"]
-        dockerfile: ./Dockerfile.aks
+        # dockerfile: ./Dockerfile.aks
 
   test/Krp.Tests/Krp.Tests.csproj:
     type: test
