@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,13 +16,13 @@ namespace Krp.Tests.EndpointExplorer;
 [TestClass]
 public sealed class EndpointExplorerBackgroundServiceTests : TestBase
 {
-    private TestableEndpointExplorerBackgroundService Sut => Fixture.Freeze<TestableEndpointExplorerBackgroundService>();
+    private EndpointExplorerBackgroundService Sut => Fixture.Freeze<EndpointExplorerBackgroundService>();
 
     [TestMethod]
     public async Task ExecuteAsync_WhenValidationFailed_ShouldLogAndReturn()
     {
         // Arrange
-        Fixture.Customize<TestableEndpointExplorerBackgroundService>(composer => composer.OmitAutoProperties());
+        Fixture.Customize<EndpointExplorerBackgroundService>(composer => composer.OmitAutoProperties());
 
         var logger = Fixture.Freeze<Mock<ILogger<EndpointExplorerBackgroundService>>>();
         var validationState = new ValidationState();
@@ -37,23 +38,15 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         Fixture.Inject(validationState);
 
         // Act
-        await Sut.RunAsync(CancellationToken.None);
+        await InvokeExecuteAsync(Sut, CancellationToken.None);
 
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping endpoint discovery");
     }
 
-    private sealed class TestableEndpointExplorerBackgroundService : EndpointExplorerBackgroundService
+    private static Task InvokeExecuteAsync(EndpointExplorerBackgroundService service, CancellationToken ct)
     {
-        public TestableEndpointExplorerBackgroundService(
-            EndpointExplorer.EndpointExplorer explorer,
-            IOptions<EndpointExplorerOptions> options,
-            ILogger<EndpointExplorerBackgroundService> logger,
-            ValidationState validationState)
-            : base(explorer, options, logger, validationState)
-        {
-        }
-
-        public Task RunAsync(CancellationToken ct) => ExecuteAsync(ct);
+        var method = typeof(EndpointExplorerBackgroundService).GetMethod("ExecuteAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        return (Task)(method?.Invoke(service, new object[] { ct }) ?? Task.CompletedTask);
     }
 }

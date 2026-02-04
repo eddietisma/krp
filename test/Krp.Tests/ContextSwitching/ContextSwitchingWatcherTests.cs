@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,13 +16,13 @@ namespace Krp.Tests.ContextSwitching;
 [TestClass]
 public sealed class ContextSwitchingWatcherTests : TestBase
 {
-    private TestableContextSwitchingWatcher Sut => Fixture.Freeze<TestableContextSwitchingWatcher>();
+    private ContextSwitchingWatcher Sut => Fixture.Freeze<ContextSwitchingWatcher>();
 
     [TestMethod]
     public async Task ExecuteAsync_WhenValidationFailed_ShouldLogAndReturn()
     {
         // Arrange
-        Fixture.Customize<TestableContextSwitchingWatcher>(composer => composer.OmitAutoProperties());
+        Fixture.Customize<ContextSwitchingWatcher>(composer => composer.OmitAutoProperties());
 
         var logger = Fixture.Freeze<Mock<ILogger<ContextSwitchingWatcher>>>();
         var validationState = new ValidationState();
@@ -35,24 +36,15 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         Fixture.Inject(validationState);
 
         // Act
-        await Sut.RunAsync(CancellationToken.None);
+        await InvokeExecuteAsync(Sut, CancellationToken.None);
 
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping context switch monitoring");
     }
 
-    private sealed class TestableContextSwitchingWatcher : ContextSwitchingWatcher
+    private static Task InvokeExecuteAsync(ContextSwitchingWatcher watcher, CancellationToken ct)
     {
-        public TestableContextSwitchingWatcher(
-            IServiceProvider serviceProvider,
-            EndpointManager endpointManager,
-            KubernetesClient kbKubernetesClient,
-            ILogger<ContextSwitchingWatcher> logger,
-            ValidationState validationState)
-            : base(serviceProvider, endpointManager, kbKubernetesClient, logger, validationState)
-        {
-        }
-
-        public Task RunAsync(CancellationToken ct) => ExecuteAsync(ct);
+        var method = typeof(ContextSwitchingWatcher).GetMethod("ExecuteAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        return (Task)(method?.Invoke(watcher, new object[] { ct }) ?? Task.CompletedTask);
     }
 }
