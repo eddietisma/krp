@@ -30,9 +30,9 @@ public class LogsTable
         // Initialize column definitions.
         _columnDefinitions =
         [
-            new ColumnDefinition<LogEntry>("", 8, SortField.None, _ => null, true),
-            new ColumnDefinition<LogEntry>("", 3, SortField.None, _ => null, true),
-            new ColumnDefinition<LogEntry>("", 0, SortField.None, _ => null, true),
+            new ColumnDefinition<LogEntry>("", 8, SortField.None, _ => string.Empty, true),
+            new ColumnDefinition<LogEntry>("", 3, SortField.None, _ => string.Empty, true),
+            new ColumnDefinition<LogEntry>("", 0, SortField.None, _ => string.Empty, true),
         ];
     }
 

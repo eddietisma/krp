@@ -13,7 +13,7 @@ public class WindowsCertificateStore : ICertificateStore
             store.Open(OpenFlags.ReadOnly);
             var existing = store.Certificates.Find(X509FindType.FindByThumbprint, certificate.Thumbprint, false);
             isTrusted = existing.Count > 0;
-            error = null;
+            error = string.Empty;
             return true;
         }
         catch (Exception ex)
@@ -36,7 +36,7 @@ public class WindowsCertificateStore : ICertificateStore
                 store.Add(certificate);
             }
 
-            error = null;
+            error = string.Empty;
             return true;
         }
         catch

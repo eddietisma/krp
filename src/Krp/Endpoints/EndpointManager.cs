@@ -23,7 +23,7 @@ public class EndpointManager
     private readonly KubernetesForwarderOptions _options;
     private int _ipCounter;
 
-    public event Func<Task> EndPointsChangedEvent;
+    public event Func<Task>? EndPointsChangedEvent;
 
     public EndpointManager(IServiceProvider serviceProvider, ILogger<EndpointManager> logger, IOptions<KubernetesForwarderOptions> options)
     {
@@ -52,12 +52,11 @@ public class EndpointManager
     public void AddEndpoint(HttpEndpoint endpoint)
     {
         var endpointPath = string.IsNullOrEmpty(endpoint.Path) ? "" : endpoint.Path.TrimStart('/').TrimEnd('/');
-        var localIp = _handlers.FirstOrDefault(x => string.Equals(x.Value.Host, endpoint.Host, StringComparison.OrdinalIgnoreCase)).Value?.LocalIp
-                      ?? GetNextLoopbackIp();
-
-        var handler = _serviceProvider.GetService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
+        var existingLocalIp = _handlers.FirstOrDefault(x => string.Equals(x.Value.Host, endpoint.Host, StringComparison.OrdinalIgnoreCase)).Value?.LocalIp;
+       
+        var handler = _serviceProvider.GetRequiredService<HttpProxyEndpointHandler>(); // HttpProxyEndpointHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = true;
-        handler.LocalIp = localIp;
+        handler.LocalIp = existingLocalIp ?? GetNextLoopbackIp();
         handler.LocalPort = endpoint.LocalPort;
         handler.LocalScheme = endpoint.LocalScheme;
         handler.Url = $"{endpoint.Host}/{endpointPath}";
@@ -87,7 +86,7 @@ public class EndpointManager
             return;
         }
 
-        var handler = _serviceProvider.GetService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
+        var handler = _serviceProvider.GetRequiredService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
         handler.LocalIp = GetNextLoopbackIp();
         handler.LocalPort = endpoint.LocalPort;
@@ -120,12 +119,13 @@ public class EndpointManager
     /// <param name="host"></param>
     /// <param name="path"></param>
     /// <returns></returns>
-    public IEndpointHandler GetHttpEndpointByUrl(string host, string path)
+    public IEndpointHandler? GetHttpEndpointByUrl(string host, string path)
     {
         return _handlers
             .Where(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler))
             .Where(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
-            .FirstOrDefault(x => path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path)).Value;
+            .FirstOrDefault(x => path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path))
+            .Value;
     }
 
     /// <summary>
@@ -145,11 +145,12 @@ public class EndpointManager
     /// </summary>
     /// <param name="host"></param>
     /// <returns></returns>
-    public IEndpointHandler GetPortForwardHandlerByHost(string host)
+    public IEndpointHandler? GetPortForwardHandlerByHost(string host)
     {
         return _handlers
             .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
-            .FirstOrDefault(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase)).Value;
+            .FirstOrDefault(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
+            .Value;
     }
 
     /// <summary>
@@ -157,11 +158,12 @@ public class EndpointManager
     /// </summary>
     /// <param name="ip"></param>
     /// <returns></returns>
-    public IEndpointHandler GetHandlerByIpPort(IPAddress ip)
+    public IEndpointHandler? GetHandlerByIpPort(IPAddress ip)
     {
         return _handlers
             .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
-            .FirstOrDefault(x => Equals(x.Value.LocalIp, ip)).Value;
+            .FirstOrDefault(x => Equals(x.Value.LocalIp, ip))
+            .Value;
     }
 
     public IEnumerable<IEndpointHandler> GetAllHandlers()

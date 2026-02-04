@@ -27,7 +27,7 @@ public class KrpTerminalUi
     private readonly ILogger<KrpTerminalUi> _logger;
     private readonly FigletFont _logoFont;
 
-    private string _kubeCurrentContext;
+    private string _kubeCurrentContext = string.Empty;
 
     public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
     {

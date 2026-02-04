@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Krp.Endpoints.PortForward;
 
-public record ProcessWrapper(Process Process, ConcurrentStack<string> Logs);
+public record ProcessWrapper(Process? Process, ConcurrentStack<string> Logs);
 
 /// <summary>
 /// Spawns external commands (kubectl port-forward) and wires up cleanup so child processes are reaped on exit.

@@ -12,10 +12,9 @@ public class PortForwardEndpointHandler : IEndpointHandler
 {
     private readonly ProcessRunner _processRunner;
     private readonly ILogger<PortForwardEndpointHandler> _logger;
-    private Process _process;
-    private int _localPort;
+    private Process? _process;
     private int? _localPortActual;
-    private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
     /// The local port to use for the port-forwarding. If set to 0, a random port will be used.
@@ -23,8 +22,8 @@ public class PortForwardEndpointHandler : IEndpointHandler
     /// </summary>
     public int LocalPort
     {
-        get => _localPort == 0 && _localPortActual != null && _process is { HasExited: false } ? _localPortActual.Value : _localPort;
-        set => _localPort = value;
+        get => field == 0 && _localPortActual != null && _process is { HasExited: false } ? _localPortActual.Value : field;
+        set;
     }
 
     public int? LocalPortActual
@@ -34,9 +33,9 @@ public class PortForwardEndpointHandler : IEndpointHandler
     }
 
     public bool IsStatic { get; set; }
-    public string Namespace { get; set; }
+    public string Namespace { get; set; } = string.Empty;
     public int RemotePort { get; set; }
-    public string Resource { get; set; }
+    public string Resource { get; set; } = string.Empty;
 
     public string Url
     {
@@ -44,11 +43,11 @@ public class PortForwardEndpointHandler : IEndpointHandler
         set => throw new NotImplementedException();
     }
 
-    public string Path { get; set; }
+    public string Path { get; set; } = string.Empty;
 
     public string Host
     {
-        get => $"{Resource.Substring("service/".Length)}.{Namespace}";
+        get => $"{Resource["service/".Length..]}.{Namespace}";
         set => throw new NotImplementedException();
     }
     public bool IsActive
@@ -56,7 +55,7 @@ public class PortForwardEndpointHandler : IEndpointHandler
         get => _process is { HasExited: false };
     }
 
-    public IPAddress LocalIp { get; set; }
+    public IPAddress LocalIp { get; set; } = IPAddress.Loopback;
 
     public PortForwardEndpointHandler(ProcessRunner processRunner, ILogger<PortForwardEndpointHandler> logger)
     {

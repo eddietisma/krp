@@ -2,8 +2,8 @@
 
 public class HttpEndpoint
 {
-    public string Host { get; set; }
+    public string Host { get; set; } = string.Empty;
     public int LocalPort { get; set; }
-    public string LocalScheme { get; set; }
-    public string Path { get; set; }
+    public string LocalScheme { get; set; } = string.Empty;
+    public string? Path { get; set; }
 }
