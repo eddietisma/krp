@@ -279,7 +279,7 @@ public class CertificateManager : ICertificateManager
         return ca;
     }
 
-    private X509Certificate2 FindCertificateAuthority(bool requirePrivateKey)
+    private X509Certificate2? FindCertificateAuthority(bool requirePrivateKey)
     {
         using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
         store.Open(OpenFlags.ReadOnly);

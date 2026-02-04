@@ -222,7 +222,7 @@ public class TcpWithHttpForwarder
         return buffer.Length >= prefaceLen && buffer.Slice(0, prefaceLen).SequenceEqual(Http2Preface);
     }
 
-    public static string ParseSniHostname(byte[] buffer, int length)
+    public static string? ParseSniHostname(byte[] buffer, int length)
     {
         if (buffer == null || length < 5 || buffer[0] != 0x16)
         {

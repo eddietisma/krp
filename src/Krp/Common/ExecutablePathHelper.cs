@@ -46,7 +46,7 @@ public static class ExecutablePathHelper
         }
     }
 
-    private static string TryResolveDirectory(string directory)
+    private static string? TryResolveDirectory(string? directory)
     {
         if (string.IsNullOrWhiteSpace(directory))
         {
@@ -58,7 +58,7 @@ public static class ExecutablePathHelper
         return resolved?.FullName ?? directoryInfo.FullName;
     }
 
-    private static string TryResolveFileTargetDirectory(string filePath)
+    private static string? TryResolveFileTargetDirectory(string? filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {

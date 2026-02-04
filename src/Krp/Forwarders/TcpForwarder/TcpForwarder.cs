@@ -95,9 +95,16 @@ public class TcpForwarder
                 }
             }
 
-            var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
-            var localIp = localEndPoint?.Address;
-            var localPort = localEndPoint?.Port;
+            if (client.Client.LocalEndPoint is not IPEndPoint localEndPoint)
+            {
+                _logger.LogWarning("Missing local endpoint for TCP proxy request");
+                var errorMessageBytes = GetErrorMessageBytes(IPAddress.None, null);
+                await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
+                return;
+            }
+
+            var localIp = localEndPoint.Address;
+            var localPort = localEndPoint.Port;
 
             _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 

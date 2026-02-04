@@ -8,7 +8,6 @@
     <UserSecretsId>krp</UserSecretsId>
     <RootNamespace>Krp.Tool</RootNamespace>
     <IsPackable>true</IsPackable>
-    <!--<Nullable>enable</Nullable>-->
 
     <!--Tool-->
     <PackAsTool>true</PackAsTool>

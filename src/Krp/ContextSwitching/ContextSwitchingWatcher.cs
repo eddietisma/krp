@@ -15,7 +15,7 @@ public class ContextSwitchingWatcher : BackgroundService
     private readonly EndpointManager _endpointManager;
     private readonly KubernetesClient _kbKubernetesClient;
     private readonly ILogger<ContextSwitchingWatcher> _logger;
-    private string _currentContext;
+    private string _currentContext = string.Empty;
 
     public ContextSwitchingWatcher(IServiceProvider serviceProvider, EndpointManager endpointManager, KubernetesClient kbKubernetesClient, ILogger<ContextSwitchingWatcher> logger)
     {
