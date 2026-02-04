@@ -13,17 +13,17 @@ using System.Threading.Tasks;
 namespace Krp.Tests.EndpointExplorer;
 
 [TestClass]
-public sealed class EndpointExplorerBackgroundServiceTests : TestBase
+public sealed class EndpointExplorerServiceTests : TestBase
 {
-    private EndpointExplorerBackgroundService Sut => Fixture.Freeze<EndpointExplorerBackgroundService>();
+    private EndpointExplorerService Sut => Fixture.Freeze<EndpointExplorerService>();
 
     [TestMethod]
-    public async Task ExecuteAsync_WhenValidationFailed_ShouldLogAndReturn()
+    public async Task RunAsync_WhenValidationFailed_ShouldLogAndReturn()
     {
         // Arrange
-        Fixture.Customize<EndpointExplorerBackgroundService>(composer => composer.OmitAutoProperties());
+        Fixture.Customize<EndpointExplorerService>(composer => composer.OmitAutoProperties());
 
-        var logger = Fixture.Freeze<Mock<ILogger<EndpointExplorerBackgroundService>>>();
+        var logger = Fixture.Freeze<Mock<ILogger<EndpointExplorerService>>>();
         var validationState = new ValidationState();
         validationState.MarkCompleted(false);
 
@@ -42,5 +42,4 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping endpoint discovery");
     }
-
 }

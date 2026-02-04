@@ -1,8 +1,8 @@
 using Krp.ContextSwitching;
 using Krp.DependencyInjection;
 using Krp.Kubernetes;
-using Krp.Validation;
 using Krp.Tests.Assertions;
+using Krp.Validation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -13,17 +13,17 @@ using System.Threading.Tasks;
 namespace Krp.Tests.ContextSwitching;
 
 [TestClass]
-public sealed class ContextSwitchingWatcherTests : TestBase
+public sealed class ContextSwitchingServiceTests : TestBase
 {
-    private ContextSwitchingWatcher Sut => Fixture.Freeze<ContextSwitchingWatcher>();
+    private ContextSwitchingService Sut => Fixture.Freeze<ContextSwitchingService>();
 
     [TestMethod]
-    public async Task ExecuteAsync_WhenValidationFailed_ShouldLogAndReturn()
+    public async Task RunAsync_WhenValidationFailed_ShouldLogAndReturn()
     {
         // Arrange
-        Fixture.Customize<ContextSwitchingWatcher>(composer => composer.OmitAutoProperties());
+        Fixture.Customize<ContextSwitchingService>(composer => composer.OmitAutoProperties());
 
-        var logger = Fixture.Freeze<Mock<ILogger<ContextSwitchingWatcher>>>();
+        var logger = Fixture.Freeze<Mock<ILogger<ContextSwitchingService>>>();
         var validationState = new ValidationState();
         validationState.MarkCompleted(false);
 
@@ -40,5 +40,4 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping context switch monitoring");
     }
-
 }

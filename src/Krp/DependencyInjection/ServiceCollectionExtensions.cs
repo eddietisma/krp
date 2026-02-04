@@ -36,6 +36,8 @@ public static class ServiceCollectionExtensions
         services.AddOptions<ValidationOptions>();
         services.AddHttpsCertificateManagement();
         services.AddSingleton<ValidationState>();
+        services.AddSingleton<ContextSwitchingService>();
+        services.AddSingleton<EndpointExplorerService>();
         services.AddHostedService<ValidationService>();
         services.AddHostedService<ContextSwitchingWatcher>();
         services.AddSingleton<EndpointManager>();
