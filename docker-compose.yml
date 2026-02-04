@@ -3,18 +3,18 @@ services:
   krp:
     # Run build first using:
     #   docker buildx bake -f .buildcharts\docker-bake.hcl docker
-    image: eddietisma/krp:1.0.0-local
+    # image: eddietisma/krp:1.0.0-local
+    image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
+      - "443:443" # optional
     environment:
-      ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
-      ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
       KRP_HOSTS: /windows_etc/hosts
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
-      - /c/Windows/System32/drivers/etc/:/windows_etc/ 
+      - /c/Windows/System32/drivers/etc/:/windows_etc/ # win
+      # - /etc/:/mnt/etc/ # linux/mac

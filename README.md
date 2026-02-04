@@ -76,10 +76,8 @@
 ### Installation
 
 ```bash
-# Using local code
-git clone https://github.com/eddietisma/krp.git
-cd krp
-dotnet run
+# Using winget
+winget install EddieTisma.Krp
 ```
 
 ```bash
@@ -90,12 +88,15 @@ krp
 
 ```bash
 # Using docker
-docker compose -f https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml up
+curl -fsSL https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml -o docker-compose.yaml
+docker compose up
 ```
 
 ```bash
-# Setup HTTPS
-dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --trust
+# Using local code
+git clone https://github.com/eddietisma/krp.git
+cd krp
+dotnet run
 ```
 
 ## **Usage**
@@ -122,6 +123,9 @@ Options:
                                  Allowed values are: hosts, windivert.
                                  Default value is: windivert.
   -?|-h|--help                   Show help information.
+
+Commands:
+  https                          Manage HTTPS certificates
 
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
@@ -179,6 +183,12 @@ Environment variables:
 >
 > For HTTPS we could use SNI to detect hostnames and use for routing but ran into issues with reacting to network changes due to already established TCP tunnels (need some more work to break existing TCP connections when needed).
 
+### HTTPS certificate management
+
+`krp` uses its own certificate authority (CA) for optional local HTTPS routing.
+- Run `krp https --trust` to create a new certificate and trust it.
+- When HTTPS requests are proxied, `krp` dynamically generates per-host leaf certificates signed by that CA, so each routed hostname gets a valid certificate.
+
 ## **Running in Docker**
 
 To run `krp` in a Docker container, follow these steps:
@@ -186,7 +196,7 @@ To run `krp` in a Docker container, follow these steps:
 1. **Start Docker Desktop** as an administrator (required for hosts file modification).
 2. **Build and run the Docker container:**
    ```cli
-   docker buildx bake
+   docker buildx bake -f .buildcharts\docker-bake.hcl docker
    docker compose up -d
    ```
 
@@ -203,6 +213,11 @@ To run `krp` in a Docker container, follow these steps:
    # For EKS
    todo...
    ```
+4. **Setup HTTPS:**
+    - `krp https --trust`
+    - `krp https --export /root/.krp/krp.pfx -p "your-cert-password"`
+    - Install the exported CA cert on the host machine's trust store.
+    - Note the CA is created inside the container, so you must export it and import on the host.
 
 ### Example `docker-compose.yml`
 
@@ -214,18 +229,15 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    #  - "443:443"
+      - "443:443" # optional
     environment:
-    ##  Setup HTTPS using: dotnet dev-certs https -ep "$env:USERPROFILE\.krp\krp.pfx" -p "your-cert-password"
-    #  ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
-    #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
-      KRP_HOSTS: /mnt/hosts
+      KRP_HOSTS: /mnt/etc
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
-      - /c/Windows/System32/drivers/etc/:/host_etc/ # win
-      # - /etc/hosts:/mtn/hosts/ # Linux/macOS
+      - /c/Windows/System32/drivers/etc/:/mnt/etc/ # win
+      # - /etc/:/mnt/etc/ # linux/mac
 ```
 
 ## Roadmap / Ideas
@@ -235,6 +247,6 @@ services:
 - [ ] Support for low-level UDP traffic.
 - [ ] Support for translating internal Kubernetes IPs.
 - [x] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
-- [ ] Cross-platform support (Linux/macOS).
+- [x] Cross-platform support (Linux/macOS).
 - [x] User interface.
 - [x] Add GIF recordings of terminal use cases in README.
