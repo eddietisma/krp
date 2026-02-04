@@ -30,7 +30,7 @@ public sealed class KrpHelpTextGenerator : IHelpTextGenerator
         var normalized = text.Replace("\r\n", "\n");
         var lines = normalized.Split('\n');
 
-        string moreInfoLine = null;
+        string? moreInfoLine = null;
         var filtered = new List<string>(lines.Length);
 
         foreach (var line in lines)

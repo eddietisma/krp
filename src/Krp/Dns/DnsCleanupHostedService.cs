@@ -14,12 +14,12 @@ public class DnsCleanupHostedService : IHostedService
     private readonly IHostApplicationLifetime _applicationLifetime;
     private readonly IDnsHandler _dnsHandler;
     private readonly ILogger<DnsCleanupHostedService> _logger;
-    private Handler _handler;
-    private ConsoleCancelEventHandler _cancelKeyPressHandler;
-    private EventHandler _processExitHandler;
-    private IDisposable _sigintRegistration;
-    private IDisposable _sigtermRegistration;
-    private IDisposable _sighupRegistration;
+    private Handler? _handler;
+    private ConsoleCancelEventHandler? _cancelKeyPressHandler;
+    private EventHandler? _processExitHandler;
+    private PosixSignalRegistration? _sigintRegistration;
+    private PosixSignalRegistration? _sigtermRegistration;
+    private PosixSignalRegistration? _sighupRegistration;
     private int _shutdownRequested;
 
     public DnsCleanupHostedService(IHostApplicationLifetime applicationLifetime, IDnsHandler dnsHandler, ILogger<DnsCleanupHostedService> logger)

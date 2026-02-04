@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using System;
 
 namespace Krp.Logging;
@@ -13,12 +12,7 @@ public static class LoggingBuilderExtensions
         // Enable emojis in console output.
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-        builder.AddConsole(options =>
-        {
-            options.FormatterName = "krp";
-        });
-
-        builder.AddConsoleFormatter<KrpConsoleFormatter, SimpleConsoleFormatterOptions>(options =>
+        builder.AddSimpleConsole(options =>
         {
             options.SingleLine = true;
             options.TimestampFormat = "HH:mm:ss ";

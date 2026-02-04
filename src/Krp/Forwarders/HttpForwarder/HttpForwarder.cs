@@ -70,9 +70,7 @@ public class HttpForwarder
 
         if (response != ForwarderError.None)
         {
-            var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
-            var exception = errorFeature.Exception;
-
+            var exception = httpContext.Features.Get<IForwarderErrorFeature>()?.Exception;
             _logger.LogError(exception, "Unknown error occurred while forwarding request to {destinationUrl}", destinationUrl);
         }
     }

@@ -17,7 +17,7 @@ public class MacCertificateStore : ICertificateStore
             var ok = TryRunCommand("/usr/bin/security", new[] { "verify-cert", "-c", tempPath }, out var stdout, out var stderr);
 
             isTrusted = ok;
-            error = ok ? null : (string.IsNullOrWhiteSpace(stderr) ? stdout?.Trim() : stderr.Trim());
+            error = ok ? string.Empty : (string.IsNullOrWhiteSpace(stderr) ? (stdout?.Trim() ?? string.Empty) : stderr.Trim());
             return true;
         }
         catch (Exception ex)
@@ -81,13 +81,18 @@ public class MacCertificateStore : ICertificateStore
             }
         }
 
-        error = null;
+        error = string.Empty;
         return true;
     }
 
     public bool TryUntrustCertificate(X509Certificate2 certificate)
     {
-        var thumbprint = certificate.Thumbprint ?? "";
+        var thumbprint = certificate.Thumbprint;
+        if (string.IsNullOrWhiteSpace(thumbprint))
+        {
+            return false;
+        }
+
         var loginKeychain = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "Library/Keychains/login.keychain-db");
         var systemKeychain = "/Library/Keychains/System.keychain";
 

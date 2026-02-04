@@ -17,13 +17,13 @@ public sealed class HttpsCommand
     public bool Check { get; set; }
 
     [Option("--export <PATH>", Description = "Export the HTTPS certificate to a file (PFX export requires --password)")]
-    public string ExportPath { get; set; }
+    public string? ExportPath { get; set; }
 
     [Option("--format <FORMAT>", Description = "Export format: pfx or pem (default: pfx)")]
     public CertificateExportFormat ExportFormat { get; set; } = CertificateExportFormat.Pfx;
 
     [Option("--import <PATH>", Description = "Import a certificate PFX into CurrentUser store")]
-    public string ImportPath { get; set; }
+    public string? ImportPath { get; set; }
 
     [Option("-p|--password <PASSWORD>", Description = "Password for import; required for PFX export")]
     public string Password { get; set; } = "";

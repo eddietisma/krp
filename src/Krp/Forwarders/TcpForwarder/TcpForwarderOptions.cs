@@ -4,6 +4,6 @@ namespace Krp.Forwarders.TcpForwarder;
 
 public class TcpForwarderOptions
 {
-    public IPAddress ListenAddress { get; set; }
-    public int[] ListenPorts { get; set; }
+    public required IPAddress ListenAddress { get; set; }
+    public required int[] ListenPorts { get; set; }
 }

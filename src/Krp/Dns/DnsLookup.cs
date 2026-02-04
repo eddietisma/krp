@@ -10,7 +10,7 @@ namespace Krp.Dns;
 
 public interface IDnsLookupHandler
 {
-    Task<IPAddress> QueryAsync(string host);
+    Task<IPAddress?> QueryAsync(string host);
 }
 
 public class DnsLookupHandler : IDnsLookupHandler
@@ -29,7 +29,7 @@ public class DnsLookupHandler : IDnsLookupHandler
         });
     }
 
-    public async Task<IPAddress> QueryAsync(string host)
+    public async Task<IPAddress?> QueryAsync(string host)
     {
         var result = await _lookupClient.QueryAsync(new DnsQuestion(host, QueryType.A));
 

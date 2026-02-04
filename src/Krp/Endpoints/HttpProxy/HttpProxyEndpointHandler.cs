@@ -6,13 +6,13 @@ namespace Krp.Endpoints.HttpProxy;
 
 public class HttpProxyEndpointHandler : IEndpointHandler
 {
-    public string Host { get; set; }
+    public required string Host { get; set; }
     public bool IsStatic { get; set; }
-    public IPAddress LocalIp { get; set; }
+    public required IPAddress LocalIp { get; set; }
     public int LocalPort { get; set; }
-    public string LocalScheme { get; set; }
-    public string Url { get; set; }
-    public string Path { get; set; }
+    public required string LocalScheme { get; set; }
+    public required string Url { get; set; }
+    public required string Path { get; set; }
 
     public Task EnsureRunningAsync()
     {

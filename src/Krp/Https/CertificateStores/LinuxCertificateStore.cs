@@ -20,7 +20,7 @@ public class LinuxCertificateStore : ICertificateStore
         if (!File.Exists(trustPath))
         {
             isTrusted = false;
-            error = null;
+            error = string.Empty;
             return true;
         }
 
@@ -28,7 +28,7 @@ public class LinuxCertificateStore : ICertificateStore
         {
             using var installed = X509Certificate2.CreateFromPemFile(trustPath);
             isTrusted = string.Equals(installed.Thumbprint, certificate.Thumbprint, StringComparison.OrdinalIgnoreCase);
-            error = null;
+            error = string.Empty;
             return true;
         }
         catch (Exception ex)
@@ -49,7 +49,13 @@ public class LinuxCertificateStore : ICertificateStore
 
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(trustPath));
+            var trustDir = Path.GetDirectoryName(trustPath);
+            if (string.IsNullOrWhiteSpace(trustDir))
+            {
+                error = "Invalid trust path for Linux certificate store.";
+                return false;
+            }
+            Directory.CreateDirectory(trustDir);
             File.WriteAllText(trustPath, BuildPem(certificate));
         }
         catch (Exception ex)
@@ -66,7 +72,7 @@ public class LinuxCertificateStore : ICertificateStore
             return false;
         }
 
-        error = null;
+        error = string.Empty;
         return true;
     }
 
@@ -105,7 +111,7 @@ public class LinuxCertificateStore : ICertificateStore
         return builder.ToString();
     }
 
-    private static bool TryGetTrustSettings(out string trustPath, out string commandPath, out string[] commandArgs)
+    private static bool TryGetTrustSettings(out string trustPath, out string commandPath, out string[]? commandArgs)
     {
         var updateCaCertificates = File.Exists("/usr/sbin/update-ca-certificates")
             ? "/usr/sbin/update-ca-certificates"
@@ -131,13 +137,13 @@ public class LinuxCertificateStore : ICertificateStore
             return true;
         }
 
-        trustPath = null;
-        commandPath = null;
+        trustPath = string.Empty;
+        commandPath = string.Empty;
         commandArgs = null;
         return false;
     }
 
-    private static bool TryRunCommand(string fileName, string[] args, out string output, out string error)
+    private static bool TryRunCommand(string fileName, string[]? args, out string output, out string error)
     {
         try
         {
