@@ -50,3 +50,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: publish/*.zip
+
+  publish-winget:
+    needs: [publish-release-assets]
+    if: github.event.action == 'released' || github.event.action == 'prereleased'
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: EddieTisma.Krp
+          max-versions-to-keep: 5
+          token: ${{ secrets.WINGET_TOKEN }}
+          installers-regex: 'krp_.*_win-(x64|arm64)\\.zip$'
