@@ -1,12 +1,8 @@
 using Krp.ContextSwitching;
 using Krp.DependencyInjection;
-using Krp.Endpoints;
-using Krp.Endpoints.HttpProxy;
-using Krp.Endpoints.PortForward;
 using Krp.Kubernetes;
 using Krp.Validation;
 using Krp.Tests.Assertions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -27,13 +23,14 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         // Arrange
         Fixture.Customize<TestableContextSwitchingWatcher>(composer => composer.OmitAutoProperties());
 
-        var logger = new Mock<ILogger<ContextSwitchingWatcher>>();
+        var logger = Fixture.Freeze<Mock<ILogger<ContextSwitchingWatcher>>>();
         var validationState = new ValidationState();
         validationState.MarkCompleted(false);
 
-        Fixture.Inject(CreateServiceProvider());
-        Fixture.Inject(CreateEndpointManager());
-        Fixture.Inject(new KubernetesClient(Mock.Of<ILogger<KubernetesClient>>()));
+        Fixture.Inject(Fixture.Freeze<Mock<IServiceProvider>>().Object);
+        Fixture.Inject<IOptions<KubernetesForwarderOptions>>(Options.Create(new KubernetesForwarderOptions()));
+        Fixture.Inject(Fixture.Create<EndpointManager>());
+        Fixture.Inject(Fixture.Create<KubernetesClient>());
         Fixture.Inject(logger.Object);
         Fixture.Inject(validationState);
 
@@ -41,23 +38,7 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         await Sut.RunAsync(CancellationToken.None);
 
         // Assert
-        Assert.ShouldLog(logger, "Skipping context switch monitoring");
-    }
-
-    private static IServiceProvider CreateServiceProvider()
-    {
-        var services = new ServiceCollection();
-        return services.BuildServiceProvider();
-    }
-
-    private static EndpointManager CreateEndpointManager()
-    {
-        var services = new ServiceCollection();
-        services.AddTransient<HttpProxyEndpointHandler>();
-        services.AddTransient<PortForwardEndpointHandler>();
-
-        var provider = services.BuildServiceProvider();
-        return new EndpointManager(provider, Mock.Of<ILogger<EndpointManager>>(), Options.Create(new KubernetesForwarderOptions()));
+        Assert.ShouldLog(logger, LogLevel.Warning, "Skipping context switch monitoring");
     }
 
     private sealed class TestableContextSwitchingWatcher : ContextSwitchingWatcher

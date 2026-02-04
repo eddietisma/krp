@@ -1,12 +1,8 @@
 using Krp.DependencyInjection;
 using Krp.EndpointExplorer;
-using Krp.Endpoints;
-using Krp.Endpoints.HttpProxy;
-using Krp.Endpoints.PortForward;
 using Krp.Kubernetes;
 using Krp.Tests.Assertions;
 using Krp.Validation;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -27,11 +23,12 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         // Arrange
         Fixture.Customize<TestableEndpointExplorerBackgroundService>(composer => composer.OmitAutoProperties());
 
-        var logger = new Mock<ILogger<EndpointExplorerBackgroundService>>();
+        var logger = Fixture.Freeze<Mock<ILogger<EndpointExplorerBackgroundService>>>();
         var validationState = new ValidationState();
         validationState.MarkCompleted(false);
 
-        Fixture.Inject(CreateEndpointExplorer());
+        Fixture.Inject<IOptions<KubernetesForwarderOptions>>(Options.Create(new KubernetesForwarderOptions()));
+        Fixture.Inject(Fixture.Create<EndpointExplorer.EndpointExplorer>());
         Fixture.Inject<IOptions<EndpointExplorerOptions>>(Options.Create(new EndpointExplorerOptions
         {
             RefreshInterval = TimeSpan.FromMinutes(1),
@@ -43,24 +40,7 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         await Sut.RunAsync(CancellationToken.None);
 
         // Assert
-        Assert.ShouldLog(logger, "Skipping endpoint discovery");
-    }
-
-    private static EndpointExplorer.EndpointExplorer CreateEndpointExplorer()
-    {
-        var services = new ServiceCollection();
-        services.AddTransient<HttpProxyEndpointHandler>();
-        services.AddTransient<PortForwardEndpointHandler>();
-
-        var provider = services.BuildServiceProvider();
-        var endpointManager = new EndpointManager(provider, Mock.Of<ILogger<EndpointManager>>(), Options.Create(new KubernetesForwarderOptions()));
-        var kubernetesClient = new KubernetesClient(Mock.Of<ILogger<KubernetesClient>>());
-
-        return new EndpointExplorer.EndpointExplorer(
-            endpointManager,
-            kubernetesClient,
-            Options.Create(new EndpointExplorerOptions()),
-            Mock.Of<ILogger<EndpointExplorer.EndpointExplorer>>());
+        Assert.ShouldLog(logger, LogLevel.Warning, "Skipping endpoint discovery");
     }
 
     private sealed class TestableEndpointExplorerBackgroundService : EndpointExplorerBackgroundService

@@ -6,11 +6,6 @@ namespace Krp.Tests.Assertions;
 
 public static class Assert
 {
-    public static void ShouldLog<T>(Mock<ILogger<T>> logger, string messageContains)
-    {
-        ShouldLog(logger, LogLevel.Warning, messageContains);
-    }
-
     public static void ShouldLog<T>(Mock<ILogger<T>> logger, LogLevel level, string messageContains)
     {
         logger.Verify(
