@@ -46,4 +46,9 @@ public class EndpointExplorerBackgroundService : BackgroundService
             await Task.Delay(_options.RefreshInterval, ct);
         }
     }
+
+    public Task RunAsync(CancellationToken ct)
+    {
+        return ExecuteAsync(ct);
+    }
 }

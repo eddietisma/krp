@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,15 +37,10 @@ public sealed class EndpointExplorerBackgroundServiceTests : TestBase
         Fixture.Inject(validationState);
 
         // Act
-        await InvokeExecuteAsync(Sut, CancellationToken.None);
+        await Sut.RunAsync(CancellationToken.None);
 
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping endpoint discovery");
     }
 
-    private static Task InvokeExecuteAsync(EndpointExplorerBackgroundService service, CancellationToken ct)
-    {
-        var method = typeof(EndpointExplorerBackgroundService).GetMethod("ExecuteAsync", BindingFlags.Instance | BindingFlags.NonPublic);
-        return (Task)(method?.Invoke(service, new object[] { ct }) ?? Task.CompletedTask);
-    }
 }

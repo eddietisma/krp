@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,15 +35,10 @@ public sealed class ContextSwitchingWatcherTests : TestBase
         Fixture.Inject(validationState);
 
         // Act
-        await InvokeExecuteAsync(Sut, CancellationToken.None);
+        await Sut.RunAsync(CancellationToken.None);
 
         // Assert
         Assert.ShouldLog(logger, LogLevel.Warning, "Skipping context switch monitoring");
     }
 
-    private static Task InvokeExecuteAsync(ContextSwitchingWatcher watcher, CancellationToken ct)
-    {
-        var method = typeof(ContextSwitchingWatcher).GetMethod("ExecuteAsync", BindingFlags.Instance | BindingFlags.NonPublic);
-        return (Task)(method?.Invoke(watcher, new object[] { ct }) ?? Task.CompletedTask);
-    }
 }

@@ -70,4 +70,9 @@ public class ContextSwitchingWatcher : BackgroundService
             await Task.Delay(TimeSpan.FromSeconds(1), ct);
         }
     }
+
+    public Task RunAsync(CancellationToken ct)
+    {
+        return ExecuteAsync(ct);
+    }
 }
