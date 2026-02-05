@@ -106,15 +106,7 @@ public class HttpForwarderKestrelConfigurator : IConfigureOptions<KestrelServerO
         }
 
         // Allow endpoint hostnames.
-        if (_endpointManager != null)
-        {
-            var handlers = _endpointManager.GetHandlerByHost(hostName);
-            if (handlers.Any(handler => handler.LocalIp != null && IPAddress.IsLoopback(handler.LocalIp)))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        var handlers = _endpointManager.GetHandlerByHost(hostName);
+        return handlers.Any(handler => IPAddress.IsLoopback(handler.LocalIp));
     }
 }
