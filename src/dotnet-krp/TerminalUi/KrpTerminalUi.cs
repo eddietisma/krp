@@ -48,7 +48,7 @@ public class KrpTerminalUi
     public async Task RunAsync(CancellationToken ct)
     {
         _ = WatchValidationAsync(ct);
-        _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
+        _ = InitializeContextAsync(ct);
 
         var baseW = Console.WindowWidth;
         var baseH = Console.WindowHeight;
@@ -134,11 +134,21 @@ public class KrpTerminalUi
                             // Handle kubernetes context (1s).
                             if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
-                                var context = await _kubernetesClient.FetchCurrentContext();
-                                if (context != _kubeCurrentContext)
+                                if (_validationState.Succeeded)
                                 {
-                                    _kubeCurrentContext = context;
-                                    redrawInfo = true;
+                                    try
+                                    {
+                                        var context = await _kubernetesClient.FetchCurrentContext();
+                                        if (context != _kubeCurrentContext)
+                                        {
+                                            _kubeCurrentContext = context;
+                                            redrawInfo = true;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogError(ex, "Failed to fetch current context");
+                                    }
                                 }
 
                                 lastCtx.Restart();
@@ -383,6 +393,29 @@ public class KrpTerminalUi
         catch (OperationCanceledException)
         {
             // Ignore cancellation.
+        }
+    }
+
+    private async Task InitializeContextAsync(CancellationToken ct)
+    {
+        try
+        {
+            var succeeded = await _validationState.WaitForCompletionAsync(ct);
+            if (!succeeded)
+            {
+                _kubeCurrentContext = string.Empty;
+                return;
+            }
+
+            _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch current context");
         }
     }
 }
