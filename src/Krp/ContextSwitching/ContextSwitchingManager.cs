@@ -58,7 +58,5 @@ public class ContextSwitchingManager
         {
             _logger.LogError(ex, "Failed to fetch current context");
         }
-
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
     }
 }
