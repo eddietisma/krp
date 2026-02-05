@@ -2,6 +2,7 @@ using Krp.Common;
 using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
+using Krp.Validation;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using System;
@@ -21,6 +22,7 @@ public class KrpTerminalUi
 
     private readonly string _version = VersionHelper.GetProductVersion().Split('+')[0];
     private readonly IKubernetesClient _kubernetesClient;
+    private readonly ValidationState _validationState;
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
@@ -29,9 +31,10 @@ public class KrpTerminalUi
 
     private string _kubeCurrentContext = string.Empty;
 
-    public KrpTerminalUi(IKubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
+    public KrpTerminalUi(IKubernetesClient kubernetesClient, ValidationState validationState, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
     {
         _kubernetesClient = kubernetesClient;
+        _validationState = validationState;
         _state = state;
         _portForwardTable = portForwardTable;
         _logsTable = logsTable;
@@ -44,6 +47,7 @@ public class KrpTerminalUi
 
     public async Task RunAsync(CancellationToken ct)
     {
+        _ = WatchValidationAsync(ct);
         _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
 
         var baseW = Console.WindowWidth;
@@ -364,5 +368,21 @@ public class KrpTerminalUi
         _state.SortAscending = _state.SortField != field || !_state.SortAscending;
         _state.SortField = field;
         _state.SelectedRow[_state.SelectedTable] = 0; // Reset cursor to top.
+    }
+
+    private async Task WatchValidationAsync(CancellationToken ct)
+    {
+        try
+        {
+            var succeeded = await _validationState.WaitForCompletionAsync(ct);
+            if (!succeeded)
+            {
+                _state.SelectedTable = KrpTable.Logs;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
     }
 }

@@ -28,12 +28,14 @@ public class ValidationHostedService : IHostedService
     private readonly ICertificateManager _certificateManager;
     private readonly ValidationState _validationState;
     private readonly ValidationOptions _options;
+    private readonly IHostApplicationLifetime _appLifetime;
 
     public ValidationHostedService(
         IEndpointManager endpointManager,
         IKubernetesClient kubernetesClient,
         ICertificateManager certificateManager,
         IDnsHandler dnsHandler,
+        IHostApplicationLifetime appLifetime,
         ILogger<ValidationHostedService> logger,
         IOptions<DnsHostsOptions> dnsOptions,
         ValidationState validationState,
@@ -43,6 +45,7 @@ public class ValidationHostedService : IHostedService
         _kubernetesClient = kubernetesClient;
         _certificateManager = certificateManager;
         _dnsHandler = dnsHandler;
+        _appLifetime = appLifetime;
         _logger = logger;
         _dnsOptions = dnsOptions;
         _validationState = validationState;
@@ -243,7 +246,8 @@ public class ValidationHostedService : IHostedService
         if (_options.ExitOnFailure)
         {
             _logger.LogError("Terminating...");
-            Environment.Exit(1);
+            Environment.ExitCode = 1;
+            _appLifetime.StopApplication();
         }
     }
 }
