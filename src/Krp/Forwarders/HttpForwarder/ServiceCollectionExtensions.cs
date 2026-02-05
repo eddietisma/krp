@@ -1,8 +1,10 @@
-﻿using Krp.Dns;
+﻿using DnsClient.Internal;
+using Krp.Dns;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Diagnostics;
@@ -93,16 +95,23 @@ public static class ServiceCollectionExtensions
 
     public static void UseKubernetesForwarder(this IApplicationBuilder app)
     {
+        var forwarderOptions = app.ApplicationServices.GetRequiredService<IOptions<HttpForwarderOptions>>().Value;
+        var logger = app.ApplicationServices.GetRequiredService<ILogger<HttpForwarder>>();
+
         app.UseRouting();
         app.Use(async (context, next) =>
         {
             var remoteIp = context.Connection.RemoteIpAddress;
-            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            var localIp = context.Connection.LocalIpAddress;
+            var isInternalTransport = forwarderOptions.InternalTransport is HttpForwarderInternalTransport.NamedPipe or HttpForwarderInternalTransport.UnixSocket;
+            var isInternalEndpoint = isInternalTransport && remoteIp == null && localIp == null;
+            if (!isInternalEndpoint && (remoteIp == null || !IPAddress.IsLoopback(remoteIp)))
             {
                 // Let docker handle network isolation when running in a container,
                 // since we may receive non-loopback connections due to docker NAT.
                 if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
                 {
+                    logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     await context.Response.WriteAsync("Loopback connections only.");
                     return;

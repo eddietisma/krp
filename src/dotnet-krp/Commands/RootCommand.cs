@@ -104,6 +104,9 @@ public class RootCommand
                 builder.Services.PostConfigure<HttpForwarderOptions>(options =>
                 {
                     options.SkipCertificateValidation = NoCertificateValidation;
+                    options.InternalTransport = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                        ? HttpForwarderInternalTransport.NamedPipe
+                        : HttpForwarderInternalTransport.UnixSocket;
                 });
 
                 break;

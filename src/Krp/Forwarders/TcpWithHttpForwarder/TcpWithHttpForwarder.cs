@@ -5,8 +5,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Pipes;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,7 +91,7 @@ public class TcpWithHttpForwarder
         try
         {
             using var tcpClient = client;
-            using var target = new TcpClient();
+            TcpClient? target = null;
 
             var remoteEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
             var remoteIp = remoteEndPoint?.Address;
@@ -116,6 +119,7 @@ public class TcpWithHttpForwarder
 
             var targetIp = localIp;
             var targetPort = 0;
+            var internalEndpoint = (HttpForwarderInternalEndpoint?)null;
 
             if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
             {
@@ -139,11 +143,25 @@ public class TcpWithHttpForwarder
                         var isHttp2 = IsHttp2Preface(buffer.AsSpan(0, bytesRead));
 
                         // Forward to HttpForwarder for routing using HTTP headers.
-                        targetPort = isHttp2 ? _httpOptions.Http2Port : _httpOptions.HttpPort;
+                        if (_httpOptions.InternalTransport == HttpForwarderInternalTransport.Tcp)
+                        {
+                            targetPort = isHttp2 ? _httpOptions.Http2Port : _httpOptions.HttpPort;
+                        }
+                        else
+                        {
+                            internalEndpoint = isHttp2 ? HttpForwarderInternalEndpoint.Http2 : HttpForwarderInternalEndpoint.Http1;
+                        }
                         break;
                     case 443:
                         // Forward to HttpForwarder for routing using HTTP headers.
-                        targetPort = _httpOptions.HttpsPort;
+                        if (_httpOptions.InternalTransport == HttpForwarderInternalTransport.Tcp)
+                        {
+                            targetPort = _httpOptions.HttpsPort;
+                        }
+                        else
+                        {
+                            internalEndpoint = HttpForwarderInternalEndpoint.Https;
+                        }
 
                         //// TODO: Since TCP connections are stream based, once the tunnel is setup we can no longer react to when HTTP endpoints check switches state.
                         //// TODO: Idea - once a hostname has been setup, react to when ANY HTTP endpoint changes state and disconnect all active HTTP tunnels.
@@ -178,9 +196,20 @@ public class TcpWithHttpForwarder
                 }
             }
 
-            // Setup live TCP connection between client and downstream port to let data flow.
-            await target.ConnectAsync(targetIp, targetPort, stoppingToken);
-            var targetStream = target.GetStream();
+            Stream targetStream;
+            if (internalEndpoint.HasValue && _httpOptions.InternalTransport != HttpForwarderInternalTransport.Tcp)
+            {
+                targetStream = await ConnectInternalAsync(internalEndpoint.Value, stoppingToken);
+            }
+            else
+            {
+                target = new TcpClient();
+                await target.ConnectAsync(targetIp, targetPort, stoppingToken);
+                targetStream = target.GetStream();
+            }
+
+            // Setup live connection between client and downstream to let data flow.
+            await using var _ = targetStream;
             await targetStream.WriteAsync(buffer, 0, bytesRead, stoppingToken);
             var clientToTarget = clientStream.CopyToAsync(targetStream, stoppingToken);
             var targetToClient = targetStream.CopyToAsync(clientStream, stoppingToken);
@@ -220,6 +249,35 @@ public class TcpWithHttpForwarder
 
         const int prefaceLen = 24;
         return buffer.Length >= prefaceLen && buffer.Slice(0, prefaceLen).SequenceEqual(Http2Preface);
+    }
+
+    private async Task<Stream> ConnectInternalAsync(HttpForwarderInternalEndpoint endpoint, CancellationToken ct)
+    {
+        switch (_httpOptions.InternalTransport)
+        {
+            case HttpForwarderInternalTransport.NamedPipe:
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    throw new InvalidOperationException("Named pipes are only supported on Windows.");
+                }
+
+                var pipeName = _httpOptions.GetInternalPipeName(endpoint);
+                var pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+                await pipeClient.ConnectAsync(ct);
+                return pipeClient;
+            case HttpForwarderInternalTransport.UnixSocket:
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    throw new InvalidOperationException("Unix domain sockets are not supported on Windows.");
+                }
+
+                var socketPath = _httpOptions.GetInternalUnixSocketPath(endpoint);
+                var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                await socket.ConnectAsync(new UnixDomainSocketEndPoint(socketPath), ct);
+                return new NetworkStream(socket, ownsSocket: true);
+            default:
+                throw new InvalidOperationException("Internal transport is not configured.");
+        }
     }
 
     public static string? ParseSniHostname(byte[] buffer, int length)
