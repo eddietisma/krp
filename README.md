@@ -185,7 +185,7 @@ Environment variables:
 
 ### HTTPS certificate management
 
-`krp` uses its own certificate authority (CA) for local HTTPS routing.
+`krp` uses its own certificate authority (CA) for optional local HTTPS routing.
 - Run `krp https --trust` to create a new certificate and trust it.
 - When HTTPS requests are proxied, `krp` dynamically generates per-host leaf certificates signed by that CA, so each routed hostname gets a valid certificate.
 
