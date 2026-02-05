@@ -18,5 +18,5 @@ public class ValidationState
     }
 
     public bool IsCompleted => _completion.Task.IsCompleted;
-    public bool Succeeded => _completion.Task.IsCompletedSuccessfully && _completion.Task.Result;
+    public bool Succeeded => _completion.Task is { IsCompletedSuccessfully: true, Result: true };
 }
