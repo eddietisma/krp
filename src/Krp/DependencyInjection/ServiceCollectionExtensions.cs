@@ -34,16 +34,25 @@ public static class ServiceCollectionExtensions
         RegisterEndpoints(configuration, builder);
 
         services.AddHttpsCertificateManagement();
-        services.AddOptions<ValidationOptions>();
-        services.AddSingleton<ValidationState>();
-        services.AddSingleton<ContextSwitchingManager>();
-        services.AddSingleton<IEndpointManager, EndpointManager>();
+
+        // Kubernetes
         services.AddSingleton<IKubernetesClient, KubernetesClient>();
+
+        // Endpoints
+        services.AddSingleton<IEndpointManager, EndpointManager>();
         services.AddSingleton<ProcessRunner>();
         services.AddTransient<PortForwardEndpointHandler>();
         services.AddTransient<HttpProxyEndpointHandler>();
-        services.AddHostedService<ValidationHostedService>();
+
+        // Context switching
+        services.AddSingleton<ContextSwitchingManager>();
         services.AddHostedService<ContextSwitchingBackgroundService>();
+
+        // Validation
+        services.AddOptions<ValidationOptions>();
+        services.AddSingleton<ValidationState>();
+        services.AddHostedService<ValidationHostedService>();
+
         return builder;
     }
 
