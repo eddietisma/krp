@@ -57,14 +57,18 @@ public class RootCommand
         var webApplicationBuilder = WebApplication.CreateSlimBuilder();
         webApplicationBuilder.Configuration.AddUserSecrets<Program>();
 
-        if (!NoTerminalUi)
+        if (NoTerminalUi)
         {
-            webApplicationBuilder.Logging.AddKrpTerminalLogger();
-            webApplicationBuilder.AddKrpTerminalUi();
+            webApplicationBuilder.Logging.AddKrpLogger();
         }
         else
         {
-            webApplicationBuilder.Logging.AddKrpLogger();
+            webApplicationBuilder.Logging.AddKrpTerminalLogger();
+            webApplicationBuilder.AddKrpTerminalUi();
+            webApplicationBuilder.Services.Configure<ValidationOptions>(options =>
+            {
+                options.ExitOnFailure = false;
+            });
         }
 
         var builder = webApplicationBuilder.Services.AddKubernetesForwarder(webApplicationBuilder.Configuration)
@@ -109,11 +113,6 @@ public class RootCommand
 
                 break;
         }
-
-        webApplicationBuilder.Services.Configure<ValidationOptions>(options =>
-        {
-            options.ExitOnFailure = NoTerminalUi;
-        });
 
         if (!NoDiscovery)
         {
