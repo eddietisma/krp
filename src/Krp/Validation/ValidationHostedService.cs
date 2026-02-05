@@ -18,23 +18,23 @@ using System.Threading.Tasks;
 
 namespace Krp.Validation;
 
-public class ValidationService : IHostedService
+public class ValidationHostedService : IHostedService
 {
-    private readonly ILogger<ValidationService> _logger;
+    private readonly ILogger<ValidationHostedService> _logger;
     private readonly IOptions<DnsHostsOptions> _dnsOptions;
-    private readonly EndpointManager _endpointManager;
-    private readonly KubernetesClient _kubernetesClient;
+    private readonly IEndpointManager _endpointManager;
+    private readonly IKubernetesClient _kubernetesClient;
     private readonly IDnsHandler _dnsHandler;
     private readonly ICertificateManager _certificateManager;
     private readonly ValidationState _validationState;
     private readonly ValidationOptions _options;
 
-    public ValidationService(
-        EndpointManager endpointManager,
-        KubernetesClient kubernetesClient,
+    public ValidationHostedService(
+        IEndpointManager endpointManager,
+        IKubernetesClient kubernetesClient,
         ICertificateManager certificateManager,
         IDnsHandler dnsHandler,
-        ILogger<ValidationService> logger,
+        ILogger<ValidationHostedService> logger,
         IOptions<DnsHostsOptions> dnsOptions,
         ValidationState validationState,
         IOptions<ValidationOptions> options)

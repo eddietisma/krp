@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Krp.Kubernetes;
 
-public class KubernetesClient
+public class KubernetesClient : IKubernetesClient
 {
     private static readonly Lock _lockObj = new();
     private readonly ILogger<KubernetesClient> _logger;

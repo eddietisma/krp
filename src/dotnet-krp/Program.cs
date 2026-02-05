@@ -1,4 +1,4 @@
-using Krp.Https;
+using Krp.Https.DependencyInjection;
 using Krp.Tool.Help;
 using Krp.Tool.Commands;
 using McMaster.Extensions.CommandLineUtils;

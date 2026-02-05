@@ -1,4 +1,3 @@
-﻿
 using Krp.Endpoints;
 using Krp.Kubernetes;
 using Microsoft.Extensions.Logging;
@@ -11,15 +10,19 @@ using System.Threading.Tasks;
 
 namespace Krp.EndpointExplorer;
 
-public class EndpointExplorer
+/// <summary>
+/// Provides functionality to discover and manage service endpoints using Kubernetes and configurable filtering.
+/// </summary>
+public class EndpointExplorerManager
 {
-    private readonly EndpointManager _endpointManager;
-    private readonly KubernetesClient _kubernetesClient;
-    private readonly ILogger<EndpointExplorer> _logger;
+    private readonly IEndpointManager _endpointManager;
+    private readonly IKubernetesClient _kubernetesClient;
+    private readonly ILogger<EndpointExplorerManager> _logger;
+
     private readonly List<Regex> _compiledFilters = [];
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public EndpointExplorer(EndpointManager endpointManager, KubernetesClient kubernetesClient, IOptions<EndpointExplorerOptions> options, ILogger<EndpointExplorer> logger)
+    public EndpointExplorerManager(IEndpointManager endpointManager, IKubernetesClient kubernetesClient, IOptions<EndpointExplorerOptions> options, ILogger<EndpointExplorerManager> logger)
     {
         _endpointManager = endpointManager;
         _kubernetesClient = kubernetesClient;
@@ -31,7 +34,7 @@ public class EndpointExplorer
             _compiledFilters.Add(new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled));
         }
     }
-    
+
     public async Task DiscoverEndpointsAsync(CancellationToken ct)
     {
         // Prevent running multiple endpoints discovery simultaneously.

@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Krp.Endpoints;
 
-public class EndpointManager
+public class EndpointManager : IEndpointManager
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<string, IEndpointHandler> _handlers = new(StringComparer.OrdinalIgnoreCase);

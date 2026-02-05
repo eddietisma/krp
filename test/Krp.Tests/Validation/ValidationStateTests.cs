@@ -1,5 +1,5 @@
+using AutoFixture;
 using Krp.Validation;
-using System.Threading;
 
 namespace Krp.Tests.Validation;
 

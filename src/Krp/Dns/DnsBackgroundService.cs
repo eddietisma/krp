@@ -1,4 +1,5 @@
 using Krp.Common;
+using Krp.EndpointExplorer;
 using Krp.Endpoints;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -13,11 +14,11 @@ namespace Krp.Dns;
 public class DnsBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<DnsBackgroundService> _logger;
     private readonly IDnsHandler _dnsHandler;
 
-    public DnsBackgroundService(IServiceProvider serviceProvider, EndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsBackgroundService> logger)
+    public DnsBackgroundService(IServiceProvider serviceProvider, IEndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _endpointManager = endpointManager;
@@ -30,7 +31,7 @@ public class DnsBackgroundService : BackgroundService
     {
         _ = _dnsHandler.RunAsync(stoppingToken);
 
-        var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorer.EndpointExplorer>() != null;
+        var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorerManager>() != null;
         if (!isEndpointExplorerEnabled)
         {
             // Skip updating DNS, since the endpoint explorer will, once discovery is finished.

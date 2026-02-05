@@ -1,4 +1,4 @@
-﻿using Krp.Common;
+using Krp.Common;
 using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
@@ -20,7 +20,7 @@ public class KrpTerminalUi
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
 
     private readonly string _version = VersionHelper.GetProductVersion().Split('+')[0];
-    private readonly KubernetesClient _kubernetesClient;
+    private readonly IKubernetesClient _kubernetesClient;
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
@@ -29,7 +29,7 @@ public class KrpTerminalUi
 
     private string _kubeCurrentContext = string.Empty;
 
-    public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
+    public KrpTerminalUi(IKubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
     {
         _kubernetesClient = kubernetesClient;
         _state = state;
