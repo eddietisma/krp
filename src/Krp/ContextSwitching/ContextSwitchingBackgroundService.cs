@@ -22,13 +22,13 @@ public class ContextSwitchingBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var validationSucceeded = await _validationState.WaitForCompletionAsync(stoppingToken);
-        if (!validationSucceeded)
+        var succeeded = await _validationState.WaitForCompletionAsync(stoppingToken);
+        if (!succeeded)
         {
-            _logger.LogWarning("Skipping context switch monitoring because validation failed.");
+            _logger.LogWarning("Skipping context switch monitoring because validation failed");
             return;
         }
-
+        
         while (!stoppingToken.IsCancellationRequested)
         {
             await _contextSwitchingManager.DetectContextSwitch(stoppingToken);

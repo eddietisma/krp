@@ -18,17 +18,20 @@ public sealed class ValidationHostedServiceTests : TestBase
     {
         // Arrange
         var validationState = Fixture.Freeze<ValidationState>();
+        var kubeConfigPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.config");
 
         Fixture.Freeze<Mock<IKubernetesClient>>()
-            .Setup(x => x.WaitForAccess(It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()))
+            .Setup(x => x.TryGetKubeConfigPath(out kubeConfigPath))
             .Returns(true);
         
         // Act
         await Sut.StartAsync(CancellationToken.None);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // Give enough time when debugging.
+        await validationState.WaitForCompletionAsync(cts.Token);
 
         // Assert
         Assert.IsTrue(validationState.IsCompleted);
-        Assert.IsTrue(validationState.Succeeded);
+        Assert.IsTrue(validationState.IsValid);
     }
 
     [TestMethod]
@@ -43,11 +46,18 @@ public sealed class ValidationHostedServiceTests : TestBase
         var validationState = Fixture.Freeze<ValidationState>();
         Fixture.Inject(validationState);
 
+        var kubeConfigPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.config");
+        Fixture.Freeze<Mock<IKubernetesClient>>()
+            .Setup(x => x.TryGetKubeConfigPath(out kubeConfigPath))
+            .Returns(true);
+
         // Act
         await Sut.StartAsync(CancellationToken.None);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // Give enough time when debugging.
+        await validationState.WaitForCompletionAsync(cts.Token);
 
         // Assert
         Assert.IsTrue(validationState.IsCompleted);
-        Assert.IsFalse(validationState.Succeeded);
+        Assert.IsFalse(validationState.IsValid);
     }
 }

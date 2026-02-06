@@ -47,8 +47,8 @@ public class KrpTerminalUi
 
     public async Task RunAsync(CancellationToken ct)
     {
-        _ = WatchValidationAsync(ct);
-        _ = InitializeContextAsync(ct);
+        _ = OnValidationFailureSwitchToLogsAsync(ct);
+        _ = OnValidationSuccessInitializeContextAsync(ct);
 
         var baseW = Console.WindowWidth;
         var baseH = Console.WindowHeight;
@@ -134,7 +134,7 @@ public class KrpTerminalUi
                             // Handle kubernetes context (1s).
                             if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
-                                if (_validationState.Succeeded)
+                                if (_validationState.IsValid)
                                 {
                                     try
                                     {
@@ -380,7 +380,7 @@ public class KrpTerminalUi
         _state.SelectedRow[_state.SelectedTable] = 0; // Reset cursor to top.
     }
 
-    private async Task WatchValidationAsync(CancellationToken ct)
+    private async Task OnValidationFailureSwitchToLogsAsync(CancellationToken ct)
     {
         try
         {
@@ -396,17 +396,11 @@ public class KrpTerminalUi
         }
     }
 
-    private async Task InitializeContextAsync(CancellationToken ct)
+    private async Task OnValidationSuccessInitializeContextAsync(CancellationToken ct)
     {
         try
         {
-            var succeeded = await _validationState.WaitForCompletionAsync(ct);
-            if (!succeeded)
-            {
-                _kubeCurrentContext = string.Empty;
-                return;
-            }
-
+            await _validationState.WaitForValidAsync(ct);
             _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
         }
         catch (OperationCanceledException)

@@ -1,5 +1,4 @@
 using Krp.Endpoints.Models;
-using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -9,7 +8,7 @@ namespace Krp.Kubernetes;
 
 public interface IKubernetesClient
 {
+    bool TryGetKubeConfigPath(out string path);
     Task<string> FetchCurrentContext();
     Task<List<KubernetesEndpoint>> FetchServices(List<Regex> filters, CancellationToken ct);
-    bool WaitForAccess(TimeSpan timeout, TimeSpan pollInterval);
 }

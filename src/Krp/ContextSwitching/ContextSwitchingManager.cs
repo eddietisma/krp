@@ -43,16 +43,18 @@ public class ContextSwitchingManager
             if (_currentContext != context)
             {
                 _logger.LogInformation("Detected context switch from {oldContext} to {newContext}", _currentContext, context);
+
                 _endpointManager.RemoveAllHandlers();
 
                 var endpointExplorer = _serviceProvider.GetService<EndpointExplorerManager>();
-                if (endpointExplorer != null)
-                {
-                    await endpointExplorer.DiscoverEndpointsAsync(ct);
-                }
+                endpointExplorer?.RequestRefresh();
 
                 _currentContext = context;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Suppress
         }
         catch (Exception ex)
         {

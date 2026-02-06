@@ -32,12 +32,7 @@ public class DnsBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var validationSucceeded = await _validationState.WaitForCompletionAsync(stoppingToken);
-        if (!validationSucceeded)
-        {
-            _logger.LogWarning("Skipping DNS updates because validation failed.");
-            return;
-        }
+        await _validationState.WaitForValidAsync(stoppingToken);
 
         _ = _dnsHandler.RunAsync(stoppingToken);
 
@@ -57,12 +52,6 @@ public class DnsBackgroundService : BackgroundService
 
     private async Task UpdateDns()
     {
-        if (!_validationState.Succeeded)
-        {
-            _logger.LogWarning("Skipping DNS update because validation did not succeed.");
-            return;
-        }
-
         _logger.LogInformation("Updating DNS entries...");
 
         // https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods
