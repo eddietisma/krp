@@ -1,3 +1,4 @@
+using Krp.Validation;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
@@ -5,7 +6,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Krp.Validation;
+namespace Krp.Forwarders.HttpForwarder;
 
 public class ValidationGatedServer : IServer
 {
