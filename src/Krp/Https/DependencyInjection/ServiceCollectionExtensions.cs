@@ -2,9 +2,9 @@ using Krp.Https.CertificateStores;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Krp.Https;
+namespace Krp.Https.DependencyInjection;
 
-public static class CertificateManagerExtensions
+public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddHttpsCertificateManagement(this IServiceCollection services)
     {

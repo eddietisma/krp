@@ -1,4 +1,4 @@
-﻿using Krp.Common;
+using Krp.Common;
 using Krp.Endpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -17,12 +17,12 @@ namespace Krp.Forwarders.HttpForwarder;
 /// </summary>
 public class HttpForwarder
 {
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
     private readonly HttpMessageInvoker _httpMessageInvoker;
     private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, HttpMessageInvoker httpMessageInvoker, ILogger<HttpForwarder> logger)
+    public HttpForwarder(IEndpointManager endpointManager, IHttpForwarder forwarder, HttpMessageInvoker httpMessageInvoker, ILogger<HttpForwarder> logger)
     {
         _endpointManager = endpointManager;
         _forwarder = forwarder;

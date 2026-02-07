@@ -1,4 +1,3 @@
-using k8s;
 using Krp.Common;
 using Krp.Dns;
 using Krp.Endpoints;
@@ -18,36 +17,46 @@ using System.Threading.Tasks;
 
 namespace Krp.Validation;
 
-public class ValidationService : IHostedService
+public class ValidationHostedService : BackgroundService
 {
-    private readonly ILogger<ValidationService> _logger;
-    private readonly IOptions<DnsHostsOptions> _dnsOptions;
-    private readonly EndpointManager _endpointManager;
-    private readonly KubernetesClient _kubernetesClient;
+    private readonly ILogger<ValidationHostedService> _logger;
+    private readonly DnsHostsOptions _dnsOptions;
+    private readonly IEndpointManager _endpointManager;
     private readonly IDnsHandler _dnsHandler;
     private readonly ICertificateManager _certificateManager;
+    private readonly IKubernetesClient _kubernetesClient;
+    private readonly ValidationState _validationState;
+    private readonly ValidationOptions _validationOptions;
+    private readonly IHostApplicationLifetime _appLifetime;
 
-    public ValidationService(
-        EndpointManager endpointManager,
-        KubernetesClient kubernetesClient,
+    public ValidationHostedService(
+        IEndpointManager endpointManager,
         ICertificateManager certificateManager,
         IDnsHandler dnsHandler,
-        ILogger<ValidationService> logger,
-        IOptions<DnsHostsOptions> dnsOptions)
+        IKubernetesClient kubernetesClient,
+        ValidationState validationState,
+        IHostApplicationLifetime appLifetime,
+        ILogger<ValidationHostedService> logger,
+        IOptions<DnsHostsOptions> dnsOptions,
+        IOptions<ValidationOptions> validationOptions)
     {
         _endpointManager = endpointManager;
-        _kubernetesClient = kubernetesClient;
         _certificateManager = certificateManager;
         _dnsHandler = dnsHandler;
+        _kubernetesClient = kubernetesClient;
+        _validationState = validationState;
+        _appLifetime = appLifetime;
         _logger = logger;
-        _dnsOptions = dnsOptions;
+        _dnsOptions = dnsOptions.Value;
+        _validationOptions = validationOptions.Value;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var hostsPath = _dnsOptions.Value.Path;
+        var os = RuntimeInformation.OSDescription.Trim();
+        var arch = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 
-        _logger.LogInformation($"✅ Platform: {RuntimeInformation.OSArchitecture}/{RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()}");
+        _logger.LogInformation($"✅ Platform: {os}/{arch}");
 
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
         {
@@ -57,27 +66,28 @@ public class ValidationService : IHostedService
             _logger.LogInformation("    - Loopback client restriction is off");
         }
 
-        var validationSuccess = ValidateRouting(hostsPath);
-        if (!validationSuccess)
-        {
-            _logger.LogError("Validation failed. Terminating...");
-            Environment.Exit(1);
-        }
+        var validRouting = ValidateRouting(_dnsOptions.Path);
+        var validKubernetesConfig = ValidateKubernetesConfig();
+        var validHttpsCertificate = ValidateHttpsCertificateAuthority();
 
-        validationSuccess = await ValidateKubernetes() && validationSuccess;
-        if (!validationSuccess)
+        if (!validRouting || !validKubernetesConfig || !validHttpsCertificate)
         {
-            _logger.LogError("Validation failed. Terminating...");
-            Environment.Exit(1);
-        }
+            _validationState.MarkCompleted(false);
 
-        ValidateHttpsCertificateAuthority();
+            if (!_validationOptions.ExitOnFailure)
+            {
+                return Task.CompletedTask;
+            }
+
+            _logger.LogError("Terminating...");
+            Environment.ExitCode = 1;
+            _appLifetime.StopApplication();
+
+            return Task.CompletedTask;
+        }
 
         _endpointManager.Initialize();
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
+        _validationState.MarkCompleted(true);
         return Task.CompletedTask;
     }
 
@@ -149,37 +159,21 @@ public class ValidationService : IHostedService
         return true;
     }
 
-    private async Task<bool> ValidateKubernetes()
+    private bool ValidateKubernetesConfig()
     {
-        var fileExists = File.Exists(KubernetesClientConfiguration.KubeConfigDefaultLocation);
-        if (fileExists)
+        if (_kubernetesClient.TryGetKubeConfigPath(out var configPath))
         {
-            _logger.LogInformation("✅ Found kubeconfig: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
+            _logger.LogInformation("✅ Found kubeconfig: '{ConfigPath}'", configPath);
         }
         else
         {
-            _logger.LogError("❌ Kubeconfig not found: '{ConfigPath}'", KubernetesClientConfiguration.KubeConfigDefaultLocation);
-            return false;
-        }
-
-        var timeoutSeconds = 60;
-        var hasAccess = _kubernetesClient.WaitForAccess(TimeSpan.FromSeconds(timeoutSeconds), TimeSpan.FromSeconds(2));
-        if (hasAccess)
-        {
-            var context = await _kubernetesClient.FetchCurrentContext();
-            _logger.LogInformation("✅ Successfully connected to {Context}", context);
-        }
-        else
-        {
-            _logger.LogError("❌ Unable to reach Kubernetes ({timeout}s timeout).", timeoutSeconds);
-            _logger.LogError("    - Authenticate or refresh credentials");
-            _logger.LogError("    - Set KUBECONFIG to a valid file and retry");
+            _logger.LogError("❌ Kubeconfig not found: '{ConfigPath}'", configPath);
             return false;
         }
 
         return true;
     }
-
+    
     private static bool ValidateIsWinDivertInstalled()
     {
 #pragma warning disable CA1416
@@ -211,20 +205,23 @@ public class ValidationService : IHostedService
         return dllPaths.Any(File.Exists);
     }
 
-    private void ValidateHttpsCertificateAuthority()
+    private bool ValidateHttpsCertificateAuthority()
     {
+        const bool result = true; // HTTPS errors are just informational since its optional.
+
         if (_certificateManager.TryCheckTrustedCertificateAuthority(out _))
         {
             _logger.LogInformation("✅ HTTPS certificate: OK");
-            return;
+            return result;
         }
 
         if (_certificateManager.TryCheckCertificateAuthority(out _))
         {
             _logger.LogWarning("⚠️ HTTPS certificate: Untrusted - run `krp https --trust` to enable HTTPS");
-            return;
+            return result;
         }
 
         _logger.LogWarning("⚠️ HTTPS certificate: Disabled - run `krp https --trust` to enable HTTPS");
+        return result;
     }
 }

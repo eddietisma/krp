@@ -1,4 +1,4 @@
-﻿using Krp.Endpoints;
+using Krp.Endpoints;
 using Krp.Endpoints.PortForward;
 using Krp.Tool.TerminalUi.Extensions;
 using Spectre.Console;
@@ -16,12 +16,12 @@ public class PortForwardTable
     public int Count { get; private set; }
 
     private readonly KrpTerminalState _state;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly Dictionary<string, int> _measurementLookup = new();
     private readonly List<ColumnDefinition<PortForwardEndpointHandler>> _columnDefinitions;
     private int _handlersActiveCount;
 
-    public PortForwardTable(KrpTerminalState state, EndpointManager endpointManager)
+    public PortForwardTable(KrpTerminalState state, IEndpointManager endpointManager)
     {
         _state = state;
         _endpointManager = endpointManager;
