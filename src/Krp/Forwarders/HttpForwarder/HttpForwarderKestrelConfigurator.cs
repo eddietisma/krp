@@ -16,14 +16,14 @@ public class HttpForwarderKestrelConfigurator : IConfigureOptions<KestrelServerO
     private readonly ILogger<HttpForwarderKestrelConfigurator> _logger;
     private readonly IServiceProvider _provider;
     private readonly ICertificateManager _certificateManager;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
 
     public HttpForwarderKestrelConfigurator(
         IOptions<HttpForwarderOptions> forwarderOptions,
         ILogger<HttpForwarderKestrelConfigurator> logger,
         IServiceProvider provider,
         ICertificateManager certificateManager,
-        EndpointManager endpointManager)
+        IEndpointManager endpointManager)
     {
         _options = forwarderOptions.Value;
         _logger = logger;
@@ -106,15 +106,7 @@ public class HttpForwarderKestrelConfigurator : IConfigureOptions<KestrelServerO
         }
 
         // Allow endpoint hostnames.
-        if (_endpointManager != null)
-        {
-            var handlers = _endpointManager.GetHandlerByHost(hostName);
-            if (handlers.Any(handler => handler.LocalIp != null && IPAddress.IsLoopback(handler.LocalIp)))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        var handlers = _endpointManager.GetHandlerByHost(hostName);
+        return handlers.Any(handler => IPAddress.IsLoopback(handler.LocalIp));
     }
 }

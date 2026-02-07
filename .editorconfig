@@ -14,6 +14,8 @@ indent_style = space
 
 # IDE0042: Deconstruct variable declaration
 dotnet_diagnostic.IDE0042.severity = none
+# IDE0005: Remove unnecessary usings
+dotnet_diagnostic.IDE0005.severity = warning
 
 #### Core EditorConfig Options ####
 

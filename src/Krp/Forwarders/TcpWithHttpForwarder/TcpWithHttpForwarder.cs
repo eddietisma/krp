@@ -1,4 +1,4 @@
-﻿using Krp.Endpoints;
+using Krp.Endpoints;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Microsoft.Extensions.Logging;
@@ -19,14 +19,14 @@ namespace Krp.Forwarders.TcpWithHttpForwarder;
 public class TcpWithHttpForwarder
 {
     private static ReadOnlySpan<byte> Http2Preface => "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<TcpWithHttpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _tcpOptions;
     private readonly HttpForwarderOptions _httpOptions;
     private readonly List<TcpListener> _listeners = new();
 
     public TcpWithHttpForwarder(
-        EndpointManager endpointManager,
+        IEndpointManager endpointManager,
         ILogger<TcpWithHttpForwarderBackgroundService> logger,
         IOptions<TcpForwarderOptions> tcpOptions,
         IOptions<HttpForwarderOptions> httpOptions)

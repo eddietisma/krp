@@ -84,7 +84,7 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseEndpointExplorer(this KubernetesForwarderBuilder builder, Action<EndpointExplorerOptions> optionsAction)
     {
         builder.Services.Configure(optionsAction);
-        builder.Services.AddSingleton<EndpointExplorer.EndpointExplorer>();
+        builder.Services.AddSingleton<EndpointExplorerManager>();
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
         return builder;
     }
