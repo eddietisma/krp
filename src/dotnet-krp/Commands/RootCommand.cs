@@ -6,6 +6,7 @@ using Krp.Logging;
 using Krp.Tool.TerminalUi;
 using Krp.Tool.TerminalUi.DependencyInjection;
 using Krp.Tool.TerminalUi.Logging;
+using Krp.Validation;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -56,14 +57,18 @@ public class RootCommand
         var webApplicationBuilder = WebApplication.CreateSlimBuilder();
         webApplicationBuilder.Configuration.AddUserSecrets<Program>();
 
-        if (!NoTerminalUi)
+        if (NoTerminalUi)
         {
-            webApplicationBuilder.Logging.AddKrpTerminalLogger();
-            webApplicationBuilder.AddKrpTerminalUi();
+            webApplicationBuilder.Logging.AddKrpLogger();
         }
         else
         {
-            webApplicationBuilder.Logging.AddKrpLogger();
+            webApplicationBuilder.Logging.AddKrpTerminalLogger();
+            webApplicationBuilder.AddKrpTerminalUi();
+            webApplicationBuilder.Services.Configure<ValidationOptions>(options =>
+            {
+                options.ExitOnFailure = false;
+            });
         }
 
         var builder = webApplicationBuilder.Services.AddKubernetesForwarder(webApplicationBuilder.Configuration)

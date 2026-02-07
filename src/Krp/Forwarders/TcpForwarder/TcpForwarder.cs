@@ -1,4 +1,4 @@
-﻿using Krp.Endpoints;
+using Krp.Endpoints;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -16,12 +16,12 @@ namespace Krp.Forwarders.TcpForwarder;
 /// </summary>
 public class TcpForwarder
 {
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<TcpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _options;
     private readonly List<TcpListener> _listeners = new();
 
-    public TcpForwarder(EndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
+    public TcpForwarder(IEndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
     {
         _endpointManager = endpointManager;
         _logger = logger;
