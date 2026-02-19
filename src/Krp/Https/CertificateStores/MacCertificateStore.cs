@@ -14,7 +14,7 @@ public class MacCertificateStore : ICertificateStore
         {
             File.WriteAllBytes(tempPath, certificate.Export(X509ContentType.Cert));
 
-            var ok = TryRunCommand("/usr/bin/security", new[] { "verify-cert", "-c", tempPath }, out var stdout, out var stderr);
+            var ok = TryRunCommand("/usr/bin/security", new[] { "verify-cert", "-p", "basic", "-p", "ssl", "-c", tempPath }, out var stdout, out var stderr);
 
             isTrusted = ok;
             error = ok ? string.Empty : (string.IsNullOrWhiteSpace(stderr) ? (stdout?.Trim() ?? string.Empty) : stderr.Trim());
