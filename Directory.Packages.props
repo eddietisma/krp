@@ -11,7 +11,7 @@
     </PackageVersion>
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="KubernetesClient" Version="18.0.13" />
-    <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
+    <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.0.1" />
     <PackageVersion Include="McMaster.Extensions.Hosting.CommandLine" Version="4.1.1" />
     <PackageVersion Include="Meziantou.Framework.Win32.Jobs" Version="3.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.2" />
