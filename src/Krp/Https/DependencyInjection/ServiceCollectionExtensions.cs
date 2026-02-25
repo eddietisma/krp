@@ -12,15 +12,15 @@ public static class ServiceCollectionExtensions
 
         if (OperatingSystem.IsMacOS())
         {
-            services.AddSingleton<ICertificateStore, MacCertificateStore>();
+            services.AddSingleton<ICertificateStore, MacKeychainCertificateStore>();
         }
         else if (OperatingSystem.IsLinux())
         {
-            services.AddSingleton<ICertificateStore, LinuxCertificateStore>();
+            services.AddSingleton<ICertificateStore, LinuxRootCertificateStore>();
         }
         else
         {
-            services.AddSingleton<ICertificateStore, WindowsCertificateStore>();
+            services.AddSingleton<ICertificateStore, WindowsX509StoreCertificateStore>();
         }
 
         services.AddSingleton<ICertificateManager, CertificateManager>();

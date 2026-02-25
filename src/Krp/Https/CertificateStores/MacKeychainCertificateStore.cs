@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Krp.Https.CertificateStores;
 
-public class MacCertificateStore : ICertificateStore
+public class MacKeychainCertificateStore : ICertificateStore
 {
     public bool TryCheckTrustedCertificate(X509Certificate2 certificate, out bool isTrusted, out string error)
     {

@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Krp.Https.CertificateStores;
 
-public class WindowsCertificateStore : ICertificateStore
+public class WindowsX509StoreCertificateStore : ICertificateStore
 {
     public bool TryCheckTrustedCertificate(X509Certificate2 certificate, out bool isTrusted, out string error)
     {

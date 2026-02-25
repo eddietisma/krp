@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Krp.Https.CertificateStores;
 
-public class LinuxCertificateStore : ICertificateStore
+public class LinuxRootCertificateStore : ICertificateStore
 {
     public bool TryCheckTrustedCertificate(X509Certificate2 certificate, out bool isTrusted, out string error)
     {
