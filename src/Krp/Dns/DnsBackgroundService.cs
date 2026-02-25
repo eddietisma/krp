@@ -34,14 +34,26 @@ public class DnsBackgroundService : BackgroundService
     {
         await _validationState.WaitForValidAsync(stoppingToken);
 
-        _ = _dnsHandler.RunAsync(stoppingToken);
-
         var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorerManager>() != null;
         if (!isEndpointExplorerEnabled)
         {
             // Skip updating DNS, since the endpoint explorer will once discovery is finished.
             // Prevents unnecessary updates where the static routes are updated first and then overwritten with dynamic ones.
             await UpdateDns();
+        }
+
+        try
+        {
+            await _dnsHandler.RunAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Expected during graceful shutdown.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DNS handler failed");
+            throw;
         }
     }
     
