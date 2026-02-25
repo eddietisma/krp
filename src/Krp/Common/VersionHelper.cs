@@ -15,19 +15,15 @@ public static class VersionHelper
             return infoVersion;
         }
 
+        var fallbackVersion = assembly.GetName().Version?.ToString() ?? "unknown";
         // Assembly location might be empty in some contexts (e.g., single-file publish).
         var assemblyLocation = assembly.Location;
         if (string.IsNullOrWhiteSpace(assemblyLocation))
         {
-            return assembly.GetName().Version?.ToString() ?? "unknown";
+            return fallbackVersion;
         }
 
         var fvi = FileVersionInfo.GetVersionInfo(assemblyLocation);
-        if (!string.IsNullOrWhiteSpace(fvi.ProductVersion))
-        {
-            return fvi.ProductVersion;
-        }
-
-        return assembly.GetName().Version?.ToString() ?? "unknown";
+        return !string.IsNullOrWhiteSpace(fvi.ProductVersion) ? fvi.ProductVersion : fallbackVersion;
     }
 }

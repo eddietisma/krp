@@ -12,11 +12,7 @@ public static class FileHelper
             using var fs = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             return true;
         }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-        catch (IOException)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             return false;
         }
