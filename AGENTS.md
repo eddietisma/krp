@@ -46,5 +46,7 @@ Follow the repository's `.editorconfig`. Key points include:
 - Summaries should only describe commits since the previous release tag.
 - Keep wording short and concise.
 - Under Maintenance, list all non-infra NuGet package version updates in the format: "PackageName: x.y.z → a.b.c". If a nuget is removed add a "PackageName: Removed."
-- At the bottom add "Full Changelog: v1.0.x...v1.0.x" wher the versioning is a href to https://github.com/eddietisma/krp/compare/v1.0.x...v1.0.x 
+  - When a new package is added use this format example `coverlet.collector: 8.0.0 (#59)`.
+  - List all package changes found using `git diff --unified=0 v1.0.8..HEAD -- Directory.Packages.props`
+- At the bottom add "Full Changelog: v1.0.x...v1.0.x" where the versioning is a href to https://github.com/eddietisma/krp/compare/v1.0.x...v1.0.x 
 - Use `git log --oneline v1.0.5..HEAD` to find commits since last release.
