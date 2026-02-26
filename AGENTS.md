@@ -39,6 +39,7 @@ Follow the repository's `.editorconfig`. Key points include:
 ## Release notes generation
 - Group entries under the headings Features, Fixes, Documentation, Performance and Maintenance, following Docker Buildx style.
   - Use ### for headings.
+  - Only add headings if applicable.
 - Each bullet must end with a period.
 - Use the imperative mood for entries (e.g., "fix bug" not "fixed bug").
 - When a pull request number is available, link it in the format "(#123)"
