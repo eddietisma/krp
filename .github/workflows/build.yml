@@ -12,10 +12,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
 
-    permissions:
-      actions: write
-      contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,18 +20,28 @@ jobs:
 
       - name: Set up BuildCharts
         uses: buildcharts/setup-action@v1
-        
+
       - name: Generate BuildCharts
         uses: buildcharts/generate-action@v1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker build and test
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Docker build and push
         uses: docker/bake-action@v6
         with:
           source: .
           files: .buildcharts/docker-bake.hcl
+          set: |
+            docker.output=type=registry
+            docker.attest=type=sbom
+            ${{ github.event_name == 'release' && github.event.release.target_commitish == github.event.repository.default_branch && 'docker.tags+=docker.io/eddietisma/krp:latest' || '' }}
         env:
           VERSION: ${{ inputs.version }}
           COMMIT:  ${{ inputs.commit }}
@@ -44,34 +50,19 @@ jobs:
         #     base.cache-from=type=gha,scope=krp
         #     build.cache-to=type=gha,scope=krp,mode=max
 
+      - name: Nuget push
+        run: |
+          dotnet nuget push ".buildcharts/output/nuget/*.nupkg" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Upload release assets
+        if: ${{ github.event_name == 'release' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: .buildcharts/output/publish/*.zip
+
       - name: BuildCharts Summary
         uses: buildcharts/summary-action@v1
-
-      - name: Save Docker image
-        run: |
-          docker save eddietisma/krp:${{ inputs.version }}-${{ inputs.commit }} -o krp-${{ inputs.version }}-${{ inputs.commit }}.tar
-
-      - name: Upload nuget
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget
-          path: .buildcharts/output/nuget
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test
-          path: .buildcharts/output/test
-
-      - name: Upload published artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish
-          path: .buildcharts/output/publish
-
-      - name: Upload docker
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker
-          path: krp-${{ inputs.version }}-${{ inputs.commit }}.tar
-
+        if: always()

@@ -15,44 +15,16 @@ jobs:
 
   build:
     needs: [determine_version]
+    permissions:
+      contents: write
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.determine_version.outputs.version }}
       commit: ${{ github.sha }}
-
-  publish-nuget:
-    needs: [build]
-    uses: ./.github/workflows/publish-nuget.yml
     secrets: inherit
-
-  publish-docker:
-    needs: [determine_version, build]
-    uses: ./.github/workflows/publish-docker.yml
-    with:
-      version: ${{ needs.determine_version.outputs.version }}
-      commit: ${{ github.sha }}
-      push_latest: ${{ github.event.release.target_commitish == github.event.repository.default_branch }}
-    secrets: inherit
-
-  publish-release-assets:
-    needs: [build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download publish zips
-        uses: actions/download-artifact@v4
-        with:
-          name: publish
-          path: publish
-
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: publish/*.zip
 
   publish-winget:
-    needs: [publish-release-assets]
+    needs: [build]
     if: github.event.action == 'released' || github.event.action == 'prereleased'
     runs-on: windows-latest
     steps:
