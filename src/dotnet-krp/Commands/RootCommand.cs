@@ -149,7 +149,7 @@ public class RootCommand
         var build = parts.Length > 1 ? parts[1] : null;
 
         return build is null
-            ? $"krp version {version}"
-            : $"krp version {version}, build {build}";
+            ? $"krp v{version}"
+            : $"krp v{version}, build {build}";
     }
 }
