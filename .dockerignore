@@ -1,7 +1,5 @@
 .dockerignore
 .env
-#.git # needed for sourcelink when building the image inside docker
-#.gitignore # needed for sourcelink when building the image inside docker
 .vs
 .vscode
 docker-bake.hcl
@@ -16,3 +14,9 @@ output
 
 # Ignore generated build artifacts
 .buildcharts
+
+# Keep minimal git info for SourceLink
+!.git/HEAD
+!.git/config
+!.git/refs/heads/master
+!.gitignore

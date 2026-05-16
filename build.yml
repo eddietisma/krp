@@ -8,7 +8,8 @@ targets:
   krp.sln:
     type: build
     with:
-      base: mcr.microsoft.com/dotnet/sdk:10.0
+      contexts:
+        base: docker-image://mcr.microsoft.com/dotnet/sdk:10.0
 
   src/dotnet-krp/dotnet-krp.csproj:
     - type: nuget
@@ -18,7 +19,8 @@ targets:
     - type: nuget
     - type: docker
       with:
-        base: mcr.microsoft.com/dotnet/aspnet:10.0
+        contexts:
+          base: docker-image://mcr.microsoft.com/dotnet/aspnet:10.0
         tags: ["docker.io/eddietisma/krp:${VERSION}-${COMMIT}"]
         dockerfile: ./Dockerfile.aks
 
@@ -29,6 +31,9 @@ targets:
     type: test
 
 types:
+  nuget:
+    contexts:
+      git: .git
   publish:
     matrix:
       runtime: ["win-x64", "win-arm64"]
