@@ -20,9 +20,9 @@
       },
       "Meziantou.Framework.Win32.Jobs": {
         "type": "Direct",
-        "requested": "[3.5.2, )",
-        "resolved": "3.5.2",
-        "contentHash": "x6fYhlPliNnbF9DSWliRPEPWmVYMonHNot6JE4oMX14ltErYECNvWkII8I1qSMRDuMcVFFb9zjOtnYrOHAjc1w=="
+        "requested": "[4.0.0, )",
+        "resolved": "4.0.0",
+        "contentHash": "3d8pS59zu2b8lFtdfo0PBYpURRo8xdnz+BfCXDbddmowkP0e4PN5ZiMhwFo9o74brC/6wT7r3KPMR8j/tLeSzg=="
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
