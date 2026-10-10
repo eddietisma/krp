@@ -51,8 +51,13 @@ public sealed class DnsMasqHandlerTests
     [TestMethod]
     public async Task UpdateAsync_ShouldWriteConfigurationBeforeRestart_WhenUsingCustomPath()
     {
-        await _sut.UpdateAsync(["127.0.0.2 app.local", "127.0.0.3 api.local"]);
+        // Arrange
+        List<string> hostnames = ["127.0.0.2 app.local", "127.0.0.3 api.local"];
 
+        // Act
+        await _sut.UpdateAsync(hostnames);
+
+        // Assert
         var lines = await File.ReadAllLinesAsync(_options.OverridePath);
         CollectionAssert.Contains(lines, "address=/app.local/127.0.0.2");
         CollectionAssert.Contains(lines, "address=/api.local/127.0.0.3");
@@ -63,41 +68,55 @@ public sealed class DnsMasqHandlerTests
     [TestMethod]
     public async Task UpdateAsync_ShouldSkipRestart_WhenConfigurationIsUnchanged()
     {
-        await _sut.UpdateAsync(["127.0.0.2 app.local"]);
+        // Arrange
         await _sut.UpdateAsync(["127.0.0.2 app.local"]);
 
+        // Act
+        await _sut.UpdateAsync(["127.0.0.2 app.local"]);
+
+        // Assert
         Assert.AreEqual(1, File.ReadAllLines(_callsPath).Length);
     }
 
     [TestMethod]
     public async Task UpdateAsync_ShouldRestart_WhenExistingConfigurationMatchesOnStartup()
     {
+        // Arrange
         await _sut.UpdateAsync(["127.0.0.2 app.local"]);
         var newHandler = CreateHandler();
 
+        // Act
         await newHandler.UpdateAsync(["127.0.0.2 app.local"]);
 
+        // Assert
         Assert.AreEqual(2, File.ReadAllLines(_callsPath).Length);
     }
 
     [TestMethod]
     public async Task UpdateAsync_ShouldRetryRestart_WhenPreviousRestartFailed()
     {
+        // Arrange
         File.WriteAllText(_failurePath, "fail");
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UpdateAsync(["127.0.0.2 app.local"]));
         File.Delete(_failurePath);
 
+        // Act
         await _sut.UpdateAsync(["127.0.0.2 app.local"]);
 
+        // Assert
         Assert.AreEqual(2, File.ReadAllLines(_callsPath).Length);
     }
 
     [TestMethod]
     public async Task UpdateAsync_ShouldRemoveOldMappings_WhenEndpointsAreEmpty()
     {
+        // Arrange
         await _sut.UpdateAsync(["127.0.0.2 app.local"]);
+
+        // Act
         await _sut.UpdateAsync([]);
 
+        // Assert
         Assert.IsFalse(File.ReadAllLines(_options.OverridePath).Any(line => line.StartsWith("address=")));
         Assert.AreEqual(2, File.ReadAllLines(_callsPath).Length);
     }
@@ -105,11 +124,14 @@ public sealed class DnsMasqHandlerTests
     [TestMethod]
     public async Task StopAsync_ShouldRemoveConfigurationAndRestart_WhenFileIsManaged()
     {
+        // Arrange
         await _sut.UpdateAsync(["127.0.0.2 app.local"]);
 
+        // Act
         await _sut.StopAsync(CancellationToken.None);
         await _sut.UpdateAsync(["127.0.0.3 api.local"]);
 
+        // Assert
         Assert.IsFalse(File.Exists(_options.OverridePath));
         CollectionAssert.AreEqual(new[] { "present", "missing" }, File.ReadAllLines(_callsPath));
     }
@@ -117,6 +139,7 @@ public sealed class DnsMasqHandlerTests
     [TestMethod]
     public async Task StopAsync_ShouldCancelUpdateAndRemoveConfiguration_WhenRestartIsRunning()
     {
+        // Arrange
         var scriptPath = Path.Combine(_directory, OperatingSystem.IsWindows() ? "restart.cmd" : "restart.sh");
         var script = OperatingSystem.IsWindows()
             ? $"@echo off\r\nif exist \"{_options.OverridePath}\" (echo present>>\"{_callsPath}\" & ping -n 30 127.0.0.1 >nul) else (echo missing>>\"{_callsPath}\")\r\nexit /b 0\r\n"
@@ -130,9 +153,11 @@ public sealed class DnsMasqHandlerTests
             await Task.Delay(10, timeout.Token);
         }
 
+        // Act
         await _sut.StopAsync(timeout.Token);
         await update;
 
+        // Assert
         Assert.IsFalse(File.Exists(_options.OverridePath));
         CollectionAssert.AreEqual(new[] { "present", "missing" }, File.ReadAllLines(_callsPath));
     }
@@ -140,12 +165,15 @@ public sealed class DnsMasqHandlerTests
     [TestMethod]
     public async Task StopAsync_ShouldPreserveConfiguration_WhenFileIsNotManaged()
     {
+        // Arrange
         Directory.CreateDirectory(Path.GetDirectoryName(_options.OverridePath));
         const string existing = "address=/existing.local/10.0.0.1";
         File.WriteAllText(_options.OverridePath, existing);
 
+        // Act
         await _sut.StopAsync(CancellationToken.None);
 
+        // Assert
         Assert.AreEqual(existing, File.ReadAllText(_options.OverridePath));
         Assert.IsFalse(File.Exists(_callsPath));
     }

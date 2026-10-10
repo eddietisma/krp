@@ -17,20 +17,25 @@ public sealed class DnsMasqValidationTests : TestBase
     [DataRow(false)]
     public async Task StartAsync_ShouldAcceptConfiguration_WhenDirectoryIsWritable(bool directoryExists)
     {
+        // Arrange
         var directory = Path.Combine(Path.GetTempPath(), $"krp-dnsmasq-{Guid.NewGuid():N}");
         if (directoryExists)
         {
             Directory.CreateDirectory(directory);
         }
 
+        var options = new DnsMasqOptions
+        {
+            OverridePath = Path.Combine(directory, "krp.override.conf"),
+            RestartCommand = "dnsmasq-restart",
+        };
+
         try
         {
-            var state = await ValidateAsync(new DnsMasqOptions
-            {
-                OverridePath = Path.Combine(directory, "krp.override.conf"),
-                RestartCommand = "dnsmasq-restart",
-            });
+            // Act
+            var state = await ValidateAsync(options);
 
+            // Assert
             Assert.IsTrue(state.IsValid);
             Assert.IsTrue(Directory.Exists(directory));
             Assert.AreEqual(0, Directory.GetFiles(directory).Length);
@@ -44,8 +49,13 @@ public sealed class DnsMasqValidationTests : TestBase
     [TestMethod]
     public async Task StartAsync_ShouldRejectConfiguration_WhenRestartCommandIsMissing()
     {
-        var state = await ValidateAsync(new DnsMasqOptions());
+        // Arrange
+        var options = new DnsMasqOptions();
 
+        // Act
+        var state = await ValidateAsync(options);
+
+        // Assert
         Assert.IsFalse(state.IsValid);
         Fixture.Freeze<Mock<IEndpointManager>>().Verify(manager => manager.Initialize(), Times.Never);
     }
@@ -53,15 +63,20 @@ public sealed class DnsMasqValidationTests : TestBase
     [TestMethod]
     public async Task StartAsync_ShouldRejectConfiguration_WhenParentPathIsAFile()
     {
+        // Arrange
         var path = Path.GetTempFileName();
+        var options = new DnsMasqOptions
+        {
+            OverridePath = Path.Combine(path, "krp.override.conf"),
+            RestartCommand = "dnsmasq-restart",
+        };
+
         try
         {
-            var state = await ValidateAsync(new DnsMasqOptions
-            {
-                OverridePath = Path.Combine(path, "krp.override.conf"),
-                RestartCommand = "dnsmasq-restart",
-            });
+            // Act
+            var state = await ValidateAsync(options);
 
+            // Assert
             Assert.IsFalse(state.IsValid);
             Assert.IsTrue(File.Exists(path));
         }
