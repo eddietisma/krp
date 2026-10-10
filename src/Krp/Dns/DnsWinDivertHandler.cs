@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using Krp.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,6 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,10 +40,12 @@ public class DnsWinDivertHandler : IDnsHandler
 {
     private readonly ILogger<DnsWinDivertHandler> _logger;
     private readonly ConcurrentDictionary<string, IPAddress> _redirectMap = new(StringComparer.OrdinalIgnoreCase);
-    
+    private readonly bool _serviceExistedAtStart;
+
     public DnsWinDivertHandler(ILogger<DnsWinDivertHandler> logger)
     {
         _logger = logger;
+        _serviceExistedAtStart = OperatingSystem.IsWindows() && IsWinDivertServiceInstalled();
     }
 
     public Task UpdateAsync(List<string> hostnames)
@@ -66,6 +71,30 @@ public class DnsWinDivertHandler : IDnsHandler
         return Task.Run(() => HandleQueries(stoppingToken), stoppingToken);
     }
 
+    public Task StopAsync(CancellationToken stoppingToken)
+    {
+        // Safeguard if other apps are using windivert service.
+        // Assume safe to remove windivert service if not running at start. 
+        if (OperatingSystem.IsWindows() && !_serviceExistedAtStart)
+        {
+            try
+            {
+                using var service = new ServiceController("windivert");
+
+                if (service.Status == ServiceControllerStatus.Running)
+                {
+                    service.Stop();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to stop WinDivert service");
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void HandleQueries(CancellationToken ct)
     {
         const string filter = "outbound and ip and udp.DstPort == 53";
@@ -78,7 +107,7 @@ public class DnsWinDivertHandler : IDnsHandler
             return;
         }
 
-        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 1_000_000); // Reduce shutdown latency by lowering queue time to 100ms.
+        WinDivertSetParam(handle, WINDIVERT_PARAM.QueueTime, 100_000); // Reduce shutdown latency by lowering queue time to 100ms.
 
         var buffer = new byte[4096];
         var address = new byte[WINDIVERT_ADDRESS_SIZE];
@@ -418,6 +447,21 @@ public class DnsWinDivertHandler : IDnsHandler
     {
         return (ushort)((b[off] << 8) | b[off + 1]);
     }
+
+    [SupportedOSPlatform("windows")]
+    private static bool IsWinDivertServiceInstalled()
+    {
+        try
+        {
+            using var service = new ServiceController("windivert");
+            _ = service.Status;
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
 }
 
 internal static class WinDivertNative
@@ -431,10 +475,11 @@ internal static class WinDivertNative
             Environment.GetEnvironmentVariable("PATH") ?? string.Empty,
         };
 
+        var baseDir = ExecutablePathHelper.GetExecutableBaseDirectory();
         var dllSearchPaths = new[]
         {
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x86", "native"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtimes", "win-x64", "native"),
+            Path.Combine(baseDir, "runtimes", "win-x86", "native"),
+            Path.Combine(baseDir, "runtimes", "win-x64", "native"),
         };
 
         var newPath = string.Join(Path.PathSeparator.ToString(), path.Concat(dllSearchPaths));

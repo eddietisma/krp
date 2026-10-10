@@ -8,6 +8,7 @@ public enum KrpTable { PortForwards, Logs }
 
 public class KrpTerminalState
 {
+    public Dictionary<KrpTable, int> AnchorRowIndex { get; } = new();
     public Dictionary<KrpTable, int> SelectedRow { get; set; } = new();
     public KrpTable SelectedTable { get; set; }
     public SortField SortField { get; set; }

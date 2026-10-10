@@ -1,7 +1,5 @@
 .dockerignore
 .env
-#.git # needed for sourcelink when building the image inside docker
-.gitignore
 .vs
 .vscode
 docker-bake.hcl
@@ -13,3 +11,12 @@ bin/
 obj/
 output
 *.tar
+
+# Ignore generated build artifacts
+.buildcharts
+
+# Keep minimal git info for SourceLink
+!.git/HEAD
+!.git/config
+!.git/refs/heads/master
+!.gitignore

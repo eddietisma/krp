@@ -2,7 +2,6 @@
 using k8s.Models;
 using Krp.Endpoints.Models;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -14,14 +13,19 @@ using System.Threading.Tasks;
 
 namespace Krp.Kubernetes;
 
-public class KubernetesClient
+public class KubernetesClient : IKubernetesClient
 {
-    private static readonly Lock _lockObj = new();
     private readonly ILogger<KubernetesClient> _logger;
 
     public KubernetesClient(ILogger<KubernetesClient> logger)
     {
         _logger = logger;
+    }
+
+    public bool TryGetKubeConfigPath(out string path)
+    {
+        path = KubernetesClientConfiguration.KubeConfigDefaultLocation;
+        return File.Exists(path);
     }
 
     public async Task<string> FetchCurrentContext()
@@ -79,51 +83,7 @@ public class KubernetesClient
 
         return endpoints.ToList();
     }
-
-    /// <summary>
-    /// Blocks until returns true or the timeout expires.
-    /// </summary>
-    /// <param name="timeout">Maximum time to wait. Default is 30 seconds.</param>
-    /// <param name="pollInterval">Delay between probes. Default is 5 seconds.</param>
-    /// <returns>True if access was obtained inside the timeout; otherwise false.</returns>
-    public bool WaitForAccess(TimeSpan timeout, TimeSpan pollInterval)
-    {
-        var deadline = timeout <= TimeSpan.Zero
-            ? DateTimeOffset.MaxValue
-            : DateTimeOffset.UtcNow + timeout;
-
-        while (DateTimeOffset.UtcNow <= deadline)
-        {
-            bool hasAccess;
-
-            try
-            {
-                lock (_lockObj)
-                {
-                    var cfg = KubernetesClientConfiguration.BuildConfigFromConfigFile();
-                    hasAccess = !string.IsNullOrEmpty(cfg.AccessToken);
-                }
-            }
-            catch (k8s.Exceptions.KubeConfigException)
-            {
-                hasAccess = false;
-            }
-            catch (IOException)
-            {
-                hasAccess = false;
-            }
-
-            if (hasAccess)
-            {
-                return true;
-            }
-
-            Thread.Sleep(pollInterval);
-        }
-
-        return false;
-    }
-
+    
     private async Task<IEnumerable<V1Service>> FetchServicesAsync(string ns, k8s.Kubernetes client, CancellationToken ct)
     {
         try

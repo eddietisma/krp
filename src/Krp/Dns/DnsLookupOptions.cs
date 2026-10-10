@@ -5,5 +5,5 @@ public class DnsLookupOptions
     /// <summary>
     /// DNS server.
     /// </summary>
-    public string Nameserver { get; set; }
+    public required string Nameserver { get; set; }
 }

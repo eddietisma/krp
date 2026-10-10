@@ -13,7 +13,7 @@ public enum DnsOptions
     WinDivert,
 
     /// <summary>
-    /// Use dnsmasq for DNS routing.
+    /// Use dnsmasq configuration for DNS routing.
     /// </summary>
     DnsMasq,
 }

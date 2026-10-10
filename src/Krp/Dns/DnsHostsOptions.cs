@@ -5,5 +5,5 @@ public class DnsHostsOptions
     /// <summary>
     /// Path to HOSTS file.
     /// </summary>
-    public string Path { get; set; }
+    public required string Path { get; set; }
 }

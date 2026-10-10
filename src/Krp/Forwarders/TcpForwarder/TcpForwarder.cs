@@ -1,4 +1,4 @@
-﻿using Krp.Endpoints;
+using Krp.Endpoints;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -16,12 +16,12 @@ namespace Krp.Forwarders.TcpForwarder;
 /// </summary>
 public class TcpForwarder
 {
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<TcpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _options;
     private readonly List<TcpListener> _listeners = new();
 
-    public TcpForwarder(EndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
+    public TcpForwarder(IEndpointManager endpointManager, ILogger<TcpForwarderBackgroundService> logger, IOptions<TcpForwarderOptions> options)
     {
         _endpointManager = endpointManager;
         _logger = logger;
@@ -82,9 +82,29 @@ public class TcpForwarder
             using var tcpClient = client;
             using var target = new TcpClient();
 
-            var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
-            var localIp = localEndPoint?.Address;
-            var localPort = localEndPoint?.Port;
+            var remoteEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
+            var remoteIp = remoteEndPoint?.Address;
+            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            {
+                // Let docker handle network isolation when running in a container,
+                // since we may receive non-loopback connections due to docker NAT.
+                if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+                {
+                    _logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
+                    return;
+                }
+            }
+
+            if (client.Client.LocalEndPoint is not IPEndPoint localEndPoint)
+            {
+                _logger.LogWarning("Missing local endpoint for TCP proxy request");
+                var errorMessageBytes = GetErrorMessageBytes(IPAddress.None, null);
+                await client.GetStream().WriteAsync(errorMessageBytes, 0, errorMessageBytes.Length, stoppingToken);
+                return;
+            }
+
+            var localIp = localEndPoint.Address;
+            var localPort = localEndPoint.Port;
 
             _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 

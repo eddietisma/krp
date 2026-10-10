@@ -60,7 +60,7 @@ public static class KubernetesBuilderExtension
     /// <param name="host"></param>
     /// <param name="path"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseHttpEndpoint(this KubernetesForwarderBuilder builder, int localPort, string localScheme, string host, string path = null)
+    public static KubernetesForwarderBuilder UseHttpEndpoint(this KubernetesForwarderBuilder builder, int localPort, string localScheme, string host, string? path = null)
     {
         builder.Services.Configure<KubernetesForwarderOptions>(options =>
         {
@@ -84,7 +84,7 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseEndpointExplorer(this KubernetesForwarderBuilder builder, Action<EndpointExplorerOptions> optionsAction)
     {
         builder.Services.Configure(optionsAction);
-        builder.Services.AddSingleton<EndpointExplorer.EndpointExplorer>();
+        builder.Services.AddSingleton<EndpointExplorerManager>();
         builder.Services.AddHostedService<EndpointExplorerBackgroundService>();
         return builder;
     }
@@ -95,7 +95,7 @@ public static class KubernetesBuilderExtension
     /// <param name="builder"></param>
     /// <param name="optionsAction"></param>
     /// <returns></returns>
-    public static KubernetesForwarderBuilder UseHttpForwarder(this KubernetesForwarderBuilder builder, Action<HttpForwarderOptions> optionsAction = null)
+    public static KubernetesForwarderBuilder UseHttpForwarder(this KubernetesForwarderBuilder builder, Action<HttpForwarderOptions>? optionsAction = null)
     {
         optionsAction ??= options =>
         {
@@ -118,6 +118,7 @@ public static class KubernetesBuilderExtension
     public static KubernetesForwarderBuilder UseRouting(this KubernetesForwarderBuilder builder, DnsOptions routing)
     {
         builder.Services.AddHostedService<DnsBackgroundService>();
+        builder.Services.AddHostedService<DnsCleanupHostedService>();
         
         switch (routing)
         {
@@ -125,7 +126,7 @@ public static class KubernetesBuilderExtension
                 var hostsPath = Environment.GetEnvironmentVariable("KRP_HOSTS") ?? (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"drivers\etc\hosts")
                     : "/etc/hosts");
-
+                
                 builder.Services.AddSingleton<IDnsHandler, DnsHostsHandler>();
                 builder.Services.Configure<DnsHostsOptions>(o => o.Path = hostsPath);
                 break;
@@ -133,10 +134,13 @@ public static class KubernetesBuilderExtension
                 builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
                 break;
             case DnsOptions.DnsMasq:
-                var dnsMasqOverridePath = Environment.GetEnvironmentVariable("KRP_DNSMASQ_OVERRIDE") ?? "/run/dnsmasq/krp.override.conf";
-
                 builder.Services.AddSingleton<IDnsHandler, DnsMasqHandler>();
-                builder.Services.Configure<DnsMasqOptions>(o => o.OverridePath = dnsMasqOverridePath);
+                builder.Services.Configure<DnsMasqOptions>(o =>
+                {
+                    o.OverridePath = Environment.GetEnvironmentVariable("KRP_DNSMASQ_OVERRIDE") ?? "/run/dnsmasq/krp.override.conf";
+                    o.RestartCommand = Environment.GetEnvironmentVariable("KRP_DNSMASQ_RESTART_COMMAND");
+                    o.RestartArguments = Environment.GetEnvironmentVariable("KRP_DNSMASQ_RESTART_ARGUMENTS") ?? string.Empty;
+                });
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");

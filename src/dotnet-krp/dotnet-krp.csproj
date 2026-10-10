@@ -3,12 +3,11 @@
   <PropertyGroup>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <UserSecretsId>krp</UserSecretsId>
     <RootNamespace>Krp.Tool</RootNamespace>
     <IsPackable>true</IsPackable>
-    <!--<Nullable>enable</Nullable>-->
 
     <!--Tool-->
     <PackAsTool>true</PackAsTool>

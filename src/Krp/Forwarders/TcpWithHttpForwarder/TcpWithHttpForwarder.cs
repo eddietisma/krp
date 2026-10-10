@@ -1,11 +1,10 @@
-﻿using Krp.Endpoints;
+using Krp.Endpoints;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -20,14 +19,14 @@ namespace Krp.Forwarders.TcpWithHttpForwarder;
 public class TcpWithHttpForwarder
 {
     private static ReadOnlySpan<byte> Http2Preface => "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<TcpWithHttpForwarderBackgroundService> _logger;
     private readonly TcpForwarderOptions _tcpOptions;
     private readonly HttpForwarderOptions _httpOptions;
     private readonly List<TcpListener> _listeners = new();
 
     public TcpWithHttpForwarder(
-        EndpointManager endpointManager,
+        IEndpointManager endpointManager,
         ILogger<TcpWithHttpForwarderBackgroundService> logger,
         IOptions<TcpForwarderOptions> tcpOptions,
         IOptions<HttpForwarderOptions> httpOptions)
@@ -90,6 +89,19 @@ public class TcpWithHttpForwarder
         {
             using var tcpClient = client;
             using var target = new TcpClient();
+
+            var remoteEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
+            var remoteIp = remoteEndPoint?.Address;
+            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            {
+                // Let docker handle network isolation when running in a container,
+                // since we may receive non-loopback connections due to docker NAT.
+                if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+                {
+                    _logger.LogWarning("Rejected non-loopback client {ip}", remoteIp);
+                    return;
+                }
+            }
 
             var localEndPoint = client.Client.LocalEndPoint as IPEndPoint;
             var localIp = localEndPoint!.Address;
@@ -203,14 +215,14 @@ public class TcpWithHttpForwarder
         // We can however detect the HTTP/2 preface and use that to determine if the client is using HTTP/2 or HTTP/1.1 and route to
         // a specific backend by hosting HTTP/2 and HTTP/1 on different Kestrel ports.
         // https://httpwg.org/specs/rfc7540.html#ConnectionHeader
-        // https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-9.0&tabs=visual-studio#protocol-negotiation
+        // https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-10.0&tabs=visual-studio#protocol-negotiation
         // https://github.com/dotnet/aspnetcore/issues/13502
 
         const int prefaceLen = 24;
         return buffer.Length >= prefaceLen && buffer.Slice(0, prefaceLen).SequenceEqual(Http2Preface);
     }
 
-    public static string ParseSniHostname(byte[] buffer, int length)
+    public static string? ParseSniHostname(byte[] buffer, int length)
     {
         if (buffer == null || length < 5 || buffer[0] != 0x16)
         {

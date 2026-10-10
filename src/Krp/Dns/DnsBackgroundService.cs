@@ -1,5 +1,7 @@
 using Krp.Common;
+using Krp.EndpointExplorer;
 using Krp.Endpoints;
+using Krp.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,29 +15,45 @@ namespace Krp.Dns;
 public class DnsBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly ILogger<DnsBackgroundService> _logger;
     private readonly IDnsHandler _dnsHandler;
+    private readonly ValidationState _validationState;
 
-    public DnsBackgroundService(IServiceProvider serviceProvider, EndpointManager endpointManager, IDnsHandler dnsHandler, ILogger<DnsBackgroundService> logger)
+    public DnsBackgroundService(IServiceProvider serviceProvider, IEndpointManager endpointManager, IDnsHandler dnsHandler, ValidationState validationState, ILogger<DnsBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _endpointManager = endpointManager;
         _endpointManager.EndPointsChangedEvent += OnEndPointsChangedEvent;
         _dnsHandler = dnsHandler;
+        _validationState = validationState;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _ = _dnsHandler.RunAsync(stoppingToken);
+        await _validationState.WaitForValidAsync(stoppingToken);
 
-        var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorer.EndpointExplorer>() != null;
+        var isEndpointExplorerEnabled = _serviceProvider.GetService<EndpointExplorerManager>() != null;
         if (!isEndpointExplorerEnabled)
         {
-            // Skip updating DNS, since the endpoint explorer will, once discovery is finished.
+            // Skip updating DNS, since the endpoint explorer will once discovery is finished.
             // Prevents unnecessary updates where the static routes are updated first and then overwritten with dynamic ones.
             await UpdateDns();
+        }
+
+        try
+        {
+            await _dnsHandler.RunAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Expected during graceful shutdown.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "DNS handler failed");
+            throw;
         }
     }
     

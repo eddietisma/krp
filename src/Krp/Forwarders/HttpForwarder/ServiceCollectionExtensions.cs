@@ -1,11 +1,15 @@
-﻿using Krp.Dns;
+using Krp.Dns;
+using Krp.Validation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
@@ -89,11 +93,30 @@ public static class ServiceCollectionExtensions
                 },
             };
         });
+
+        GateKestrelUntilValidation(services);
     }
 
     public static void UseKubernetesForwarder(this IApplicationBuilder app)
     {
         app.UseRouting();
+        app.Use(async (context, next) =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress;
+            if (remoteIp == null || !IPAddress.IsLoopback(remoteIp))
+            {
+                // Let docker handle network isolation when running in a container,
+                // since we may receive non-loopback connections due to docker NAT.
+                if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsync("Loopback connections only.");
+                    return;
+                }
+            }
+
+            await next();
+        });
         app.UseEndpoints(endpoints =>
         {
             endpoints.Map("/{**catch-all}", async (HttpForwarder handler, HttpContext httpContext) =>
@@ -101,5 +124,31 @@ public static class ServiceCollectionExtensions
                 await handler.HandleRequest(httpContext);
             });
         });
+    }
+
+    private static void GateKestrelUntilValidation(IServiceCollection services)
+    {
+        var descriptor = services.LastOrDefault(sd => sd.ServiceType == typeof(IServer));
+        if (descriptor == null)
+        {
+            return;
+        }
+
+        if (descriptor.ImplementationType == typeof(ValidationGatedServer))
+        {
+            return;
+        }
+
+        services.Remove(descriptor);
+        services.Add(new ServiceDescriptor(typeof(IServer), sp =>
+        {
+            var inner = (IServer)(descriptor.ImplementationInstance ??
+                descriptor.ImplementationFactory?.Invoke(sp) ??
+                ActivatorUtilities.CreateInstance(sp, descriptor.ImplementationType!));
+
+            var validationState = sp.GetRequiredService<ValidationState>();
+            var logger = sp.GetRequiredService<ILogger<ValidationGatedServer>>();
+            return new ValidationGatedServer(inner, validationState, logger);
+        }, descriptor.Lifetime));
     }
 }

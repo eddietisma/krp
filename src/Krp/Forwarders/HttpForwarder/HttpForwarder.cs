@@ -1,9 +1,10 @@
-﻿using Krp.Common;
+using Krp.Common;
 using Krp.Endpoints;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -16,12 +17,12 @@ namespace Krp.Forwarders.HttpForwarder;
 /// </summary>
 public class HttpForwarder
 {
-    private readonly EndpointManager _endpointManager;
+    private readonly IEndpointManager _endpointManager;
     private readonly IHttpForwarder _forwarder;
     private readonly HttpMessageInvoker _httpMessageInvoker;
     private readonly ILogger<HttpForwarder> _logger;
 
-    public HttpForwarder(EndpointManager endpointManager, IHttpForwarder forwarder, HttpMessageInvoker httpMessageInvoker, ILogger<HttpForwarder> logger)
+    public HttpForwarder(IEndpointManager endpointManager, IHttpForwarder forwarder, HttpMessageInvoker httpMessageInvoker, ILogger<HttpForwarder> logger)
     {
         _endpointManager = endpointManager;
         _forwarder = forwarder;
@@ -55,20 +56,21 @@ public class HttpForwarder
             destinationUrl = portForwardHandler.GetDestinationUrl();
         }
         
-        _logger.LogInformation("{method} {requestUrl} → {destinationUrl}", httpContext.Request.Method, requestUrl, destinationUrl);
-
         var requestConfig = new ForwarderRequestConfig
         {
             Version = GetVersionFromRequest(httpContext.Request),
             VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
         };
 
+        var stopwatch = Stopwatch.StartNew();
         var response = await _forwarder.SendAsync(httpContext, destinationUrl, _httpMessageInvoker, requestConfig);
+        stopwatch.Stop();
+
+        _logger.LogInformation("{method} {requestUrl} → {destinationUrl} [{statusCode}] {elapsedMs}ms", httpContext.Request.Method, requestUrl, destinationUrl, httpContext.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+
         if (response != ForwarderError.None)
         {
-            var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
-            var exception = errorFeature.Exception;
-
+            var exception = httpContext.Features.Get<IForwarderErrorFeature>()?.Exception;
             _logger.LogError(exception, "Unknown error occurred while forwarding request to {destinationUrl}", destinationUrl);
         }
     }

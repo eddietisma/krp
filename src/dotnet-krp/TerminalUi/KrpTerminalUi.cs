@@ -1,7 +1,8 @@
-﻿using Krp.Common;
+using Krp.Common;
 using Krp.Kubernetes;
 using Krp.Tool.TerminalUi.Extensions;
 using Krp.Tool.TerminalUi.Tables;
+using Krp.Validation;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 using System;
@@ -20,18 +21,20 @@ public class KrpTerminalUi
     public const int MIN_COL_WIDTH = 5;    // Space (chars) for minimum column width.
 
     private readonly string _version = VersionHelper.GetProductVersion().Split('+')[0];
-    private readonly KubernetesClient _kubernetesClient;
+    private readonly IKubernetesClient _kubernetesClient;
+    private readonly ValidationState _validationState;
     private readonly KrpTerminalState _state;
     private readonly PortForwardTable _portForwardTable;
     private readonly LogsTable _logsTable;
     private readonly ILogger<KrpTerminalUi> _logger;
     private readonly FigletFont _logoFont;
 
-    private string _kubeCurrentContext;
+    private string _kubeCurrentContext = string.Empty;
 
-    public KrpTerminalUi(KubernetesClient kubernetesClient, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
+    public KrpTerminalUi(IKubernetesClient kubernetesClient, ValidationState validationState, KrpTerminalState state, PortForwardTable portForwardTable, LogsTable logsTable, ILogger<KrpTerminalUi> logger)
     {
         _kubernetesClient = kubernetesClient;
+        _validationState = validationState;
         _state = state;
         _portForwardTable = portForwardTable;
         _logsTable = logsTable;
@@ -44,7 +47,8 @@ public class KrpTerminalUi
 
     public async Task RunAsync(CancellationToken ct)
     {
-        _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
+        _ = OnValidationFailureSwitchToLogsAsync(ct);
+        _ = OnValidationSuccessInitializeContextAsync(ct);
 
         var baseW = Console.WindowWidth;
         var baseH = Console.WindowHeight;
@@ -69,6 +73,11 @@ public class KrpTerminalUi
                     {
                         try
                         {
+                            if (ct.IsCancellationRequested)
+                            {
+                                return;
+                            }
+
                             _state.WindowHeight = Console.WindowHeight;
                             _state.WindowWidth = Console.WindowWidth;
 
@@ -98,22 +107,24 @@ public class KrpTerminalUi
 
                                 var shift = (key.Modifiers & ConsoleModifiers.Shift) != 0;
                                 var ctrl = (key.Modifiers & ConsoleModifiers.Control) != 0;
-
+                                
                                 switch (key.Key)
                                 {
-                                    case ConsoleKey.Home: _state.SelectedRow[_state.SelectedTable] = 0; redraw = true; break;
-                                    case ConsoleKey.End: _state.SelectedRow[_state.SelectedTable] = count - 1; redraw = true; break;
-                                    case ConsoleKey.LeftArrow: _state.ColumnOffset = Math.Max(0, _state.ColumnOffset - 1); redraw = true; break;
-                                    case ConsoleKey.RightArrow: _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); redraw = true; break;
+                                    case ConsoleKey.Home: redraw = true; _state.SelectedRow[_state.SelectedTable] = 0; break;
+                                    case ConsoleKey.End: redraw = true; _state.SelectedRow[_state.SelectedTable] = Math.Max(0, count - 1); break;
+                                    case ConsoleKey.PageUp:  redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - GetPageSize(_state.SelectedTable))); break;
+                                    case ConsoleKey.PageDown: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Min(Math.Max(0, count - 1), _state.SelectedRow[_state.SelectedTable] + GetPageSize(_state.SelectedTable))); break;
+                                    case ConsoleKey.LeftArrow: redraw = true; _state.ColumnOffset = Math.Max(0, _state.ColumnOffset - 1); break;
+                                    case ConsoleKey.RightArrow: redraw = true; _state.ColumnOffset = Math.Min(_state.ColumnOffset + 1, _state.ColumnOffsetMax); break;
                                     case ConsoleKey.UpArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Max(0, _state.SelectedRow[_state.SelectedTable] - 1)); break;
                                     case ConsoleKey.DownArrow: redraw = _state.SelectedRow[_state.SelectedTable] != (_state.SelectedRow[_state.SelectedTable] = Math.Min(count - 1, _state.SelectedRow[_state.SelectedTable] + 1)); break;
-                                    case ConsoleKey.D1: _state.SelectedTable = KrpTable.PortForwards; redraw = true; redrawContext = true; break;
-                                    case ConsoleKey.D2: _state.SelectedTable = KrpTable.Logs; redraw = true; redrawContext = true; break;
-                                    case ConsoleKey.I when shift: ToggleSort(SortField.Ip, ref redraw); break;
-                                    case ConsoleKey.N when shift: ToggleSort(SortField.Namespace, ref redraw); break;
-                                    case ConsoleKey.P when shift: ToggleSort(SortField.PortForward, ref redraw); break;
-                                    case ConsoleKey.R when shift: ToggleSort(SortField.Resource, ref redraw); break;
-                                    case ConsoleKey.U when shift: ToggleSort(SortField.Url, ref redraw); break;
+                                    case ConsoleKey.D1: redraw = true; redrawContext = true; _state.SelectedTable = KrpTable.PortForwards; break;
+                                    case ConsoleKey.D2: redraw = true; redrawContext = true; _state.SelectedTable = KrpTable.Logs; break;
+                                    case ConsoleKey.I when shift: redraw = true; ToggleSort(SortField.Ip); break;
+                                    case ConsoleKey.N when shift: redraw = true; ToggleSort(SortField.Namespace); break;
+                                    case ConsoleKey.P when shift: redraw = true; ToggleSort(SortField.PortForward); break;
+                                    case ConsoleKey.R when shift: redraw = true; ToggleSort(SortField.Resource); break;
+                                    case ConsoleKey.U when shift: redraw = true; ToggleSort(SortField.Url); break;
                                     case ConsoleKey.Enter when _state.SelectedTable == KrpTable.PortForwards: _ = _portForwardTable.ForceStart(); break;
                                     case ConsoleKey.D when ctrl && _state.SelectedTable == KrpTable.PortForwards: _portForwardTable.ForceStop(); break;
                                     case ConsoleKey.F5: return; // Abort inner loop to force a new AnsiConsole.Live instance, forcing a refresh.
@@ -123,11 +134,21 @@ public class KrpTerminalUi
                             // Handle kubernetes context (1s).
                             if (!redraw && lastCtx.Elapsed >= TimeSpan.FromSeconds(1))
                             {
-                                var context = await _kubernetesClient.FetchCurrentContext();
-                                if (context != _kubeCurrentContext)
+                                if (_validationState.IsValid)
                                 {
-                                    _kubeCurrentContext = context;
-                                    redrawInfo = true;
+                                    try
+                                    {
+                                        var context = await _kubernetesClient.FetchCurrentContext();
+                                        if (context != _kubeCurrentContext)
+                                        {
+                                            _kubeCurrentContext = context;
+                                            redrawInfo = true;
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogError(ex, "Failed to fetch current context");
+                                    }
                                 }
 
                                 lastCtx.Restart();
@@ -179,6 +200,12 @@ public class KrpTerminalUi
                                 }
 
                                 redraw = true;
+                            }
+
+                            // Keep viewport anchor in sync with selection for scrolling tables.
+                            if (_state.SelectedTable == KrpTable.PortForwards)
+                            {
+                                UpdateFirstRowAnchor(_state.SelectedTable, count);
                             }
 
                             // Redraw panels.
@@ -315,11 +342,74 @@ public class KrpTerminalUi
         return panel.NoBorder().Padding(padding, 0, 0, 0);
     }
 
-    private void ToggleSort(SortField field, ref bool redraw)
+    private int GetPageSize(KrpTable table)
+    {
+        return table switch
+        {
+            KrpTable.PortForwards => Math.Max(1, _state.WindowHeight - (PortForwardTable.HEADER_SIZE + HEADER_SIZE)),
+            KrpTable.Logs => Math.Max(1, _state.WindowHeight - (LogsTable.HEADER_SIZE + HEADER_SIZE)),
+            _ => 1,
+        };
+    }
+    
+    private void UpdateFirstRowAnchor(KrpTable table, int count)
+    {
+        var maxRows = Math.Max(1, _state.WindowHeight - (PortForwardTable.HEADER_SIZE + HEADER_SIZE));
+        var maxFirst = Math.Max(0, count - maxRows);
+
+        var selected = Math.Clamp(_state.SelectedRow[table], 0, Math.Max(0, count - 1));
+        var first = _state.AnchorRowIndex[_state.SelectedTable];
+
+        // Keep the selection visible; adjust just enough without paging jumps.
+        if (selected < first)
+        {
+            first = selected;
+        }
+        else if (selected >= first + maxRows)
+        {
+            first = selected - maxRows + 1;
+        }
+
+        _state.AnchorRowIndex[table] = Math.Clamp(first, 0, maxFirst);
+    }
+    
+    private void ToggleSort(SortField field)
     {
         _state.SortAscending = _state.SortField != field || !_state.SortAscending;
         _state.SortField = field;
         _state.SelectedRow[_state.SelectedTable] = 0; // Reset cursor to top.
-        redraw = true;
+    }
+
+    private async Task OnValidationFailureSwitchToLogsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var succeeded = await _validationState.WaitForCompletionAsync(ct);
+            if (!succeeded)
+            {
+                _state.SelectedTable = KrpTable.Logs;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
+    }
+
+    private async Task OnValidationSuccessInitializeContextAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _validationState.WaitForValidAsync(ct);
+            _kubeCurrentContext = await _kubernetesClient.FetchCurrentContext();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch current context");
+        }
     }
 }

@@ -1,6 +1,6 @@
 on:
   release:
-    types: [released]
+    types: [released, prereleased]
 
 jobs:
   determine_version:
@@ -15,20 +15,22 @@ jobs:
 
   build:
     needs: [determine_version]
+    permissions:
+      contents: write
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.determine_version.outputs.version }}
       commit: ${{ github.sha }}
+    secrets: inherit
 
-  publish-nuget:
+  publish-winget:
     needs: [build]
-    uses: ./.github/workflows/publish-nuget.yml
-    secrets: inherit
-
-  publish-docker:
-    needs: [determine_version, build]
-    uses: ./.github/workflows/publish-docker.yml
-    with:
-      version: ${{ needs.determine_version.outputs.version }}
-      commit: ${{ github.sha }}
-    secrets: inherit
+    if: github.event.action == 'released' || github.event.action == 'prereleased'
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: EddieTisma.Krp
+          max-versions-to-keep: 5
+          token: ${{ secrets.WINGET_TOKEN }}
+          installers-regex: 'krp_.*_win-(x64|arm64)\.zip$'

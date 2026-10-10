@@ -3,6 +3,10 @@
     "Krp.Tool": {
       "commandName": "Project",
       "commandLineArgs": "",
+      //"commandLineArgs": "https --trust --password 123",
+      //"commandLineArgs": "https --clean",
+      //"commandLineArgs": "https --check",
+      //"commandLineArgs": "https --import <PATH>",
       "workingDirectory": "$(ProjectDir)"
     }
   }

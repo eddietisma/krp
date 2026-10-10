@@ -10,7 +10,7 @@
 - **On-Demand Port Forwarding** – Automatically runs `kubectl port-forward` when you need it.
 - **Context Aware** – Adapts to changes in your current cluster context.
 - **Automatic Cleanup** – All active port forwards is cleaned up on application exit.
-- **Dynamic Traffic Routing** – Routes through `localhost` using hosts file or [WinDivert](https://github.com/basil00/WinDivert)
+- **Dynamic Traffic Routing** – Routes through `localhost` using hosts file or [WinDivert](https://github.com/basil00/WinDivert).
 - **Zero Configuration** – Once running, the tool requires no further setup or user intervention.
 
 ### **Dependencies**
@@ -76,10 +76,8 @@
 ### Installation
 
 ```bash
-# Using local code
-git clone https://github.com/eddietisma/krp.git
-cd krp
-dotnet run
+# Using winget
+winget install EddieTisma.Krp
 ```
 
 ```bash
@@ -90,12 +88,15 @@ krp
 
 ```bash
 # Using docker
-docker compose -f https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml up
+curl -fsSL https://raw.githubusercontent.com/eddietisma/krp/main/docker-compose.yml -o docker-compose.yaml
+docker compose up
 ```
 
 ```bash
-# Setup HTTPS
-dotnet dev-certs https -ep "%USERPROFILE%\.krp\krp.pfx" -p your-cert-password --trust
+# Using local code
+git clone https://github.com/eddietisma/krp.git
+cd krp
+dotnet run
 ```
 
 ## **Usage**
@@ -123,9 +124,14 @@ Options:
                                  Default value is: windivert.
   -?|-h|--help                   Show help information.
 
+Commands:
+  https                          Manage HTTPS certificates
+
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
-  KRP_DNSMASQ_OVERRIDE            Override path to dnsmasq override configuration
+  KRP_DNSMASQ_OVERRIDE            Override path to dnsmasq configuration file
+  KRP_DNSMASQ_RESTART_COMMAND     Executable used to restart dnsmasq
+  KRP_DNSMASQ_RESTART_ARGUMENTS   Arguments passed to the restart executable
 ```
 
 ### Routing methods
@@ -157,20 +163,41 @@ Environment variables:
 
 #### `dnsmasq`
 
-1. Writes endpoint mappings to a dnsmasq configuration override (default: `/run/dnsmasq/krp.override.conf`).
-2. Each endpoint hostname is written as an `address` directive pointing to its assigned loopback IP (e.g., `address=/myapp.local/127.0.0.2`).
-3. The override file is ephemeral; remove `krp` or its file to discard the entries.
+Writes endpoint mappings as native dnsmasq configuration, for example
+`address=/myapp.local/127.0.0.2`. These directives also match subdomains.
+The default output path is `/run/dnsmasq/krp.override.conf`, configurable with
+`KRP_DNSMASQ_OVERRIDE`.
+
+After configuration changes, `krp` runs the executable specified by
+`KRP_DNSMASQ_RESTART_COMMAND`, with optional `KRP_DNSMASQ_RESTART_ARGUMENTS`.
+The command must restart dnsmasq: `--conf-dir` files are read at startup, and
+SIGHUP does not reread configuration files. On exit, `krp` removes its generated
+file and runs the restart command again.
 
 **Requirements**
-- dnsmasq must already be installed and configured to read override files (e.g., `--conf-dir=/run/dnsmasq`)
-- Write access to the configured override directory.
+- dnsmasq installed and configured to read the output directory, for example `conf-dir=/run/dnsmasq` in `dnsmasq.conf`.
+- Write access to the output file and directory. A missing output directory is created.
+- A configured restart executable and permission to run it successfully.
+
+Example for a systemd service, with permission to restart dnsmasq:
+
+```bash
+export KRP_DNSMASQ_OVERRIDE=/run/dnsmasq/krp.override.conf
+export KRP_DNSMASQ_RESTART_COMMAND=systemctl
+export KRP_DNSMASQ_RESTART_ARGUMENTS="restart dnsmasq"
+krp --routing dnsmasq
+```
+
+The restart executable is invoked directly, without a shell. Use a wrapper
+script when restarting dnsmasq requires additional steps. The command has a
+30-second timeout, and failures are reported as errors.
 
 ### Forwarders available
 
 #### `HttpForwarder`
 - Supports HTTP requests (only).
 - Supports domain based routing (using HTTP headers).
-- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation) .
+- Multiplexing HTTP/1.1 and HTTP/2 over cleartext using same port without TLS [is not supported](https://learn.microsoft.com/en-us/aspnet/core/grpc/aspnetcore?view=aspnetcore-8.0&tabs=visual-studio#protocol-negotiation).
    - https://github.com/dotnet/aspnetcore/issues/13502.
 - Uses SSL termination.
   - For HTTPS either disable certificate validation on client or setup certificate for each domain.
@@ -190,6 +217,12 @@ Environment variables:
 >
 > For HTTPS we could use SNI to detect hostnames and use for routing but ran into issues with reacting to network changes due to already established TCP tunnels (need some more work to break existing TCP connections when needed).
 
+### HTTPS certificate management
+
+`krp` uses its own certificate authority (CA) for optional local HTTPS routing.
+- Run `krp https --trust` to create a new certificate and trust it.
+- When HTTPS requests are proxied, `krp` dynamically generates per-host leaf certificates signed by that CA, so each routed hostname gets a valid certificate.
+
 ## **Running in Docker**
 
 To run `krp` in a Docker container, follow these steps:
@@ -197,7 +230,7 @@ To run `krp` in a Docker container, follow these steps:
 1. **Start Docker Desktop** as an administrator (required for hosts file modification).
 2. **Build and run the Docker container:**
    ```cli
-   docker buildx bake
+   docker buildx bake -f .buildcharts\docker-bake.hcl docker
    docker compose up -d
    ```
 
@@ -214,31 +247,31 @@ To run `krp` in a Docker container, follow these steps:
    # For EKS
    todo...
    ```
+4. **Setup HTTPS:**
+    - `krp https --trust`
+    - `krp https --export /root/.krp/krp.pfx -p "your-cert-password"`
+    - Install the exported CA cert on the host machine's trust store.
+    - Note the CA is created inside the container, so you must export it and import on the host.
 
 ### Example `docker-compose.yml`
 
 ```yaml
 services:
   krp:
-    build:
-      context: .
     image: eddietisma/krp:latest
     container_name: krp
     restart: unless-stopped
     ports:
       - "80:80"
-    #  - "443:443"
+      - "443:443" # optional
     environment:
-    #  ASPNETCORE_Kestrel__Certificates__Default__Password: your-cert-password
-    #  ASPNETCORE_Kestrel__Certificates__Default__Path: /root/.krp/krp.pfx
       AZURE_CONFIG_DIR: /root/.krp/.azure
-      KRP_ENDPOINT_EXPLORER: false
-      KRP_HOSTS: /mnt/hosts
+      KRP_HOSTS: /mnt/etc
     volumes:
       - ~/.kube:/root/.kube
       - ~/.krp:/root/.krp
-      - /c/Windows/System32/drivers/etc/:/host_etc/ # win
-      # - /etc/hosts:/mtn/hosts/ # Linux/macOS
+      - /c/Windows/System32/drivers/etc/:/mnt/etc/ # win
+      # - /etc/:/mnt/etc/ # linux/mac
 ```
 
 ## Roadmap / Ideas
@@ -248,6 +281,6 @@ services:
 - [ ] Support for low-level UDP traffic.
 - [ ] Support for translating internal Kubernetes IPs.
 - [x] Eliminate hosts file dependency using **WinDivert**/**PF**/**iptables** (or mitmproxy) for more flexible routing.
-- [ ] Cross-platform support (Linux/macOS).
+- [x] Cross-platform support (Linux/macOS).
 - [x] User interface.
 - [x] Add GIF recordings of terminal use cases in README.

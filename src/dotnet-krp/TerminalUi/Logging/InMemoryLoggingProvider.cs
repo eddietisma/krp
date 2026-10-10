@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Krp.Tool.TerminalUi.Logging;
 
-public record LogEntry(DateTime Timestamp, LogLevel Level, string Category, string Message, Exception Exception);
+public record LogEntry(DateTime Timestamp, LogLevel Level, string Category, string Message, Exception? Exception);
 
 /// <summary>
 /// Simple in-memory logger that keeps a bounded list of recent log entries.
@@ -64,8 +64,7 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
             }
         }
     }
-
-
+    
     private sealed class MemoryLogger : ILogger
     {
         private readonly string _category;
@@ -77,7 +76,7 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
             _category = category;
         }
 
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
         {
             return NullScope.Instance;
         }
@@ -87,7 +86,7 @@ public sealed class InMemoryLoggingProvider : ILoggerProvider
             return true;
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var message = formatter(state, exception);
             _provider.Add(new LogEntry(DateTime.UtcNow, logLevel, _category, message, exception));
