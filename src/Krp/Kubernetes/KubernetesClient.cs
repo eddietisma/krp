@@ -2,6 +2,7 @@
 using k8s.Models;
 using Krp.Endpoints.Models;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -70,12 +71,19 @@ public class KubernetesClient : IKubernetesClient
                 {
                     var endpoint = new KubernetesEndpoint
                     {
+                        Host = GetServiceHost(service),
                         LocalPort = 0,
                         Namespace = service.Namespace(),
                         RemotePort = port.Port,
                         Resource = $"service/{service.Name()}",
                     };
 
+                    endpoints.Add(endpoint);
+                }
+
+                var podEndpoints = await FetchPodContainerPortEndpointsAsync(service, client, cancellationToken);
+                foreach (var endpoint in podEndpoints)
+                {
                     endpoints.Add(endpoint);
                 }
             }
@@ -96,5 +104,60 @@ public class KubernetesClient : IKubernetesClient
             _logger.LogInformation("namespace/{namespace} (skipping due to access)", ns);
             return Enumerable.Empty<V1Service>();
         }
+    }
+
+    private async Task<IEnumerable<KubernetesEndpoint>> FetchPodContainerPortEndpointsAsync(V1Service service, k8s.Kubernetes client, CancellationToken ct)
+    {
+        if (service.Spec?.Selector == null || service.Spec.Selector.Count == 0)
+        {
+            return [];
+        }
+
+        var labelSelector = string.Join(",", service.Spec.Selector.Select(x => $"{x.Key}={x.Value}"));
+        V1PodList pods;
+        try
+        {
+            pods = await client.ListNamespacedPodAsync(service.Namespace(), labelSelector: labelSelector, cancellationToken: ct);
+        }
+        catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            _logger.LogInformation("namespace/{namespace}/service/{service} pods (skipping due to access)", service.Namespace(), service.Name());
+            return [];
+        }
+
+        var servicePorts = service.Spec.Ports?.Select(x => x.Port).ToHashSet() ?? [];
+        var endpoints = new List<KubernetesEndpoint>();
+
+        foreach (var pod in pods.Items.OrderBy(x => x.Name()))
+        {
+            if (!string.Equals(pod.Status?.Phase, "Running", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (var port in pod.Spec?.Containers?.SelectMany(x => x.Ports ?? []) ?? [])
+            {
+                if (servicePorts.Contains(port.ContainerPort))
+                {
+                    continue;
+                }
+
+                endpoints.Add(new KubernetesEndpoint
+                {
+                    Host = GetServiceHost(service),
+                    LocalPort = 0,
+                    Namespace = service.Namespace(),
+                    RemotePort = port.ContainerPort,
+                    Resource = $"pod/{pod.Name()}",
+                });
+            }
+        }
+
+        return endpoints;
+    }
+
+    private static string GetServiceHost(V1Service service)
+    {
+        return $"{service.Name()}.{service.Namespace()}";
     }
 }

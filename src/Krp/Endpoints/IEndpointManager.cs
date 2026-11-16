@@ -16,8 +16,8 @@ public interface IEndpointManager
     public void AddEndpoints(List<KubernetesEndpoint> endpoints);
     public IEndpointHandler? GetHttpEndpointByUrl(string host, string path);
     public IEnumerable<IEndpointHandler> GetHandlerByHost(string host);
-    public IEndpointHandler? GetPortForwardHandlerByHost(string host);
-    public IEndpointHandler? GetHandlerByIpPort(IPAddress ip);
+    public IEndpointHandler? GetPortForwardHandlerByHost(string host, int? port);
+    public IEndpointHandler? GetHandlerByIpPort(IPAddress ip, int port);
     public IEnumerable<IEndpointHandler> GetAllHandlers();
     public void RemoveAllHandlers();
     public Task TriggerEndPointsChangedEventAsync();

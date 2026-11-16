@@ -80,15 +80,19 @@ public class EndpointManager : IEndpointManager
     /// <param name="endpoint"></param>
     public void AddEndpoint(KubernetesEndpoint endpoint)
     {
-        if (!endpoint.Resource.StartsWith("service/"))
+        if (!endpoint.Resource.StartsWith("service/") && !endpoint.Resource.StartsWith("pod/"))
         {
-            _logger.LogWarning("Skipped registering endpoint for resource '{resource}'. Must start with '/service' (only service types are currently supported)", endpoint.Resource);
+            _logger.LogWarning("Skipped registering endpoint for resource '{resource}'. Must start with 'service/' or 'pod/'", endpoint.Resource);
             return;
         }
 
+        var host = !string.IsNullOrEmpty(endpoint.Host) ? endpoint.Host : $"{endpoint.Resource[(endpoint.Resource.IndexOf('/') + 1)..]}.{endpoint.Namespace}";
+        var existingLocalIp = _handlers.FirstOrDefault(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase)).Value?.LocalIp;
+
         var handler = _serviceProvider.GetRequiredService<PortForwardEndpointHandler>(); // PortForwardHandler is registered as transient so we get a new instance each time.
         handler.IsStatic = endpoint.IsStatic;
-        handler.LocalIp = GetNextLoopbackIp();
+        handler.Host = host;
+        handler.LocalIp = existingLocalIp ?? GetNextLoopbackIp();
         handler.LocalPort = endpoint.LocalPort;
         handler.Namespace = endpoint.Namespace;
         handler.RemotePort = endpoint.RemotePort;
@@ -107,7 +111,7 @@ public class EndpointManager : IEndpointManager
     public void AddEndpoints(List<KubernetesEndpoint> endpoints)
     {
         // Sort to get deterministic order to prevent unnecessary DNS hosts changes.
-        foreach (var endpoint in endpoints.OrderBy(x => x.Resource))
+        foreach (var endpoint in endpoints.OrderBy(x => x.Resource).ThenBy(x => x.RemotePort))
         {
             AddEndpoint(endpoint);
         }
@@ -141,29 +145,41 @@ public class EndpointManager : IEndpointManager
     }
 
     /// <summary>
-    /// Used for Kubernetes endpoints to find the correct handler by host.
+    /// Used for Kubernetes endpoints to find the correct handler by host and port.
     /// </summary>
     /// <param name="host"></param>
+    /// <param name="port"></param>
     /// <returns></returns>
-    public IEndpointHandler? GetPortForwardHandlerByHost(string host)
+    public IEndpointHandler? GetPortForwardHandlerByHost(string host, int? port)
     {
-        return _handlers
+        var handlers = _handlers
             .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
-            .FirstOrDefault(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
-            .Value;
+            .Where(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Value)
+            .OfType<PortForwardEndpointHandler>()
+            .ToList();
+
+        if (port.HasValue)
+        {
+            return handlers.FirstOrDefault(x => x.RemotePort == port.Value);
+        }
+
+        return handlers.Count == 1 ? handlers[0] : null;
     }
 
     /// <summary>
     /// Used for low-level TCP forwarding by routing using loopback IPs to determine correct downstream port.
     /// </summary>
     /// <param name="ip"></param>
+    /// <param name="port"></param>
     /// <returns></returns>
-    public IEndpointHandler? GetHandlerByIpPort(IPAddress ip)
+    public IEndpointHandler? GetHandlerByIpPort(IPAddress ip, int port)
     {
         return _handlers
             .Where(x => x.Value.GetType() == typeof(PortForwardEndpointHandler))
-            .FirstOrDefault(x => Equals(x.Value.LocalIp, ip))
-            .Value;
+            .Select(x => x.Value)
+            .OfType<PortForwardEndpointHandler>()
+            .FirstOrDefault(x => Equals(x.LocalIp, ip) && x.RemotePort == port);
     }
 
     public IEnumerable<IEndpointHandler> GetAllHandlers()

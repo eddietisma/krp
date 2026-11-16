@@ -14,6 +14,7 @@ public class PortForwardEndpointHandler : IEndpointHandler
     private readonly ILogger<PortForwardEndpointHandler> _logger;
     private Process? _process;
     private int? _localPortActual;
+    private string _host = string.Empty;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
@@ -47,8 +48,8 @@ public class PortForwardEndpointHandler : IEndpointHandler
 
     public string Host
     {
-        get => $"{Resource["service/".Length..]}.{Namespace}";
-        set => throw new NotImplementedException();
+        get => !string.IsNullOrEmpty(_host) ? _host : $"{Resource[(Resource.IndexOf('/') + 1)..]}.{Namespace}";
+        set => _host = value;
     }
     public bool IsActive
     {

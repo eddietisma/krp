@@ -119,7 +119,7 @@ public class TcpWithHttpForwarder
 
             if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
             {
-                var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
+                var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp, localPort);
                 if (portForwardHandler != null)
                 {
                     await portForwardHandler.EnsureRunningAsync();

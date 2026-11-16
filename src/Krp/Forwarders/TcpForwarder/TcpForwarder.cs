@@ -108,7 +108,7 @@ public class TcpForwarder
 
             _logger.LogInformation("Received request from {ip}:{port}", localIp, localPort);
 
-            var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
+            var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp, localPort);
             if (portForwardHandler == null)
             {
                 _logger.LogWarning("Invalid url for proxy request: {localIp}", localIp);

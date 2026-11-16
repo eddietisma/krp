@@ -49,7 +49,8 @@ public class HttpForwarder
             destinationUrl = httpProxyHandler.GetDestinationUrl();
         }
 
-        var portForwardHandler = _endpointManager.GetPortForwardHandlerByHost(httpContext.Request.Host.Host);
+        var port = httpContext.Request.Host.Port ?? (string.Equals(httpContext.Request.Scheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80);
+        var portForwardHandler = _endpointManager.GetPortForwardHandlerByHost(httpContext.Request.Host.Host, port);
         if (portForwardHandler != null)
         {
             await portForwardHandler.EnsureRunningAsync();
