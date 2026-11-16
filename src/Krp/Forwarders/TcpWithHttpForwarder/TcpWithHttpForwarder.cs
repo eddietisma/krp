@@ -1,4 +1,5 @@
 using Krp.Endpoints;
+using Krp.Endpoints.PortForward;
 using Krp.Forwarders.HttpForwarder;
 using Krp.Forwarders.TcpForwarder;
 using Microsoft.Extensions.Logging;
@@ -120,7 +121,7 @@ public class TcpWithHttpForwarder
             if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
             {
                 var portForwardHandler = _endpointManager.GetHandlerByIpPort(localIp);
-                if (portForwardHandler != null)
+                if (portForwardHandler is PortForwardEndpointHandler handler && handler.RemotePort == localPort)
                 {
                     await portForwardHandler.EnsureRunningAsync();
 

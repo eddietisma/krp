@@ -61,6 +61,12 @@ public class CertificateManager : ICertificateManager
             using var issuedCert = request.Create(caCertificate, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(2), serial);
 
             var certWithKey = issuedCert.CopyWithPrivateKey(rsa);
+            if (OperatingSystem.IsWindows())
+            {
+                // Schannel requires an imported key instead of the ephemeral RSA key.
+                using var ephemeralCertificate = certWithKey;
+                certWithKey = X509CertificateLoader.LoadPkcs12(ephemeralCertificate.Export(X509ContentType.Pfx), null, X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable);
+            }
             _leafCache[normalizedHost] = certWithKey;
             return certWithKey;
         }
