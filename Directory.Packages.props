@@ -25,6 +25,7 @@
     <PackageVersion Include="MSTest" Version="4.5.2" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.11" />
+    <PackageVersion Include="Testcontainers.K3s" Version="4.16.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 </Project>

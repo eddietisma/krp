@@ -1,5 +1,8 @@
 version: v1beta
 
+plugins:
+  - TestcontainersDinD@v1
+
 variables:
   - VERSION: "1.0.0"
   - COMMIT: "local"
@@ -25,6 +28,9 @@ targets:
         dockerfile: ./Dockerfile.aks
 
   test/Krp.Tests/Krp.Tests.csproj:
+    type: test
+
+  test/Krp.IntegrationTests/Krp.IntegrationTests.csproj:
     type: test
 
   test/Krp.Tests1/Krp.Tests1.csproj:
