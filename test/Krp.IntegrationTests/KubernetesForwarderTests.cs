@@ -72,9 +72,13 @@ public sealed class KubernetesForwarderTests
             // Assert
             Assert.AreEqual($"{app}-index", index);
             Assert.AreEqual($"{app}-probe", probe);
-            var logs = await _fixture.KubectlAsync("logs", $"deployment/{app}", "-n", $"krp-tests-{app}");
-            Assert.Contains($"GET /probe.txt?mode={mode} HTTP/1.1", logs);
+            await Sut.WaitUntilAsync(async () =>
+            {
+                var logs = await _fixture.KubectlAsync("logs", $"deployment/{app}", "-n", $"krp-tests-{app}");
+                return logs.Contains($"GET /probe.txt?mode={mode} HTTP/1.1", StringComparison.Ordinal);
+            });
         }
+        await Sut.WaitUntilAsync(() => Task.FromResult(Sut.GetForwardedPorts().Length >= 2));
         Assert.HasCount(2, Sut.GetForwardedPorts(), Sut.Logs);
     }
 
@@ -98,6 +102,7 @@ public sealed class KubernetesForwarderTests
         {
             Assert.AreEqual($"{response.App}-probe", response.Body);
         }
+        await Sut.WaitUntilAsync(() => Task.FromResult(Sut.GetForwardedPorts().Length >= 2));
         Assert.HasCount(2, Sut.GetForwardedPorts(), Sut.Logs);
     }
 
@@ -130,6 +135,7 @@ public sealed class KubernetesForwarderTests
         });
 
         // Assert
+        await Sut.WaitUntilAsync(() => Task.FromResult(Sut.GetForwardedPorts().Length >= 2 && Sut.Logs.Contains("Process exited: 'kubectl port-forward service/app-one", StringComparison.Ordinal)));
         Assert.Contains("Process exited: 'kubectl port-forward service/app-one", Sut.Logs);
         Assert.IsGreaterThanOrEqualTo(2, Sut.GetForwardedPorts().Length, Sut.Logs);
     }
@@ -142,6 +148,7 @@ public sealed class KubernetesForwarderTests
         using var client = Sut.CreateClient();
         Assert.AreEqual("app-one-index", await client.GetStringAsync("http://app-one.krp-tests-app-one/"));
         Assert.AreEqual("app-two-index", await client.GetStringAsync("http://app-two.krp-tests-app-two/"));
+        await Sut.WaitUntilAsync(() => Task.FromResult(Sut.GetForwardedPorts().Length >= 2));
         var ports = Sut.GetForwardedPorts();
         Assert.HasCount(2, ports);
 
