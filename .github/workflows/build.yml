@@ -50,12 +50,20 @@ jobs:
         #     base.cache-from=type=gha,scope=krp
         #     build.cache-to=type=gha,scope=krp,mode=max
 
-      - name: Nuget push
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: NuGet push
         run: |
           dotnet nuget push ".buildcharts/output/nuget/*.nupkg" \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "$NUGET_API_KEY" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
 
       - name: Upload release assets
         if: ${{ github.event_name == 'release' }}

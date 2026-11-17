@@ -17,6 +17,7 @@ jobs:
     needs: [determine_version]
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       version: ${{ needs.determine_version.outputs.version }}
