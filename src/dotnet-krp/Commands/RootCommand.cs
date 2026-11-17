@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -129,6 +130,8 @@ public class RootCommand
             builder.UseEndpointExplorer(options =>
             {
                 options.RefreshInterval = TimeSpan.FromHours(1);
+                // Read values directly to avoid the configuration generator's trimmed array-binding error.
+                options.Filter = configuration.GetSection("Krp:EndpointExplorer:Filter").GetChildren().Select(section => section.Value).OfType<string>().ToArray();
             });
         }
 

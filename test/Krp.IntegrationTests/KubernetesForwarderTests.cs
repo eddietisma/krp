@@ -12,7 +12,6 @@ namespace Krp.IntegrationTests;
 
 [TestClass]
 [TestCategory("K3s")]
-[DoNotParallelize]
 public sealed class KubernetesForwarderTests
 {
     private static K3sFixture _fixture;
@@ -22,9 +21,6 @@ public sealed class KubernetesForwarderTests
     [ClassInitialize]
     public static async Task Initialize(TestContext context)
     {
-        var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
-        Assert.IsFalse(listeners.Any(x => x.Port is 80 or 81 or 82 or 443 or 444), "KRP listen ports 80, 81, 82, 443 and 444 must be available.");
-
         _fixture = new K3sFixture();
         try
         {
@@ -72,15 +68,15 @@ public sealed class KubernetesForwarderTests
         foreach (var app in new[] { "app-one", "app-two" })
         {
             // Act
-            var index = await client.GetStringAsync($"http://{app}.krp-tests-{app}/");
-            var probe = await client.GetStringAsync($"http://{app}.krp-tests-{app}/probe.txt?mode={mode}");
+            var index = await client.GetStringAsync(Sut.GetUrl(app));
+            var probe = await client.GetStringAsync(Sut.GetUrl(app, $"/probe.txt?mode={mode}"));
 
             // Assert
             Assert.AreEqual($"{app}-index", index);
             Assert.AreEqual($"{app}-probe", probe);
             await Sut.WaitUntilAsync(async () =>
             {
-                var logs = await _fixture.KubectlAsync("logs", $"deployment/{app}", "-n", $"krp-tests-{app}");
+                var logs = await _fixture.KubectlAsync("logs", $"deployment/{app}", "-n", Sut.GetNamespace(app));
                 return logs.Contains($"GET /probe.txt?mode={mode} HTTP/1.1", StringComparison.Ordinal);
             });
         }
@@ -99,7 +95,7 @@ public sealed class KubernetesForwarderTests
         var responses = await Task.WhenAll(Enumerable.Range(0, 20).Select(async i =>
         {
             var app = i % 2 == 0 ? "app-one" : "app-two";
-            var body = await client.GetStringAsync($"http://{app}.krp-tests-{app}/probe.txt?request={i}");
+            var body = await client.GetStringAsync(Sut.GetUrl(app, $"/probe.txt?request={i}"));
             return (App: app, Body: body);
         }));
 
@@ -118,16 +114,16 @@ public sealed class KubernetesForwarderTests
         // Arrange
         await Sut.StartAsync("hybrid");
         using var client = Sut.CreateClient();
-        Assert.AreEqual("app-one-index", await client.GetStringAsync("http://app-one.krp-tests-app-one/"));
+        Assert.AreEqual("app-one-index", await client.GetStringAsync(Sut.GetUrl("app-one")));
 
         // Act
-        await _fixture.KubectlAsync("delete", "pod", "-n", "krp-tests-app-one", "-l", "app=app-one", "--wait=true", "--timeout=30s");
-        await _fixture.KubectlAsync("rollout", "status", "deployment/app-one", "-n", "krp-tests-app-one", "--timeout=30s");
+        await _fixture.KubectlAsync("delete", "pod", "-n", Sut.GetNamespace("app-one"), "-l", "app=app-one", "--wait=true", "--timeout=30s");
+        await _fixture.KubectlAsync("rollout", "status", "deployment/app-one", "-n", Sut.GetNamespace("app-one"), "--timeout=30s");
         await Sut.WaitUntilAsync(async () =>
         {
             try
             {
-                using var response = await client.GetAsync("http://app-one.krp-tests-app-one/");
+                using var response = await client.GetAsync(Sut.GetUrl("app-one"));
                 return response.StatusCode == HttpStatusCode.OK && await response.Content.ReadAsStringAsync() == "app-one-index";
             }
             catch (HttpRequestException)
@@ -152,8 +148,8 @@ public sealed class KubernetesForwarderTests
         // Arrange
         await Sut.StartAsync("hybrid");
         using var client = Sut.CreateClient();
-        Assert.AreEqual("app-one-index", await client.GetStringAsync("http://app-one.krp-tests-app-one/"));
-        Assert.AreEqual("app-two-index", await client.GetStringAsync("http://app-two.krp-tests-app-two/"));
+        Assert.AreEqual("app-one-index", await client.GetStringAsync(Sut.GetUrl("app-one")));
+        Assert.AreEqual("app-two-index", await client.GetStringAsync(Sut.GetUrl("app-two")));
         await Sut.WaitUntilAsync(() => Task.FromResult(Sut.GetForwardedPorts().Length >= 2));
         var ports = Sut.GetForwardedPorts();
         Assert.HasCount(2, ports);
@@ -185,7 +181,7 @@ public sealed class KubernetesForwarderTests
             string body;
             try
             {
-                body = await client.GetStringAsync($"https://{app}.krp-tests-{app}/probe.txt?mode=https");
+                body = await client.GetStringAsync(Sut.GetUrl(app, "/probe.txt?mode=https", https: true));
             }
             catch (HttpRequestException ex)
             {

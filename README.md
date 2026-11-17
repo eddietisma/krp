@@ -241,7 +241,7 @@ services:
 ```
 
 ## Roadmap / Ideas
-- [ ] Add integration tests.
+- [x] Add integration tests.
 - [x] Auto-discovery of Kubernetes services.
 - [x] Support for low-level TCP traffic.
 - [ ] Support for low-level UDP traffic.

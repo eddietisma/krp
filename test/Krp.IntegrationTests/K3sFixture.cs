@@ -45,12 +45,6 @@ internal sealed class K3sFixture : IAsyncDisposable
             await File.WriteAllBytesAsync(KubectlPath, kubectl, timeout.Token);
             File.SetUnixFileMode(KubectlPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
-        await KubectlAsync("apply", "-f", Path.Combine(AppContext.BaseDirectory, "k3s.yaml"));
-        foreach (var app in new[] { "app-one", "app-two" })
-        {
-            await KubectlAsync("rollout", "status", $"deployment/{app}", "-n", $"krp-tests-{app}", "--timeout=60s");
-        }
-
         var certificateCheck = await RunAsync("dotnet", [typeof(RootCommand).Assembly.Location, "https", "--check"], assertSuccess: false);
         Assert.IsTrue(certificateCheck.ExitCode is 0 or 1, certificateCheck.Output);
         await RunAsync("dotnet", [typeof(RootCommand).Assembly.Location, "https"]);

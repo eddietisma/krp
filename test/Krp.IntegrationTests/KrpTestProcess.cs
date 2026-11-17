@@ -18,22 +18,54 @@ namespace Krp.IntegrationTests;
 
 internal sealed class KrpTestProcess : IAsyncDisposable
 {
+    private static readonly HashSet<int> AllocatedPorts = new();
     private readonly K3sFixture _fixture;
     private readonly ConcurrentQueue<string> _logs = new();
+    private readonly string _namespacePrefix = $"krp-tests-{Guid.NewGuid():N}";
+    private readonly string _directoryPath;
     private Process _process;
+    private bool _resourcesCreated;
+    private int _httpPort;
+    private int _httpsPort;
 
-    public string HostsPath => Path.Combine(_fixture.DirectoryPath, "hosts");
+    public string HostsPath => Path.Combine(_directoryPath, "hosts");
     public string Logs => string.Join(Environment.NewLine, _logs);
 
     public KrpTestProcess(K3sFixture fixture)
     {
         _fixture = fixture;
+        _directoryPath = Path.Combine(fixture.DirectoryPath, _namespacePrefix);
     }
+
+    public string GetNamespace(string app) => $"{_namespacePrefix}-{app}";
+
+    public string GetUrl(string app, string path = "/", bool https = false) => $"{(https ? "https" : "http")}://{app}.{GetNamespace(app)}{path}";
 
     public async Task StartAsync(string mode)
     {
+        Directory.CreateDirectory(_directoryPath);
+        var manifestPath = Path.Combine(_directoryPath, "k3s.yaml");
+        var manifest = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "k3s.yaml"));
+        await File.WriteAllTextAsync(manifestPath, manifest.Replace("krp-tests-", $"{_namespacePrefix}-", StringComparison.Ordinal));
+        _resourcesCreated = true;
+        await _fixture.KubectlAsync("apply", "-f", manifestPath);
+        await Task.WhenAll(new[] { "app-one", "app-two" }.Select(app => _fixture.KubectlAsync("rollout", "status", $"deployment/{app}", "-n", GetNamespace(app), "--timeout=60s")));
+
         await File.WriteAllTextAsync(HostsPath, "127.0.0.1 localhost\n");
         var startInfo = _fixture.CreateStartInfo("dotnet", typeof(RootCommand).Assembly.Location, "--no-ui", "--routing", "hosts", "--forwarder", mode);
+        startInfo.Environment["KRP_HOSTS"] = HostsPath;
+        startInfo.Environment["Krp__EndpointExplorer__Filter__0"] = $"namespace/{_namespacePrefix}-*/service/*";
+
+        // Reserve distinct ports until immediately before launching the child process.
+        using (var http = ReservePort())
+        using (var https = ReservePort())
+        {
+            _httpPort = ((IPEndPoint)http.LocalEndpoint).Port;
+            _httpsPort = ((IPEndPoint)https.LocalEndpoint).Port;
+        }
+        startInfo.Environment["Krp__HttpPort"] = _httpPort.ToString();
+        startInfo.Environment["Krp__HttpsPort"] = _httpsPort.ToString();
+        startInfo.Environment["Krp__Http2Port"] = "0";
 
         _process = new Process { StartInfo = startInfo };
         _process.OutputDataReceived += (_, e) =>
@@ -58,8 +90,25 @@ internal sealed class KrpTestProcess : IAsyncDisposable
         {
             Assert.IsFalse(_process.HasExited, Logs);
             var hosts = string.Join('\n', await ReadHostsAsync());
-            return hosts.Contains("app-one.krp-tests-app-one", StringComparison.Ordinal) && hosts.Contains("app-two.krp-tests-app-two", StringComparison.Ordinal);
+            return hosts.Contains($"app-one.{GetNamespace("app-one")}", StringComparison.Ordinal) && hosts.Contains($"app-two.{GetNamespace("app-two")}", StringComparison.Ordinal);
         });
+    }
+
+    private static TcpListener ReservePort()
+    {
+        lock (AllocatedPorts)
+        {
+            while (true)
+            {
+                var listener = new TcpListener(IPAddress.Any, 0);
+                listener.Start();
+                if (AllocatedPorts.Add(((IPEndPoint)listener.LocalEndpoint).Port))
+                {
+                    return listener;
+                }
+                listener.Stop();
+            }
+        }
     }
 
     public HttpClient CreateClient(X509Certificate2 certificateAuthority = null)
@@ -74,7 +123,8 @@ internal sealed class KrpTestProcess : IAsyncDisposable
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {
-                    await socket.ConnectAsync(IPAddress.Parse(entry[0]), context.DnsEndPoint.Port, token);
+                    var port = context.DnsEndPoint.Port == 443 ? _httpsPort : _httpPort;
+                    await socket.ConnectAsync(IPAddress.Parse(entry[0]), port, token);
                     return new NetworkStream(socket, ownsSocket: true);
                 }
                 catch
@@ -135,17 +185,27 @@ internal sealed class KrpTestProcess : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_process == null)
+        try
         {
-            return;
+            if (_process != null)
+            {
+                if (!_process.HasExited)
+                {
+                    // Kill only the parent so Windows Job Object cleanup must stop kubectl.
+                    _process.Kill();
+                    await _process.WaitForExitAsync();
+                }
+                _process.Dispose();
+                _process = null;
+            }
         }
-        if (!_process.HasExited)
+        finally
         {
-            // Kill only the parent so Windows Job Object cleanup must stop kubectl.
-            _process.Kill();
-            await _process.WaitForExitAsync();
+            if (_resourcesCreated)
+            {
+                await _fixture.KubectlAsync("delete", "namespace", GetNamespace("app-one"), GetNamespace("app-two"), "--ignore-not-found=true", "--wait=false");
+                _resourcesCreated = false;
+            }
         }
-        _process.Dispose();
-        _process = null;
     }
 }

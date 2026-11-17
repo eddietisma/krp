@@ -6,7 +6,6 @@ Requirements:
 
 - Docker running Linux containers on Windows or Linux.
 - .NET 10 SDK. On Windows, `kubectl` must be on `PATH`. On Linux, the fixture uses the client bundled in the k3s container.
-- Local ports 80, 81, 82, 443 and 444 available, with permission to bind them.
 
 Run from the repository root in PowerShell:
 
@@ -14,7 +13,9 @@ Run from the repository root in PowerShell:
 dotnet test test/Krp.IntegrationTests/Krp.IntegrationTests.csproj -c Release
 ```
 
-The integration tests run as part of the normal test suite. Class setup starts a shared `Testcontainers.K3s` fixture and deploys the two apps. Test setup creates a fresh KRP process wrapper; test cleanup stops it. Class cleanup disposes the k3s container and deletes the temporary kubeconfig and hosts file. The existing Kubernetes context and system hosts file stay unchanged.
+The integration tests run as part of the normal test suite, with up to four test methods in parallel. Class setup starts a shared `Testcontainers.K3s` fixture and obtains its kubeconfig using the randomly assigned API endpoint. Each test deploys the two apps into its own namespaces and starts a KRP process with its own hosts file and dynamically allocated listener ports. Test cleanup stops that process and deletes only its namespaces. Class cleanup disposes the k3s container and deletes the temporary files. The existing Kubernetes context and system hosts file stay unchanged.
+
+All forwarding modes use `Krp:HttpPort` and `Krp:HttpsPort` for the public listener ports. Hybrid mode assigns its internal HTTP/1.1, HTTP/2 and HTTPS ports automatically. In HTTP mode, tests set `Krp:Http2Port` to `0` for automatic allocation of the separate HTTP/2 listener. Discovery filters come from `Krp:EndpointExplorer`. Tests pass those settings through environment variables.
 
 The fixture uses `krp https` to check, create and export the CA, and `krp https --clean` to remove a CA it created. Existing CAs are reused. On Linux the CA lives in the temporary profile. The HTTPS clients validate against the exported CA directly.
 
