@@ -56,6 +56,7 @@ public class RootCommand
     {
         var webApplicationBuilder = WebApplication.CreateSlimBuilder();
         webApplicationBuilder.Configuration.AddUserSecrets<Program>();
+        var configuration = webApplicationBuilder.Configuration;
 
         if (NoTerminalUi)
         {
@@ -89,20 +90,29 @@ public class RootCommand
         switch (Forwarder)
         {
             case "http":
-                builder.UseHttpForwarder();
+                builder.UseHttpForwarder(options =>
+                {
+                    options.HttpPort = configuration.GetValue<int>("Krp:HttpPort", 80);
+                    options.HttpsPort = configuration.GetValue<int>("Krp:HttpsPort", 443);
+                    options.Http2Port = configuration.GetValue<int>("Krp:Http2Port", 81);
+                });
                 break;
             case "tcp":
                 builder.UseTcpForwarder(options =>
                 {
                     options.ListenAddress = IPAddress.Any;
-                    options.ListenPorts = [80, 443];
+                    options.HttpPort = configuration.GetValue<int>("Krp:HttpPort", 80);
+                    options.HttpsPort = configuration.GetValue<int>("Krp:HttpsPort", 443);
+                    options.ListenPorts = [options.HttpPort, options.HttpsPort];
                 });
                 break;
             case "hybrid":
                 builder.UseTcpWithHttpForwarder(options =>
                 {
                     options.ListenAddress = IPAddress.Any;
-                    options.ListenPorts = [80, 443];
+                    options.HttpPort = configuration.GetValue<int>("Krp:HttpPort", 80);
+                    options.HttpsPort = configuration.GetValue<int>("Krp:HttpsPort", 443);
+                    options.ListenPorts = [options.HttpPort, options.HttpsPort];
                 });
 
                 // TODO: Should apply NoCertificateValidation for UseTcpForwarder switch case also

@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace Krp.Forwarders.TcpWithHttpForwarder;
 
 /// <summary>
-/// Opens a TCP connection and inspects traffic and routes HTTP requests to different HTTP forwarding ports (81 for HTTP/1.1 and 82 for HTTP/2).
+/// Opens a TCP connection, inspects traffic and routes requests to the bound HTTP forwarding ports.
 /// </summary>
 public class TcpWithHttpForwarder
 {
@@ -134,17 +134,17 @@ public class TcpWithHttpForwarder
             {
                 switch (localPort)
                 {
-                    case 80:
+                    case var port when port == _tcpOptions.HttpPort:
                         // Handle HTTP/2 over cleartext (h2c) and HTTP/1.1.
                         bytesRead = await clientStream.ReadAsync(buffer, 0, 24, stoppingToken);
                         var isHttp2 = IsHttp2Preface(buffer.AsSpan(0, bytesRead));
 
                         // Forward to HttpForwarder for routing using HTTP headers.
-                        targetPort = isHttp2 ? _httpOptions.Http2Port : _httpOptions.HttpPort;
+                        targetPort = (isHttp2 ? _httpOptions.Http2Listener : _httpOptions.HttpListener)!.IPEndPoint!.Port;
                         break;
-                    case 443:
+                    case var port when port == _tcpOptions.HttpsPort:
                         // Forward to HttpForwarder for routing using HTTP headers.
-                        targetPort = _httpOptions.HttpsPort;
+                        targetPort = _httpOptions.HttpsListener?.IPEndPoint?.Port ?? throw new InvalidOperationException("No HTTPS forwarding listener is available.");
 
                         //// TODO: Since TCP connections are stream based, once the tunnel is setup we can no longer react to when HTTP endpoints check switches state.
                         //// TODO: Idea - once a hostname has been setup, react to when ANY HTTP endpoint changes state and disconnect all active HTTP tunnels.

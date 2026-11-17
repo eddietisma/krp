@@ -176,7 +176,7 @@ Environment variables:
 - Supports low-level TCP requests.
 - Supports domain based routing (using domain-based IP per hostname in hosts file)
 - Forwards HTTP/x request to `HttpForwarder` using packet inspection.
-  - Inspects TCP traffic and routes HTTP requests to different server ports based on protocol (81 for HTTP/1.1 and 82 for HTTP/2) without TLS requirement.
+  - Inspects TCP traffic and routes HTTP requests to automatically assigned internal server ports based on protocol without TLS requirement.
 
 > [!NOTE]
 > **When running Docker on Windows:** No support for domain based routing **for low-level TCP** due to docker networking limitations. Windows do not yet have full support for host network driver, which results in NAT issues when routing (all loopback IPs will originate from Docker gateway). Limiting routing to HTTP requests only for Windows hosts.

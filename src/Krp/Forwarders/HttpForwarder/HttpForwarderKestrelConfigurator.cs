@@ -35,8 +35,16 @@ public class HttpForwarderKestrelConfigurator : IConfigureOptions<KestrelServerO
     public void Configure(KestrelServerOptions options)
     {
         options.ApplicationServices = _provider;
-        options.ListenAnyIP(_options.HttpPort, listen => listen.Protocols = HttpProtocols.Http1);
-        options.ListenAnyIP(_options.Http2Port, listen => listen.Protocols = HttpProtocols.Http2);
+        options.ListenAnyIP(_options.HttpPort, listen =>
+        {
+            _options.HttpListener = listen;
+            listen.Protocols = HttpProtocols.Http1;
+        });
+        options.ListenAnyIP(_options.Http2Port, listen =>
+        {
+            _options.Http2Listener = listen;
+            listen.Protocols = HttpProtocols.Http2;
+        });
 
         if (!_certificateManager.TryCheckCertificateAuthority(out _))
         {
@@ -46,6 +54,7 @@ public class HttpForwarderKestrelConfigurator : IConfigureOptions<KestrelServerO
 
         options.ListenAnyIP(_options.HttpsPort, listen =>
         {
+            _options.HttpsListener = listen;
             listen.UseHttps(httpsOptions =>
             {
                 httpsOptions.ServerCertificateSelector = (connectionContext, serverName) =>

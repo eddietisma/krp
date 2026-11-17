@@ -167,9 +167,10 @@ public static class KubernetesBuilderExtension
         builder.Services.AddHostedService<TcpWithHttpForwarderBackgroundService>();
         builder.UseHttpForwarder(options =>
         {
-            options.Http2Port = 82;
-            options.HttpPort = 81;
-            options.HttpsPort = 444;
+            // Port 0 lets Kestrel assign available ports for the internal hybrid listeners.
+            options.Http2Port = 0;
+            options.HttpPort = 0;
+            options.HttpsPort = 0;
         });
         return builder;
     }
