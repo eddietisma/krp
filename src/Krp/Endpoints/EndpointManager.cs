@@ -124,7 +124,8 @@ public class EndpointManager : IEndpointManager
         return _handlers
             .Where(x => x.Value.GetType() == typeof(HttpProxyEndpointHandler))
             .Where(x => string.Equals(x.Value.Host, host, StringComparison.OrdinalIgnoreCase))
-            .FirstOrDefault(x => path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path))
+            .OrderByDescending(x => x.Value.Path.Length)
+            .FirstOrDefault(x => x.Value.Path == "/" || path.StartsWith($"{x.Value.Path}/") || (path == x.Value.Path))
             .Value;
     }
 
