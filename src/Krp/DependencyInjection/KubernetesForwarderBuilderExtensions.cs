@@ -133,6 +133,15 @@ public static class KubernetesBuilderExtension
             case DnsOptions.WinDivert:
                 builder.Services.AddSingleton<IDnsHandler, DnsWinDivertHandler>();
                 break;
+            case DnsOptions.DnsMasq:
+                builder.Services.AddSingleton<IDnsHandler, DnsMasqHandler>();
+                builder.Services.Configure<DnsMasqOptions>(o =>
+                {
+                    o.OverridePath = Environment.GetEnvironmentVariable("KRP_DNSMASQ_OVERRIDE") ?? "/run/dnsmasq/krp.override.conf";
+                    o.RestartCommand = Environment.GetEnvironmentVariable("KRP_DNSMASQ_RESTART_COMMAND");
+                    o.RestartArguments = Environment.GetEnvironmentVariable("KRP_DNSMASQ_RESTART_ARGUMENTS") ?? string.Empty;
+                });
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(routing), routing, $"Invalid value for {nameof(DnsOptions)}");
         }

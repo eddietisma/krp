@@ -21,6 +21,7 @@ public class ValidationHostedService : BackgroundService
 {
     private readonly ILogger<ValidationHostedService> _logger;
     private readonly DnsHostsOptions _dnsOptions;
+    private readonly DnsMasqOptions _dnsMasqOptions;
     private readonly IEndpointManager _endpointManager;
     private readonly IDnsHandler _dnsHandler;
     private readonly ICertificateManager _certificateManager;
@@ -38,6 +39,7 @@ public class ValidationHostedService : BackgroundService
         IHostApplicationLifetime appLifetime,
         ILogger<ValidationHostedService> logger,
         IOptions<DnsHostsOptions> dnsOptions,
+        IOptions<DnsMasqOptions> dnsMasqOptions,
         IOptions<ValidationOptions> validationOptions)
     {
         _endpointManager = endpointManager;
@@ -48,6 +50,7 @@ public class ValidationHostedService : BackgroundService
         _appLifetime = appLifetime;
         _logger = logger;
         _dnsOptions = dnsOptions.Value;
+        _dnsMasqOptions = dnsMasqOptions.Value;
         _validationOptions = validationOptions.Value;
     }
 
@@ -99,6 +102,7 @@ public class ValidationHostedService : BackgroundService
         {
             nameof(DnsHostsHandler) => "hosts",
             nameof(DnsWinDivertHandler) => "windivert",
+            nameof(DnsMasqHandler) => "dnsmasq",
             _ => "unknown",
         };
 
@@ -129,6 +133,44 @@ public class ValidationHostedService : BackgroundService
             }
 
             return true;
+        }
+
+        if (routing == typeof(DnsMasqHandler))
+        {
+            if (string.IsNullOrWhiteSpace(_dnsMasqOptions.RestartCommand))
+            {
+                _logger.LogError("❌ Set KRP_DNSMASQ_RESTART_COMMAND to an executable that restarts dnsmasq");
+                return false;
+            }
+
+            try
+            {
+                var overridePath = Path.GetFullPath(_dnsMasqOptions.OverridePath);
+                if (Directory.Exists(overridePath))
+                {
+                    _logger.LogError("❌ dnsmasq override path is a directory: '{OverridePath}'", overridePath);
+                    return false;
+                }
+
+                var directory = Path.GetDirectoryName(overridePath)!;
+                Directory.CreateDirectory(directory);
+                var probePath = Path.Combine(directory, $".krp-write-test-{Guid.NewGuid():N}");
+                using var probe = new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.DeleteOnClose);
+
+                if (File.Exists(overridePath) && !FileHelper.HasWriteAccess(overridePath))
+                {
+                    _logger.LogError("❌ Write-access to dnsmasq override is denied: '{OverridePath}'", overridePath);
+                    return false;
+                }
+
+                _logger.LogInformation("✅ Permission to dnsmasq override: '{OverridePath}'", overridePath);
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                _logger.LogError(e, "❌ Cannot write dnsmasq override: '{OverridePath}'", _dnsMasqOptions.OverridePath);
+                return false;
+            }
         }
 
         if (routing == typeof(DnsHostsHandler))

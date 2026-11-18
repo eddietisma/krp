@@ -120,7 +120,7 @@ Options:
                                  Allowed values are: tcp, http, hybrid.
                                  Default value is: hybrid.
   -r|--routing <ROUTING>         Routing method
-                                 Allowed values are: hosts, windivert.
+                                 Allowed values are: hosts, windivert, dnsmasq.
                                  Default value is: windivert.
   -?|-h|--help                   Show help information.
 
@@ -129,6 +129,9 @@ Commands:
 
 Environment variables:
   KRP_HOSTS                       Override path to hosts file
+  KRP_DNSMASQ_OVERRIDE            Override path to dnsmasq configuration file
+  KRP_DNSMASQ_RESTART_COMMAND     Executable used to restart dnsmasq
+  KRP_DNSMASQ_RESTART_ARGUMENTS   Arguments passed to the restart executable
 ```
 
 ### Routing methods
@@ -157,6 +160,37 @@ Environment variables:
 
 > [!NOTE]
 > WinDiverts installs as an ephemeral windows driver service at runtime. Once stopped, it's automatically removed.
+
+#### `dnsmasq`
+
+Writes endpoint mappings as native dnsmasq configuration, for example
+`address=/myapp.local/127.0.0.2`. These directives also match subdomains.
+The default output path is `/run/dnsmasq/krp.override.conf`, configurable with
+`KRP_DNSMASQ_OVERRIDE`.
+
+After configuration changes, `krp` runs the executable specified by
+`KRP_DNSMASQ_RESTART_COMMAND`, with optional `KRP_DNSMASQ_RESTART_ARGUMENTS`.
+The command must restart dnsmasq: `--conf-dir` files are read at startup, and
+SIGHUP does not reread configuration files. On exit, `krp` removes its generated
+file and runs the restart command again.
+
+**Requirements**
+- dnsmasq installed and configured to read the output directory, for example `conf-dir=/run/dnsmasq` in `dnsmasq.conf`.
+- Write access to the output file and directory. A missing output directory is created.
+- A configured restart executable and permission to run it successfully.
+
+Example for a systemd service, with permission to restart dnsmasq:
+
+```bash
+export KRP_DNSMASQ_OVERRIDE=/run/dnsmasq/krp.override.conf
+export KRP_DNSMASQ_RESTART_COMMAND=systemctl
+export KRP_DNSMASQ_RESTART_ARGUMENTS="restart dnsmasq"
+krp --routing dnsmasq
+```
+
+The restart executable is invoked directly, without a shell. Use a wrapper
+script when restarting dnsmasq requires additional steps. The command has a
+30-second timeout, and failures are reported as errors.
 
 ### Forwarders available
 

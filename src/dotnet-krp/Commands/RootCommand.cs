@@ -43,7 +43,7 @@ public class RootCommand
     public string Forwarder { get; set; } = "hybrid";
 
     [Option("--routing|-r <ROUTING>", Description = "Routing method")]
-    [AllowedValues("hosts", "windivert", IgnoreCase = true)]
+    [AllowedValues("hosts", "windivert", "dnsmasq", IgnoreCase = true)]
     public string Routing { get; set; }
 
     public RootCommand()
@@ -86,6 +86,9 @@ public class RootCommand
                 break;
             case "windivert":
                 builder.UseRouting(DnsOptions.WinDivert);
+                break;
+            case "dnsmasq":
+                builder.UseRouting(DnsOptions.DnsMasq);
                 break;
         }
         switch (Forwarder)
